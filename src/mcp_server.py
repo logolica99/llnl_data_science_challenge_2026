@@ -1,4 +1,11 @@
 from fastmcp import FastMCP
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+import os
+os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib_cache" if os.name != "nt" else os.path.join(os.environ["TEMP"], "matplotlib_cache")
 
 # Initialize the MCP server
 mcp = FastMCP("CT Segmentation")
@@ -16,7 +23,21 @@ def segment_ct_dataset(input_filepath: str, output_filepath: str, threshold: flo
     Returns:
         A status message indicating success and the save location, or an error message.
     """
-    pass # Implementation goes here
+    try:
+        volume = np.load(input_filepath)
+    except FileNotFoundError:
+        return f"Error: could not find input file at {input_filepath}"
+    except Exception as e:
+        return f"Error loading {input_filepath}: {e}"
+
+    mask = (volume >= threshold).astype(np.uint8)
+
+    try:
+        np.save(output_filepath, mask)
+    except Exception as e:
+        return f"Error saving output to {output_filepath}: {e}"
+
+    return f"Segmentation complete. Saved to {output_filepath}"
 
 @mcp.tool()
 def visualize_slice(input_filepath: str, output_filepath: str, slice_index: int, axis: int = 0) -> str:
@@ -32,7 +53,31 @@ def visualize_slice(input_filepath: str, output_filepath: str, slice_index: int,
     Returns:
         A status message indicating success and the save location, or an error message.
     """
-    pass # Implementation goes here
+    try:
+        volume = np.load(input_filepath)
+    except FileNotFoundError:
+        return f"Error: could not find input file at {input_filepath}"
+    except Exception as e:
+        return f"Error loading {input_filepath}: {e}"
+
+    if axis not in (0, 1, 2):
+        return f"Error: axis must be 0, 1, or 2 (got {axis})"
+
+    if slice_index < 0 or slice_index >= volume.shape[axis]:
+        return f"Error: slice_index {slice_index} out of range for axis {axis} (size {volume.shape[axis]})"
+
+    slice_2d = np.take(volume, slice_index, axis=axis)
+
+    try:
+        plt.figure(figsize=(6, 6))
+        plt.imshow(slice_2d, cmap="gray")
+        plt.axis("off")
+        plt.savefig(output_filepath, bbox_inches="tight", pad_inches=0)
+        plt.close()
+    except Exception as e:
+        return f"Error saving image to {output_filepath}: {e}"
+
+    return f"Slice visualization complete. Saved to {output_filepath}"
 
 @mcp.tool()
 def skeletonize(input_filepath: str, output_filepath: str) -> str:
