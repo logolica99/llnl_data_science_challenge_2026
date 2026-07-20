@@ -1,11 +1,11 @@
+import os
+os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib_cache" if os.name != "nt" else os.path.join(os.environ["TEMP"], "matplotlib_cache")
 from fastmcp import FastMCP
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-import os
-os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib_cache" if os.name != "nt" else os.path.join(os.environ["TEMP"], "matplotlib_cache")
+from skeletonization import skeletonize_mask
 
 # Initialize the MCP server
 mcp = FastMCP("CT Segmentation")
@@ -91,7 +91,15 @@ def skeletonize(input_filepath: str, output_filepath: str) -> str:
     Returns:
         A status message indicating success and the save location, or an error message.
     """
-    pass # Implementation goes here, calling skeletonize_mask internally
+    try:
+        result = skeletonize_mask(file_path=input_filepath, output_path=output_filepath)
+    except Exception as e:
+        return f"Error skeletonizing mask: {e}"
+
+    if result is None:
+        return f"Error: skeletonization failed for {input_filepath} (check that the file exists and is a valid mask)"
+
+    return f"Skeletonization complete. Saved to {output_filepath}"
 
 if __name__ == "__main__":
     # Run the FastMCP server, exposing the tools over standard I/O (default)
