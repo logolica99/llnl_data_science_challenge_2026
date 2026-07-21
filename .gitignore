@@ -172,3 +172,9 @@ ehthumbs.db
 Thumbs.db
 
 result
+
+# Large binary data (keep locally; do not push)
+*.stl
+*.tif
+*.tiff
+*.npy

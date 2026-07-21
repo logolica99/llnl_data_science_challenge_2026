@@ -1,4 +1,12 @@
+import os
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
 from fastmcp import FastMCP
+
+from skeletonization import skeletonize_mask
 
 # Initialize the MCP server
 mcp = FastMCP("CT Segmentation")
@@ -16,7 +24,27 @@ def segment_ct_dataset(input_filepath: str, output_filepath: str, threshold: flo
     Returns:
         A status message indicating success and the save location, or an error message.
     """
-    pass # Implementation goes here
+    try:
+        if not os.path.exists(input_filepath):
+            return f"Error: Input file not found at {input_filepath}"
+
+        volume = np.load(input_filepath)
+        mask = (volume >= threshold).astype(np.uint8)
+
+        output_dir = os.path.dirname(os.path.abspath(output_filepath))
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
+        np.save(output_filepath, mask)
+        foreground = int(np.count_nonzero(mask))
+        total = int(mask.size)
+        return (
+            f"Saved segmentation to {output_filepath} "
+            f"(shape={mask.shape}, threshold={threshold}, "
+            f"foreground={foreground}/{total})"
+        )
+    except Exception as exc:
+        return f"Error segmenting dataset: {exc}"
 
 @mcp.tool()
 def visualize_slice(input_filepath: str, output_filepath: str, slice_index: int, axis: int = 0) -> str:
@@ -32,7 +60,44 @@ def visualize_slice(input_filepath: str, output_filepath: str, slice_index: int,
     Returns:
         A status message indicating success and the save location, or an error message.
     """
-    pass # Implementation goes here
+    try:
+        if not os.path.exists(input_filepath):
+            return f"Error: Input file not found at {input_filepath}"
+        if axis not in (0, 1, 2):
+            return f"Error: axis must be 0, 1, or 2 (got {axis})"
+
+        volume = np.load(input_filepath)
+        if volume.ndim != 3:
+            return f"Error: Expected a 3D array, got shape {volume.shape}"
+
+        axis_size = volume.shape[axis]
+        if slice_index < 0 or slice_index >= axis_size:
+            return (
+                f"Error: slice_index {slice_index} out of range for axis {axis} "
+                f"(valid: 0–{axis_size - 1})"
+            )
+
+        slice_2d = np.take(volume, slice_index, axis=axis)
+
+        output_dir = os.path.dirname(os.path.abspath(output_filepath))
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.imshow(slice_2d, cmap="gray", origin="lower")
+        ax.set_title(f"Slice {slice_index} (axis={axis})")
+        ax.axis("off")
+        fig.tight_layout()
+        fig.savefig(output_filepath, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+        return (
+            f"Saved slice visualization to {output_filepath} "
+            f"(volume shape={volume.shape}, axis={axis}, slice_index={slice_index}, "
+            f"slice shape={slice_2d.shape})"
+        )
+    except Exception as exc:
+        return f"Error visualizing slice: {exc}"
 
 @mcp.tool()
 def skeletonize(input_filepath: str, output_filepath: str) -> str:
@@ -46,7 +111,25 @@ def skeletonize(input_filepath: str, output_filepath: str) -> str:
     Returns:
         A status message indicating success and the save location, or an error message.
     """
-    pass # Implementation goes here, calling skeletonize_mask internally
+    try:
+        if not os.path.exists(input_filepath):
+            return f"Error: Input file not found at {input_filepath}"
+
+        output_dir = os.path.dirname(os.path.abspath(output_filepath))
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
+        # Thin wrapper around the existing skeletonization API
+        skeleton = skeletonize_mask(input_filepath, output_filepath)
+        if skeleton is None:
+            return f"Error: skeletonize_mask failed for {input_filepath}"
+
+        return (
+            f"Saved skeleton to {output_filepath} "
+            f"(shape={skeleton.shape}, non-zero voxels={int(np.count_nonzero(skeleton))})"
+        )
+    except Exception as exc:
+        return f"Error skeletonizing mask: {exc}"
 
 if __name__ == "__main__":
     # Run the FastMCP server, exposing the tools over standard I/O (default)
