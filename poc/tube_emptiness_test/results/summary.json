@@ -1,0 +1,306 @@
+{
+  "method": "cKDTree tube-emptiness queries against binary-STL triangle centroids",
+  "design_json": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/octet_truss_9x9x9.json",
+  "stl_directory": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/stls",
+  "design_strut_count": 18468,
+  "transform": {
+    "formula": "stl_mm = (json_coordinate - 9.0) * scale",
+    "center_design_units": [
+      9.0,
+      9.0,
+      9.0
+    ],
+    "scale_mm_per_design_unit": 2.305
+  },
+  "tube_test": {
+    "radius_mm": 0.4,
+    "point_cloud": "triangle centroids",
+    "sample_count": 9,
+    "sample_fraction_start": 0.4,
+    "sample_fraction_end": 0.6,
+    "deletion_rule": "all sampled core points have no centroid within radius"
+  },
+  "calibration": {
+    "baseline": "0.stl",
+    "scale_overridden": false,
+    "radius_overridden": false,
+    "scale_objective": "minimize mean per-strut nearest-centroid distance on 0.stl",
+    "scale_trials": [
+      {
+        "scale_mm_per_design_unit": 2.29,
+        "mean_nearest_distance_mm": 0.14266614113192466,
+        "p99_nearest_distance_mm": 0.2332319214602089,
+        "max_nearest_distance_mm": 0.2617475924543077
+      },
+      {
+        "scale_mm_per_design_unit": 2.291,
+        "mean_nearest_distance_mm": 0.13647727542769614,
+        "p99_nearest_distance_mm": 0.23740572639793572,
+        "max_nearest_distance_mm": 0.26768287435039656
+      },
+      {
+        "scale_mm_per_design_unit": 2.292,
+        "mean_nearest_distance_mm": 0.1303328317634916,
+        "p99_nearest_distance_mm": 0.24184836303858612,
+        "max_nearest_distance_mm": 0.2740927858016665
+      },
+      {
+        "scale_mm_per_design_unit": 2.293,
+        "mean_nearest_distance_mm": 0.12424112728644056,
+        "p99_nearest_distance_mm": 0.24653972118298328,
+        "max_nearest_distance_mm": 0.280942217192984
+      },
+      {
+        "scale_mm_per_design_unit": 2.294,
+        "mean_nearest_distance_mm": 0.11823395960695939,
+        "p99_nearest_distance_mm": 0.2514800888997665,
+        "max_nearest_distance_mm": 0.2882024586796238
+      },
+      {
+        "scale_mm_per_design_unit": 2.295,
+        "mean_nearest_distance_mm": 0.11235670461212852,
+        "p99_nearest_distance_mm": 0.2564726509574515,
+        "max_nearest_distance_mm": 0.2955811275015161
+      },
+      {
+        "scale_mm_per_design_unit": 2.296,
+        "mean_nearest_distance_mm": 0.10671559485669364,
+        "p99_nearest_distance_mm": 0.2618308043350322,
+        "max_nearest_distance_mm": 0.3018119475125695
+      },
+      {
+        "scale_mm_per_design_unit": 2.297,
+        "mean_nearest_distance_mm": 0.10141898245528849,
+        "p99_nearest_distance_mm": 0.2674326338416669,
+        "max_nearest_distance_mm": 0.30845730745838945
+      },
+      {
+        "scale_mm_per_design_unit": 2.298,
+        "mean_nearest_distance_mm": 0.0965814550700766,
+        "p99_nearest_distance_mm": 0.27310284757423586,
+        "max_nearest_distance_mm": 0.3154895558216775
+      },
+      {
+        "scale_mm_per_design_unit": 2.299,
+        "mean_nearest_distance_mm": 0.09231108690653722,
+        "p99_nearest_distance_mm": 0.2789921091628737,
+        "max_nearest_distance_mm": 0.32264302735498257
+      },
+      {
+        "scale_mm_per_design_unit": 2.3,
+        "mean_nearest_distance_mm": 0.08864194025280928,
+        "p99_nearest_distance_mm": 0.2851524202989532,
+        "max_nearest_distance_mm": 0.3300334500659536
+      },
+      {
+        "scale_mm_per_design_unit": 2.301,
+        "mean_nearest_distance_mm": 0.08560356638048644,
+        "p99_nearest_distance_mm": 0.2913421538526619,
+        "max_nearest_distance_mm": 0.3375175752435539
+      },
+      {
+        "scale_mm_per_design_unit": 2.302,
+        "mean_nearest_distance_mm": 0.08324555332949038,
+        "p99_nearest_distance_mm": 0.2978255016570967,
+        "max_nearest_distance_mm": 0.34508329060661647
+      },
+      {
+        "scale_mm_per_design_unit": 2.303,
+        "mean_nearest_distance_mm": 0.08156679428857648,
+        "p99_nearest_distance_mm": 0.30423157687298047,
+        "max_nearest_distance_mm": 0.35272821268199933
+      },
+      {
+        "scale_mm_per_design_unit": 2.304,
+        "mean_nearest_distance_mm": 0.08060627529615193,
+        "p99_nearest_distance_mm": 0.31065922586043826,
+        "max_nearest_distance_mm": 0.36086083747149783
+      },
+      {
+        "scale_mm_per_design_unit": 2.305,
+        "mean_nearest_distance_mm": 0.08028788823532759,
+        "p99_nearest_distance_mm": 0.31735995650832866,
+        "max_nearest_distance_mm": 0.3682392595560082
+      },
+      {
+        "scale_mm_per_design_unit": 2.3052,
+        "mean_nearest_distance_mm": 0.08029160379782209,
+        "p99_nearest_distance_mm": 0.3186584488060564,
+        "max_nearest_distance_mm": 0.3698056221022258
+      },
+      {
+        "scale_mm_per_design_unit": 2.306,
+        "mean_nearest_distance_mm": 0.08053298029403307,
+        "p99_nearest_distance_mm": 0.32410961642229236,
+        "max_nearest_distance_mm": 0.3760910526796114
+      },
+      {
+        "scale_mm_per_design_unit": 2.307,
+        "mean_nearest_distance_mm": 0.0813268273332904,
+        "p99_nearest_distance_mm": 0.33153219134771955,
+        "max_nearest_distance_mm": 0.38395902138668053
+      },
+      {
+        "scale_mm_per_design_unit": 2.308,
+        "mean_nearest_distance_mm": 0.08268048823965012,
+        "p99_nearest_distance_mm": 0.33869902251396933,
+        "max_nearest_distance_mm": 0.3918913028488698
+      },
+      {
+        "scale_mm_per_design_unit": 2.309,
+        "mean_nearest_distance_mm": 0.08446065233638964,
+        "p99_nearest_distance_mm": 0.34579117974750584,
+        "max_nearest_distance_mm": 0.3998775416533332
+      },
+      {
+        "scale_mm_per_design_unit": 2.31,
+        "mean_nearest_distance_mm": 0.08661655002750242,
+        "p99_nearest_distance_mm": 0.3530229329978036,
+        "max_nearest_distance_mm": 0.40764161296224627
+      },
+      {
+        "scale_mm_per_design_unit": 2.311,
+        "mean_nearest_distance_mm": 0.08918559718552817,
+        "p99_nearest_distance_mm": 0.35998896078160153,
+        "max_nearest_distance_mm": 0.41537924278883476
+      },
+      {
+        "scale_mm_per_design_unit": 2.312,
+        "mean_nearest_distance_mm": 0.09213764374377358,
+        "p99_nearest_distance_mm": 0.3668941294087404,
+        "max_nearest_distance_mm": 0.42317319064839015
+      },
+      {
+        "scale_mm_per_design_unit": 2.313,
+        "mean_nearest_distance_mm": 0.09540604995055214,
+        "p99_nearest_distance_mm": 0.3740247305392477,
+        "max_nearest_distance_mm": 0.4310235059484023
+      },
+      {
+        "scale_mm_per_design_unit": 2.314,
+        "mean_nearest_distance_mm": 0.09892259574682875,
+        "p99_nearest_distance_mm": 0.38126179667331855,
+        "max_nearest_distance_mm": 0.44024178599212754
+      },
+      {
+        "scale_mm_per_design_unit": 2.315,
+        "mean_nearest_distance_mm": 0.10267375898498989,
+        "p99_nearest_distance_mm": 0.3887967809494286,
+        "max_nearest_distance_mm": 0.4533023895824237
+      },
+      {
+        "scale_mm_per_design_unit": 2.316,
+        "mean_nearest_distance_mm": 0.10663704522938013,
+        "p99_nearest_distance_mm": 0.39623844469973263,
+        "max_nearest_distance_mm": 0.4664410699291916
+      },
+      {
+        "scale_mm_per_design_unit": 2.317,
+        "mean_nearest_distance_mm": 0.11078902918127861,
+        "p99_nearest_distance_mm": 0.40411490186710863,
+        "max_nearest_distance_mm": 0.479657393911348
+      },
+      {
+        "scale_mm_per_design_unit": 2.318,
+        "mean_nearest_distance_mm": 0.11510733877605916,
+        "p99_nearest_distance_mm": 0.4128646900417151,
+        "max_nearest_distance_mm": 0.49294791762371076
+      },
+      {
+        "scale_mm_per_design_unit": 2.319,
+        "mean_nearest_distance_mm": 0.11960091548624567,
+        "p99_nearest_distance_mm": 0.42137782112097333,
+        "max_nearest_distance_mm": 0.5062979234202156
+      },
+      {
+        "scale_mm_per_design_unit": 2.32,
+        "mean_nearest_distance_mm": 0.12427084280455104,
+        "p99_nearest_distance_mm": 0.42927320526940227,
+        "max_nearest_distance_mm": 0.5197089922620399
+      },
+      {
+        "scale_mm_per_design_unit": 2.321,
+        "mean_nearest_distance_mm": 0.12910406526837978,
+        "p99_nearest_distance_mm": 0.4382077551611913,
+        "max_nearest_distance_mm": 0.533177581140346
+      }
+    ],
+    "baseline_max_nearest_distance_mm": 0.3682392595560082,
+    "radius_safety_margin_mm": 0.03,
+    "radius_rounding_mm": 0.01
+  },
+  "results": [
+    {
+      "design": "0",
+      "stl": "0.stl",
+      "triangle_count": 3514642,
+      "triangle_deficit_from_0_stl": 0,
+      "deleted_count": 0,
+      "deleted_percent_of_design": 0.0,
+      "triangles_per_deleted_strut": null,
+      "analysis_seconds": 0.0
+    },
+    {
+      "design": "0.1",
+      "stl": "0.1.stl",
+      "triangle_count": 3511458,
+      "triangle_deficit_from_0_stl": 3184,
+      "deleted_count": 18,
+      "deleted_percent_of_design": 0.09746588693957114,
+      "triangles_per_deleted_strut": 176.88888888888889,
+      "analysis_seconds": 0.4464954999857582
+    },
+    {
+      "design": "0.5",
+      "stl": "0.5.stl",
+      "triangle_count": 3498656,
+      "triangle_deficit_from_0_stl": 15986,
+      "deleted_count": 93,
+      "deleted_percent_of_design": 0.5035737491877843,
+      "triangles_per_deleted_strut": 171.89247311827958,
+      "analysis_seconds": 0.44067708402872086
+    },
+    {
+      "design": "1",
+      "stl": "1.stl",
+      "triangle_count": 3482368,
+      "triangle_deficit_from_0_stl": 32274,
+      "deleted_count": 186,
+      "deleted_percent_of_design": 1.0071474983755686,
+      "triangles_per_deleted_strut": 173.51612903225808,
+      "analysis_seconds": 0.4346022089594044
+    }
+  ],
+  "gates": {
+    "negative_control_0_stl": {
+      "expected": "0 deleted struts",
+      "actual": 0,
+      "pass": true
+    },
+    "deleted_count_0.5_stl": {
+      "expected": "88-96 deleted struts",
+      "actual": 93,
+      "pass": true
+    },
+    "monotonic_counts": {
+      "expected": "0.stl < 0.1.stl < 0.5.stl < 1.stl",
+      "actual": {
+        "0": 0,
+        "0.1": 18,
+        "0.5": 93,
+        "1": 186
+      },
+      "pass": true
+    },
+    "triangle_deficit_ratio": {
+      "expected": "170-180 triangles per deleted strut for every variant",
+      "actual": {
+        "0.1": 176.88888888888889,
+        "0.5": 171.89247311827958,
+        "1": 173.51612903225808
+      },
+      "pass": true
+    },
+    "overall_pass": true
+  }
+}
