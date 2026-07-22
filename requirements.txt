@@ -3,3 +3,5 @@ matplotlib
 fastmcp
 scikit-image
 tifffile
+OpenVisus
+pyvista

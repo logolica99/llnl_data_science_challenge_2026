@@ -178,3 +178,7 @@ result
 *.tif
 *.tiff
 *.npy
+
+# Local Python packages / OpenVisus IDX outputs
+.python_pkgs/
+data/missing_struts/tif_stacks/openvisus_idx/
