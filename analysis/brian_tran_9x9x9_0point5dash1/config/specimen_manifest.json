@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0.0",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1",
+  "inputs": {
+    "ct": {
+      "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+      "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+      "role": "ct_volume",
+      "retention": "committed"
+    },
+    "ct_metadata": {
+      "format": "tiff",
+      "shape": [
+        761,
+        815,
+        837
+      ],
+      "dtype": "uint16",
+      "byte_order": "big",
+      "array_axes": [
+        "z",
+        "y",
+        "x"
+      ]
+    },
+    "design_graph": {
+      "path": "data/missing_struts/octet_truss_9x9x9.json",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+      "role": "design_graph",
+      "retention": "committed"
+    },
+    "aligned_graph": {
+      "path": "data/missing_struts/registered_jsons/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json",
+      "sha256": "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7",
+      "role": "aligned_graph",
+      "retention": "committed"
+    },
+    "cad": {
+      "path": "data/missing_struts/stls/0.5.stl",
+      "sha256": "24dcb40c13c4a729cdd84b760b803d78c61bb31ec6b2411724ff6f78cafc2ec4",
+      "role": "cad",
+      "retention": "committed"
+    }
+  },
+  "analysis_parameters": {
+    "registration": {
+      "mode": "challenge_aligned_json",
+      "local_recenter_required": true
+    },
+    "coordinates": {
+      "graph_axes": [
+        "x",
+        "y",
+        "z"
+      ],
+      "array_axes": [
+        "z",
+        "y",
+        "x"
+      ],
+      "numpy_index_expression": "volume[round(z), round(y), round(x)]",
+      "aligned_graph_units": "voxel"
+    },
+    "segmentation": {
+      "method": "exact_histogram_otsu",
+      "method_version": "2.0.0",
+      "comparison": "value >= threshold",
+      "histogram_bins": 65536,
+      "histogram_encoding": "native_uint16",
+      "edge_slices_excluded": 0,
+      "chunk_depth": 8,
+      "coarse_bins": 1024,
+      "peak_smoothing_sigma_bins": 2.0,
+      "peak_prominence_fraction": 0.003,
+      "minimum_significant_peaks": 2,
+      "minimum_foreground_fraction": 0.01,
+      "maximum_foreground_fraction": 0.35,
+      "minimum_otsu_separability": 0.45,
+      "minimum_class_mean_separation_sigma": 0.75
+    },
+    "budgets": {
+      "local_recenter_radius_voxels": 8.0,
+      "roi_padding_fraction": 0.2,
+      "metrology_uncertainty_voxels": 2.0,
+      "maximum_agent_retries": 2
+    },
+    "artifact_schema_versions": {
+      "specimen_manifest": "1.0.0",
+      "registration_qa": "1.0.0",
+      "per_strut_metrics": "1.0.0",
+      "classified_struts": "1.0.0",
+      "nde_report": "1.0.0"
+    }
+  },
+  "analysis_parameters_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a",
+  "derived": {
+    "graph_summary": {
+      "method": "canonical_lattice_topology",
+      "method_version": "1.0.0",
+      "provenance": {
+        "source": "design and aligned graph schema inspection",
+        "input_sha256": [
+          "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+          "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
+        ],
+        "config_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a"
+      },
+      "values": {
+        "junction_count": 10206,
+        "strut_count": 18468,
+        "unit_cell_count": 729,
+        "topology_sha256": "7dc0c54a3a36af4a464159a0592d230c700744ffdbfec3f84df181914f6d5b0a"
+      },
+      "aligned_values": {
+        "junction_count": 10206,
+        "strut_count": 18468,
+        "unit_cell_count": 729,
+        "topology_sha256": "7dc0c54a3a36af4a464159a0592d230c700744ffdbfec3f84df181914f6d5b0a"
+      }
+    },
+    "voxel_spacing": {
+      "method": "cad_graph_ct_scale_crosscheck",
+      "method_version": "1.0.0",
+      "provenance": {
+        "source": "external 58.09 micrometer claim corroborated by CAD/design/registered spans",
+        "input_sha256": [
+          "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+          "24dcb40c13c4a729cdd84b760b803d78c61bb31ec6b2411724ff6f78cafc2ec4",
+          "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
+        ],
+        "config_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a"
+      },
+      "values": {
+        "spacing": [
+          0.05809,
+          0.05809,
+          0.05809
+        ],
+        "axes": [
+          "z",
+          "y",
+          "x"
+        ],
+        "unit": "millimeter"
+      }
+    },
+    "segmentation_result": {
+      "method": "exact_histogram_otsu",
+      "method_version": "2.0.0",
+      "provenance": {
+        "source": "full-volume 65536-bin uint16 histogram replay",
+        "input_sha256": [
+          "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+        ],
+        "config_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a"
+      },
+      "values": {
+        "threshold": 40054,
+        "voxel_count": 519119955,
+        "foreground_voxel_count": 58653410,
+        "foreground_fraction": 0.11298623648555371,
+        "otsu_separability": 0.814158617485167,
+        "background_mean": 32615.08340378344,
+        "foreground_mean": 47493.56062968888,
+        "class_mean_separation_sigma": 4.321652770590698,
+        "significant_modes": [
+          32288.0,
+          48992.0
+        ],
+        "histogram_sha256": "daed3b27ceb0b6c7842da7dea64fd1b3eaf7779e9fc0521905b7262114dab1f4",
+        "overall_pass": true
+      }
+    }
+  }
+}

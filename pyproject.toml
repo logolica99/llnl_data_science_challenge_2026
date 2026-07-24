@@ -1,0 +1,21 @@
+[project]
+name = "llnl-data-science-challenge-2026"
+version = "0.1.0"
+description = "Agentic CT analysis workflow for the LLNL Data Science Challenge"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastmcp==3.4.4",
+  "jsonschema==4.26.0",
+  "matplotlib==3.11.1",
+  "napari[pyqt6]==0.8.0",
+  "numpy==2.5.1",
+  "pandas==3.0.5",
+  "pyvista==0.48.4",
+  "scikit-image==0.26.0",
+  "scipy==1.18.0",
+  "tifffile==2026.7.14",
+  "trimesh==4.12.2",
+]
+
+[tool.uv]
+package = false

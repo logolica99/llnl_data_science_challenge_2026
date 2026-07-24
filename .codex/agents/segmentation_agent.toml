@@ -12,6 +12,9 @@ path, inspect its shape and dtype, and require slice index 380 to exist on axis
 0. Never modify the source TIFF. Do not inspect or use any ground-truth image;
 ground truth is reserved for the separate evaluation task.
 
+Invoke `$volume-metadata` before segmentation and preserve its hash, axes, byte
+order, and voxel-spacing provenance in the report. Never infer missing spacing.
+
 Create a `segmentation` subdirectory beside the input. Write and execute a
 reproducible Python program at `segmentation/segment_ct.py`. The program must:
 - load the TIFF with tifffile using memory-aware access;

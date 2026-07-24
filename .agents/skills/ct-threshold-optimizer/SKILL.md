@@ -9,7 +9,11 @@ Generate a small, reproducible threshold sweep through the MCP server, then comp
 
 ## Workflow
 
-1. Resolve the input `.npy` path and confirm that it is a 3D CT volume. Inspect its minimum and maximum with the `npy-metadata-extractor` skill when that skill is available.
+1. Resolve the input `.npy` path and confirm that it is a 3D CT volume. Invoke
+   `$volume-metadata` with statistics enabled (never `--header-only`) and inspect
+   its shape, dtype, axes, spacing provenance, minimum, and maximum. Stop if
+   either intensity bound is `unknown` or non-finite; do not infer missing
+   values or proceed with a threshold sweep.
 2. Choose three to seven finite, distinct thresholds:
    - Use thresholds supplied by the user.
    - Otherwise, use values at 30%, 50%, and 70% of the observed intensity range: `minimum + fraction * (maximum - minimum)`.

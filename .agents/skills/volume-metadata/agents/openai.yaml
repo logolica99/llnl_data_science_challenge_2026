@@ -1,0 +1,4 @@
+interface:
+  display_name: "Volume Metadata"
+  short_description: "Inspect manifest-ready NumPy and TIFF CT metadata"
+  default_prompt: "Use $volume-metadata to inspect a CT volume without guessing axes or voxel spacing."

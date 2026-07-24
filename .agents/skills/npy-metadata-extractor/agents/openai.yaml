@@ -1,4 +1,0 @@
-interface:
-  display_name: "NumPy Metadata Extractor"
-  short_description: "Inspect CT NumPy array shape and intensity stats"
-  default_prompt: "Use $npy-metadata-extractor to inspect the metadata of a CT NumPy file."

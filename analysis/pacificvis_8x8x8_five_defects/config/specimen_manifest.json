@@ -1,0 +1,173 @@
+{
+  "schema_version": "1.0.0",
+  "specimen_id": "pacificvis_8x8x8_five_defects",
+  "inputs": {
+    "ct": {
+      "path": "data/pacificvis/8x8x8 octet lattice with defects/five_defects_1200_xray_recon.npy",
+      "sha256": "4c128eb1a08c50b2084bd37e9779ca459d5d0e879914575f31317fd76e360b96",
+      "role": "ct_volume",
+      "retention": "external"
+    },
+    "ct_metadata": {
+      "format": "npy",
+      "shape": [
+        1200,
+        1200,
+        1200
+      ],
+      "dtype": "float32",
+      "byte_order": "little",
+      "array_axes": [
+        "z",
+        "y",
+        "x"
+      ]
+    },
+    "design_graph": {
+      "path": "data/octet_truss_8x8x8/octet_truss_8x8x8.json",
+      "sha256": "1699e3d736d2920c5a0ad9459d8b8c410b4df68016fb3a9d21f2ae4458b5edb9",
+      "role": "design_graph",
+      "retention": "committed"
+    },
+    "aligned_graph": {
+      "path": "analysis/pacificvis_8x8x8_five_defects/registration/our_registered.json",
+      "sha256": "5424210b9bb123f540c1e808f83933e71db66e192287586dc27966e84a617c0d",
+      "role": "derived_aligned_graph",
+      "retention": "regenerable"
+    },
+    "cad": {
+      "path": "data/pacificvis/8x8x8 octet lattice with defects/octet_truss_8x8x8_with_defects.obj",
+      "sha256": "08a0e77064e86adb0c2a4d95119d0ee684f75fac6797f6a4920c87cb8f31c0fa",
+      "role": "cad",
+      "retention": "external"
+    }
+  },
+  "analysis_parameters": {
+    "registration": {
+      "mode": "autonomous_v2",
+      "local_recenter_required": true
+    },
+    "coordinates": {
+      "graph_axes": [
+        "x",
+        "y",
+        "z"
+      ],
+      "array_axes": [
+        "z",
+        "y",
+        "x"
+      ],
+      "numpy_index_expression": "volume[round(z), round(y), round(x)]",
+      "aligned_graph_units": "simulation_voxel"
+    },
+    "segmentation": {
+      "method": "exact_histogram_otsu",
+      "method_version": "2.0.0",
+      "comparison": "value >= threshold",
+      "histogram_bins": 65536,
+      "histogram_encoding": "full_volume_affine_uint16",
+      "edge_slices_excluded": 0,
+      "chunk_depth": 8,
+      "coarse_bins": 1024,
+      "peak_smoothing_sigma_bins": 2.0,
+      "peak_prominence_fraction": 0.003,
+      "minimum_significant_peaks": 2,
+      "minimum_foreground_fraction": 0.01,
+      "maximum_foreground_fraction": 0.35,
+      "minimum_otsu_separability": 0.45,
+      "minimum_class_mean_separation_sigma": 0.75
+    },
+    "budgets": {
+      "local_recenter_radius_voxels": 8.0,
+      "roi_padding_fraction": 0.2,
+      "metrology_uncertainty_voxels": 2.0,
+      "maximum_agent_retries": 2
+    },
+    "artifact_schema_versions": {
+      "specimen_manifest": "1.0.0",
+      "registration_qa": "1.0.0",
+      "per_strut_metrics": "1.0.0",
+      "classified_struts": "1.0.0",
+      "nde_report": "1.0.0"
+    }
+  },
+  "analysis_parameters_sha256": "3889d451c6174cbdae0436769c025b69d5c2a5e5d85656e9599d2a08a2fee837",
+  "derived": {
+    "graph_summary": {
+      "method": "canonical_lattice_topology",
+      "method_version": "1.0.0",
+      "provenance": {
+        "source": "design and autonomous-v2 graph schema inspection",
+        "input_sha256": [
+          "1699e3d736d2920c5a0ad9459d8b8c410b4df68016fb3a9d21f2ae4458b5edb9",
+          "5424210b9bb123f540c1e808f83933e71db66e192287586dc27966e84a617c0d"
+        ],
+        "config_sha256": "3889d451c6174cbdae0436769c025b69d5c2a5e5d85656e9599d2a08a2fee837"
+      },
+      "values": {
+        "junction_count": 7168,
+        "strut_count": 13056,
+        "unit_cell_count": 512,
+        "topology_sha256": "9751573817c2c0e7ce9507c56651eac4242056ddcaa2288c25beb8476ed9eca0"
+      },
+      "aligned_values": {
+        "junction_count": 7168,
+        "strut_count": 13056,
+        "unit_cell_count": 512,
+        "topology_sha256": "9751573817c2c0e7ce9507c56651eac4242056ddcaa2288c25beb8476ed9eca0"
+      }
+    },
+    "voxel_spacing": {
+      "method": "simulation_grid_index",
+      "method_version": "1.0.0",
+      "provenance": {
+        "source": "PacificVis NPY grid coordinates; no physical spacing metadata",
+        "input_sha256": [
+          "4c128eb1a08c50b2084bd37e9779ca459d5d0e879914575f31317fd76e360b96"
+        ],
+        "config_sha256": "3889d451c6174cbdae0436769c025b69d5c2a5e5d85656e9599d2a08a2fee837"
+      },
+      "values": {
+        "spacing": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "axes": [
+          "z",
+          "y",
+          "x"
+        ],
+        "unit": "simulation_voxel"
+      }
+    },
+    "segmentation_result": {
+      "method": "exact_histogram_otsu",
+      "method_version": "2.0.0",
+      "provenance": {
+        "source": "full-volume affine uint16 encoding of the float32 NPY",
+        "input_sha256": [
+          "4c128eb1a08c50b2084bd37e9779ca459d5d0e879914575f31317fd76e360b96"
+        ],
+        "config_sha256": "3889d451c6174cbdae0436769c025b69d5c2a5e5d85656e9599d2a08a2fee837"
+      },
+      "values": {
+        "threshold": 0.0055621545633924,
+        "voxel_count": 1728000000,
+        "foreground_voxel_count": 97755064,
+        "foreground_fraction": 0.05657121759259259,
+        "otsu_separability": 0.9352826118909207,
+        "background_mean": 15276.246814418566,
+        "foreground_mean": 50243.81293409004,
+        "class_mean_separation_sigma": 9.471390870891002,
+        "significant_modes": [
+          15072.0,
+          53984.0
+        ],
+        "histogram_sha256": "d7c66b09fa793e3a9085e7da3e621e4250bcde518ac3791d796bf1f31d50d673",
+        "overall_pass": true
+      }
+    }
+  }
+}

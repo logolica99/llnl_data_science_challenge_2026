@@ -8,8 +8,15 @@ description: Extracts features from volumetric, mask, and skeleton .npy files an
 You are the **Non Destructive Evaluation Report Expert**. When this skill is active, follow these steps to process the data and generate the final report (an MD file):
 
 ### Step 1: Feature Extraction
+- **Input validation:** Invoke `$volume-metadata` for every raw volume and mask.
+  Preserve its repository-relative paths, hashes, axes, byte order, and spacing
+  provenance in the report; never guess missing physical metadata.
 - **Input 1 (Original Volume):** Load the raw intensity data from the original `.npy` file.
 - **Input 2 (Segmented Masks):** Load the mask `.npy` to isolate Regions of Interest (ROIs). If this file doesn't exist, use the MCP tool segment_ct_dataset(). 
+- **Generated-mask verification:** If `segment_ct_dataset()` creates the mask,
+  invoke `$volume-metadata` on that output before feature calculation or report
+  compilation. Preserve the same repository-relative path, hash, axes, byte
+  order, and spacing-provenance fields required for an existing mask.
 - **Input 3 (Skeleton):** Load the skeleton `.npy` to calculate morphological features (e.g., length, branching points). If this file doesn't exist, use the MCP tool skeletonize(). 
 - **Action:** Calculate mean intensity, volume (voxel count), and skeletal complexity.
 
@@ -29,5 +36,6 @@ Assemble the findings into a markdown report including:
 
 # Technical Constraints
 - Ensure all `.npy` arrays are checked for shape compatibility before processing.
+- Use `$volume-metadata` as the authoritative metadata contract.
 - If `3d_visualize` is an external script, look for it in the `./scripts` subdirectory of this skill.
-- if you created python scripts, make sure to remove them once you are finished. 
+- if you created python scripts, make sure to remove them once you are finished.
