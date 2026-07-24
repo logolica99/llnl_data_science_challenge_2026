@@ -306,7 +306,6 @@ def replay_exact_otsu(
             "threshold_comparison": "value >= threshold",
             "histogram_encoding": encoding,
             "recipe": resolved_recipe,
-            "source_path": str(view.path),
         }
     )
     return result, histogram
