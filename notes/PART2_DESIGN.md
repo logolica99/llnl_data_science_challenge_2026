@@ -112,6 +112,20 @@ editable source is
 review-ready screenshot is available as
 [`assets/part2-agent-workflow.png`](assets/part2-agent-workflow.png).
 
+#### Agent capability map
+
+[![Part 2 map from agents to policy skills and deterministic MCP
+tools](assets/part2-agent-capability-map.svg)](assets/part2-agent-capability-map.svg)
+
+Solid outlines are implemented; dashed outlines are planned. The implemented
+MCP layer includes `volume_info`, `load_lattice_graph`, and
+`replay_exact_otsu`, merged for Issue #13 in commit `515d88c`. The remaining
+dashed MCP groups are the unimplemented Issue #13 and downstream Part 2
+contracts. The map was created on **2026-07-24**. Its editable source is
+[`part2-agent-capability-map.excalidraw`](part2-agent-capability-map.excalidraw),
+and its review screenshot is
+[`assets/part2-agent-capability-map.png`](assets/part2-agent-capability-map.png).
+
 **In graph terms:** intentional missing = G_full − G_0.5-design (Stage 1); candidate unintentional defects = G_0.5-design − G_observed-CT after removing the intentional set (Stage 5). The topology identity verified in §1.4 is what makes Stage 1's labels transfer to CT space by strut ID alone.
 
 ### 3.2 Subagents and contracts
