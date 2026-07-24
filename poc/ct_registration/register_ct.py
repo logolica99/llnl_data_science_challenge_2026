@@ -27,7 +27,7 @@ from scipy import ndimage
 from scipy.spatial import cKDTree
 
 
-THRESHOLD = 40_129
+DEFAULT_THRESHOLD = 40_049
 DOWNSAMPLE = 2
 DETECTION_Z_MIN = 50
 DETECTION_Z_MAX = 710
@@ -90,8 +90,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=script_dir / "results",
-        help="Artifact destination (default: results beside this script).",
+        default=script_dir / "results_otsu40049",
+        help=(
+            "Artifact destination (default: results_otsu40049 beside this script; "
+            "the older results directory remains the 40129 baseline)"
+        ),
+    )
+    parser.add_argument(
+        "--threshold",
+        type=int,
+        default=DEFAULT_THRESHOLD,
+        help=(
+            "CT foreground threshold (default: 40049, the Part 2 exact-histogram "
+            "Otsu replay value)"
+        ),
     )
     return parser.parse_args()
 
@@ -110,10 +122,14 @@ def load_design(path: Path) -> DesignData:
     return DesignData(document, node_ids, node_positions, unique_positions)
 
 
-def foreground_count(volume: np.ndarray, chunk_depth: int = 16) -> int:
+def foreground_count(
+    volume: np.ndarray,
+    threshold: int,
+    chunk_depth: int = 16,
+) -> int:
     count = 0
     for start in range(0, volume.shape[0], chunk_depth):
-        count += int(np.count_nonzero(volume[start : start + chunk_depth] >= THRESHOLD))
+        count += int(np.count_nonzero(volume[start : start + chunk_depth] >= threshold))
     return count
 
 
@@ -134,15 +150,20 @@ def mask_bounds_xyz(mask_zyx: np.ndarray, factor: int, z_offset: int = 0) -> tup
     return low, high
 
 
-def detect_ct_nodes(ct_path: Path) -> tuple[np.ndarray, dict[str, Any]]:
+def detect_ct_nodes(
+    ct_path: Path,
+    threshold: int,
+) -> tuple[np.ndarray, dict[str, Any]]:
     started = time.perf_counter()
     volume = tifffile.memmap(ct_path)
     if volume.ndim != 3 or volume.dtype.kind != "u":
         raise ValueError(f"Expected a 3D unsigned-integer TIFF, got {volume.shape} {volume.dtype}")
     source_shape = list(map(int, volume.shape))
 
-    count = foreground_count(volume)
-    sampled_mask = np.asarray(volume[::DOWNSAMPLE, ::DOWNSAMPLE, ::DOWNSAMPLE] >= THRESHOLD)
+    count = foreground_count(volume, threshold)
+    sampled_mask = np.asarray(
+        volume[::DOWNSAMPLE, ::DOWNSAMPLE, ::DOWNSAMPLE] >= threshold
+    )
     full_low, full_high = mask_bounds_xyz(sampled_mask, DOWNSAMPLE)
 
     z_start_index = math.ceil(DETECTION_Z_MIN / DOWNSAMPLE)
@@ -173,7 +194,7 @@ def detect_ct_nodes(ct_path: Path) -> tuple[np.ndarray, dict[str, Any]]:
     metadata = {
         "ct_shape_zyx": list(map(int, detection_mask.shape)),
         "source_ct_shape_zyx": source_shape,
-        "threshold": THRESHOLD,
+        "threshold": threshold,
         "foreground_voxel_count": count,
         "downsample_factor": DOWNSAMPLE,
         "detection_z_range_full_resolution": [DETECTION_Z_MIN, DETECTION_Z_MAX],
@@ -271,6 +292,7 @@ def trimmed_icp(
 def localize_full_resolution_nodes(
     volume: np.ndarray,
     predictions_xyz: np.ndarray,
+    threshold: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     volume_shape_xyz = np.asarray(volume.shape[::-1], dtype=int)
     localized: list[np.ndarray] = []
@@ -282,7 +304,8 @@ def localize_full_resolution_nodes(
         low = np.maximum(center - LOCAL_PATCH_RADIUS, 0)
         high = np.minimum(center + LOCAL_PATCH_RADIUS + 1, volume_shape_xyz)
         patch = np.asarray(
-            volume[low[2] : high[2], low[1] : high[1], low[0] : high[0]] >= THRESHOLD
+            volume[low[2] : high[2], low[1] : high[1], low[0] : high[0]]
+            >= threshold
         )
         edt = ndimage.distance_transform_edt(patch)
         z_index, y_index, x_index = np.indices(patch.shape)
@@ -330,13 +353,16 @@ def refine_transform_from_full_resolution_ct(
     ct_path: Path,
     source: np.ndarray,
     initial: SimilarityTransform,
+    threshold: int,
 ) -> tuple[SimilarityTransform, list[dict[str, Any]]]:
     volume = tifffile.memmap(ct_path)
     transform = initial
     history: list[dict[str, Any]] = []
     for pass_index in range(LOCAL_REFINEMENT_PASSES):
         predictions = transform.apply(source)
-        localized, radii, shifts = localize_full_resolution_nodes(volume, predictions)
+        localized, radii, shifts = localize_full_resolution_nodes(
+            volume, predictions, threshold
+        )
         valid = (
             np.isfinite(localized[:, 0])
             & (radii >= LOCAL_MIN_EDT)
@@ -428,7 +454,11 @@ def rotation_difference_deg(first: np.ndarray, second: np.ndarray) -> float:
     return float(np.degrees(np.arccos(cosine)))
 
 
-def ct_neighborhood_stats(ct_path: Path, positions_xyz: np.ndarray) -> dict[str, float]:
+def ct_neighborhood_stats(
+    ct_path: Path,
+    positions_xyz: np.ndarray,
+    threshold: int,
+) -> dict[str, float]:
     volume = tifffile.memmap(ct_path)
     fractions = []
     any_hits = []
@@ -438,11 +468,16 @@ def ct_neighborhood_stats(ct_path: Path, positions_xyz: np.ndarray) -> dict[str,
         z0, z1 = max(0, z - 2), min(volume.shape[0], z + 3)
         y0, y1 = max(0, y - 2), min(volume.shape[1], y + 3)
         x0, x1 = max(0, x - 2), min(volume.shape[2], x + 3)
-        patch = np.asarray(volume[z0:z1, y0:y1, x0:x1] >= THRESHOLD)
+        patch = np.asarray(volume[z0:z1, y0:y1, x0:x1] >= threshold)
         fractions.append(float(patch.mean()) if patch.size else 0.0)
         any_hits.append(bool(patch.any()))
         center_hits.append(
-            bool(0 <= z < volume.shape[0] and 0 <= y < volume.shape[1] and 0 <= x < volume.shape[2] and volume[z, y, x] >= THRESHOLD)
+            bool(
+                0 <= z < volume.shape[0]
+                and 0 <= y < volume.shape[1]
+                and 0 <= x < volume.shape[2]
+                and volume[z, y, x] >= threshold
+            )
         )
     del volume
     return {
@@ -473,6 +508,7 @@ def validate_after_fit(
     design: DesignData,
     fitted: SimilarityTransform,
     output_dir: Path,
+    threshold: int,
 ) -> dict[str, Any]:
     # HARD-RULE BOUNDARY: this is the first and only ground-truth read.
     with ground_truth_path.open(encoding="utf-8") as handle:
@@ -482,7 +518,7 @@ def validate_after_fit(
     )
     our_positions = fitted.apply(design.node_positions)
     errors = np.linalg.norm(our_positions - ground_truth_positions, axis=1)
-    neighborhoods = ct_neighborhood_stats(ct_path, our_positions)
+    neighborhoods = ct_neighborhood_stats(ct_path, our_positions, threshold)
     translation_delta = fitted.translation - ground_truth_transform.translation
     relative_scale_error = abs(fitted.scale / ground_truth_transform.scale - 1.0)
     rotation_magnitude_error = abs(fitted.rotation_deg - ground_truth_transform.rotation_deg)
@@ -503,6 +539,7 @@ def validate_after_fit(
         "validation_only_ground_truth": str(ground_truth_path),
         "ground_truth_read_phase": "after detected_nodes.npy, fitted_transform.json, and our_registered.json were written",
         "ground_truth_used_for_fit": False,
+        "ct_threshold": threshold,
         "node_count": int(len(errors)),
         "node_error_voxels": {
             "median": float(np.median(errors)),
@@ -540,6 +577,8 @@ def validate_after_fit(
 
 def main() -> int:
     args = parse_args()
+    if not 0 <= args.threshold <= np.iinfo(np.uint16).max:
+        raise ValueError("--threshold must be in the uint16 range 0..65535")
     repo_root = args.repo_root.resolve()
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -550,7 +589,7 @@ def main() -> int:
     started = time.perf_counter()
     design = load_design(design_path)
     print(f"Loaded {len(design.node_ids):,} node records ({len(design.unique_positions):,} unique positions)")
-    detected, detection_metadata = detect_ct_nodes(ct_path)
+    detected, detection_metadata = detect_ct_nodes(ct_path, args.threshold)
     np.save(output_dir / "detected_nodes.npy", detected)
     print(f"Detected {len(detected):,} CT node candidates")
 
@@ -559,7 +598,7 @@ def main() -> int:
         design.unique_positions, detected, coarse
     )
     fitted, refinement_history = refine_transform_from_full_resolution_ct(
-        ct_path, design.unique_positions, icp_transform
+        ct_path, design.unique_positions, icp_transform, args.threshold
     )
     fitted_payload = transform_payload(
         fitted,
@@ -579,7 +618,12 @@ def main() -> int:
     )
 
     validation = validate_after_fit(
-        ground_truth_path, ct_path, design, fitted, output_dir
+        ground_truth_path,
+        ct_path,
+        design,
+        fitted,
+        output_dir,
+        args.threshold,
     )
     validation["total_elapsed_seconds"] = time.perf_counter() - started
     (output_dir / "validation.json").write_text(

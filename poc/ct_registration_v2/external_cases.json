@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "missing_struts_0p5_scan",
+      "geometry_id": "octet_truss_9x9x9",
+      "fit_manifest": "results/current/fit_manifest.json",
+      "validation_result": "results/current/held_out_validation.json"
+    }
+  ]
+}

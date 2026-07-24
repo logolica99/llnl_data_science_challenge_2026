@@ -19,7 +19,9 @@ to a multi-gigabyte floating-point array.
 
 ## Method
 
-1. Threshold the CT at the frozen value 40129 and verify the foreground count.
+1. Threshold the CT at the Part 2 exact-histogram Otsu value 40049 and verify the
+   bit-exact foreground count of 58,675,274 voxels. The CLI exposes `--threshold`
+   so older operating points can be reproduced explicitly.
 2. On the central CT depth range, compute a factor-two Euclidean distance transform. Label
    radius-thresholded components and retain lattice-scale components as candidate nodes.
    Thick scan end caps and tiny components are excluded.
@@ -34,27 +36,30 @@ to a multi-gigabyte floating-point array.
 
 ## Results
 
-The CT-only fit detected 3,501 candidate peaks and converged to:
+The CT-only fit at threshold 40049 detected 3,528 candidate peaks and converged to:
 
 ```text
-scale       = 39.182525 voxels/design-unit
-rotation    = 0.392466 degrees
-translation = (60.907649, 55.671848, 29.628577) voxels
+scale       = 39.183139 voxels/design-unit
+rotation    = 0.391825 degrees
+translation = (60.920177, 55.662928, 29.613491) voxels
 ```
 
 Held-out validation (performed only after the fit was frozen):
 
 | Metric | Result | Gate |
 |---|---:|---:|
-| Median node error | 3.681 voxels | < 5 |
-| Mean node error | 3.598 voxels | — |
-| P95 node error | 5.655 voxels | — |
-| Relative scale error | 0.776% | < 1% |
+| Median node error | 3.674 voxels | < 5 |
+| Mean node error | 3.593 voxels | — |
+| P95 node error | 5.647 voxels | — |
+| Relative scale error | 0.774% | < 1% |
 | Rotation-magnitude error | 0.057° | < 0.2° |
-| Translation error norm | 4.966 voxels | < 6 |
+| Translation error norm | 4.954 voxels | < 6 |
 | Mean 5×5×5 foreground fraction | 92.23% | ≥ 85% |
 
-All validation gates pass. Machine-readable details are in `results/validation.json`, and
-the registered design graph is `results/our_registered.json`.
+All validation gates pass. Relative to the older 40129 baseline, median error improved by
+0.006 voxels and P95 improved by 0.007 voxels; the conclusion is unchanged, but 40049 now
+matches the frozen Part 2 segmentation recipe. Machine-readable details are in
+`results_otsu40049/validation.json`, and the registered design graph is
+`results_otsu40049/our_registered.json`.
 
-![Held-out per-node registration errors](results/registration_error_hist.png)
+![Held-out per-node registration errors](results_otsu40049/registration_error_hist.png)

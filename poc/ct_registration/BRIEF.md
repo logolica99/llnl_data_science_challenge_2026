@@ -29,8 +29,9 @@ entire purpose (proving we can produce it ourselves).
 - **CT volume:** `data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif`
   - Binary TIFF, ~990 MiB, **761 pages × 815 rows × 837 cols**, dtype **uint16 big-endian**,
     ImageJ-written, series axes **ZYX**. No voxel-size metadata.
-  - Segmentation threshold is frozen at **40129** (>= 40129 is metal; expected foreground
-    58,324,474 voxels). Axis mapping: design `[x,y,z]` samples the array as `vol[z, y, x]`.
+  - Segmentation threshold is frozen at the Part 2 exact-histogram Otsu value **40049**
+    (>= 40049 is metal; expected foreground **58,675,274 voxels**). Axis mapping:
+    design `[x,y,z]` samples the array as `vol[z, y, x]`.
 - **Ideal design graph:** `data/missing_struts/octet_truss_9x9x9.json`
   - `junctions`: `{id, position:[x,y,z], indices}` — **10,206 nodes**, coords span 0–18 per axis.
   - `struts`: `{id, junction0, junction1, thickness}` — 18,468 edges.
@@ -42,19 +43,19 @@ entire purpose (proving we can produce it ourselves).
 ## Deliverables — all in `poc/ct_registration/`
 
 - `register_ct.py` — single script.
-- `results/detected_nodes.npy` — detected CT node positions (N×3, x,y,z voxel coords).
-- `results/fitted_transform.json` — `{scale, rotation_matrix (3×3), translation (3,), rotation_deg}`.
-- `results/our_registered.json` — all 10,206 design nodes mapped into CT space by OUR transform
+- `results_otsu40049/detected_nodes.npy` — detected CT node positions (N×3, x,y,z voxel coords).
+- `results_otsu40049/fitted_transform.json` — `{scale, rotation_matrix (3×3), translation (3,), rotation_deg}`.
+- `results_otsu40049/our_registered.json` — all 10,206 design nodes mapped into CT space by OUR transform
   (same schema as the provided registered JSON).
-- `results/validation.json` — error stats vs ground truth + transform comparison (see gates).
-- `results/registration_error_hist.png` — per-node error histogram.
+- `results_otsu40049/validation.json` — error stats vs ground truth + transform comparison (see gates).
+- `results_otsu40049/registration_error_hist.png` — per-node error histogram.
 - `README.md` — method, fitted transform, validation results.
 
 ## Method
 
 ### 1. Load + segment the CT
 - Read with `tifffile` (memmap if possible). **Do not cast the whole volume to float** (would
-  be 2–4 GB). Threshold at 40129 → boolean mask (Z,Y,X).
+  be 2–4 GB). Threshold at 40049 → boolean mask (Z,Y,X).
 
 ### 2. Detect node candidates in the CT
 Octet junctions are where up to 12 struts converge → locally **thicker** material than the
@@ -121,4 +122,5 @@ registration we were never allowed to look at during fitting.
 - Do not modify any files outside `poc/ct_registration/`.
 - Memory: memmap the TIFF, keep the mask boolean, downsample for detection; target machine is 16 GB.
 - Quote the space-containing TIFF path.
-- Report the final transform, node counts, and all error stats in `results/validation.json`.
+- Report the final transform, node counts, and all error stats in
+  `results_otsu40049/validation.json`.
