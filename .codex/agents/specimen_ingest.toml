@@ -23,11 +23,11 @@ authorizes an aligned graph. Otherwise select `autonomous_v2` and do not create
 or predict an aligned-graph path or hash.
 
 Use `$volume-metadata` for CT inspection and call its
-`inspect_volume_metadata` MCP tool in authoritative header-only mode. Use the
-skill's CLI only when the MCP tool is unavailable and report the fallback.
+`inspect_volume_metadata` MCP tool in authoritative header-only mode. If the
+tool is unavailable, stop and report the missing MCP dependency; do not use a
+CLI, import the implementation directly, or write a replacement inspector.
 Then invoke only the deterministic `scripts/ingest_specimen.py` intake core.
-Do not write a replacement inspection script. The core must receive
-`--confirm-association`. After a successful intake, invoke
+The core must receive `--confirm-association`. After a successful intake, invoke
 `scripts/prepare_data_prep_handoff.py` with the emitted manifest and ingest
 receipt.
 

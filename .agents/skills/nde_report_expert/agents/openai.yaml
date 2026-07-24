@@ -1,0 +1,11 @@
+interface:
+  display_name: "NDE Report Generator"
+  short_description: "Report on NumPy and TIFF CT segmentation results"
+  default_prompt: "Use $nde-report-generator to generate a traceable NDE report for a NumPy or TIFF CT segmentation."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools"
+      description: "Required CT segmentation, report metrics, and 3D rendering tools"
+      transport: "stdio"

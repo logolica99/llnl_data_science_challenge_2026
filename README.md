@@ -128,6 +128,19 @@ repository, performs header-only inspection plus streaming SHA-256 by default,
 and returns compact manifest-ready JSON. The skill owns the scientific policy
 and call sequence; the MCP tool owns deterministic file inspection.
 
+The server also owns threshold-mask comparison, report metric extraction, and
+3D artifact rendering through `compare_segmentation_masks`,
+`summarize_nde_artifacts`, and `render_volume_3d`. These tools keep voxel arrays
+out of agent context and return compact statistics or written artifact paths.
+
+Repository skills require their declared MCP dependencies. If a required
+server or tool is unavailable, the skill must stop and ask the user to
+configure the server or restart the client. Skills must not silently replace an
+MCP tool with a CLI, direct Python import, or improvised local implementation.
+Deterministic volume, mask, skeleton, comparison, and rendering operations live
+behind MCP tools rather than executable scripts bundled inside project skills.
+See `AGENTS.md` for the repository-wide rule.
+
 #### Basic Image Processing Terms
 Before starting Tasks 1-3, here are a few image-processing terms you will use with respect to a volume/image:
 
@@ -213,7 +226,7 @@ To trigger this skill, tell Codex:
 
 ### Task 5: Custom Skills
 
-Now that you've seen how to trigger a project-specific skill, it's time to build your own! Create a new subdirectory under `.agents/skills/` (e.g., `.agents/skills/my_custom_skill`) and add a `SKILL.md` file to define its behavior. Check the `nde_report_expert` skill to see how scripts and MCP tools are invoked. 
+Now that you've seen how to trigger a project-specific skill, it's time to build your own! Create a new subdirectory under `.agents/skills/` (e.g., `.agents/skills/my_custom_skill`) and add a `SKILL.md` file to define its behavior. Check the `nde_report_expert` skill to see how deterministic work is delegated to required MCP tools.
 
 After creating or changing a skill, close and restart Codex CLI before trying to use it.
 

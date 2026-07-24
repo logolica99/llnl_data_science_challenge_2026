@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -69,30 +67,12 @@ class VolumeMetadataMCPTests(unittest.IsolatedAsyncioTestCase):
             ):
                 inspect_volume_metadata(outside.name)
 
-    def test_single_file_cli_fallback_matches_authority_contract(self) -> None:
+    def test_skill_does_not_bundle_a_cli_fallback(self) -> None:
         script = (
             REPOSITORY_ROOT
             / ".agents/skills/volume-metadata/scripts/extract_metadata.py"
         )
-        completed = subprocess.run(
-            [
-                sys.executable,
-                str(script),
-                "--header-only",
-                str(self.volume),
-            ],
-            cwd=REPOSITORY_ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        result = json.loads(completed.stdout)
-
-        self.assertEqual("ok", result["status"])
-        self.assertTrue(result["authoritative"])
-        self.assertEqual("header_only", result["inspection_mode"])
-        self.assertEqual([2, 3, 4], result["shape"])
-        self.assertEqual(64, len(result["sha256"]))
+        self.assertFalse(script.exists())
 
     async def test_tool_is_registered_with_typed_schema(self) -> None:
         tools = await mcp.list_tools()

@@ -24,15 +24,14 @@ Generate a small, reproducible threshold sweep through the MCP server, then comp
    - `output_filepath`: unique absolute mask path
    - `threshold`: the absolute density threshold
 5. Treat any tool response beginning with `Error` or any missing output as a failed candidate. If the MCP tool is unavailable, stop and explain that the project MCP server must be registered and the Codex session restarted. Do not silently replace the MCP call with a local implementation.
-6. Compare successful masks with:
-
-   ```bash
-   python .agents/skills/ct-threshold-optimizer/scripts/compare_masks.py \
-     --raw <input.npy> \
-     --mask '<threshold>=<mask.npy>' [--mask '<threshold>=<mask.npy>' ...]
-   ```
-
-7. Present a table containing threshold, output path, foreground voxels, total voxels, and foreground percentage. Recommend visual inspection of representative slices in Napari or with `visualize_slice` before choosing a final threshold.
+6. Invoke the MCP tool `compare_segmentation_masks` once with:
+   - `raw_filepath`: absolute input path
+   - `mask_filepaths`: successful absolute mask paths in threshold order
+   - `thresholds`: the corresponding numeric thresholds in the same order
+7. Present the returned candidate table containing threshold, output path,
+   foreground voxels, total voxels, and foreground percentage. Recommend visual
+   inspection of representative slices in Napari or with `visualize_slice`
+   before choosing a final threshold.
 
 ## Selection Guidance
 
@@ -47,3 +46,5 @@ Generate a small, reproducible threshold sweep through the MCP server, then comp
 - Do not use normalized fractions as literal thresholds unless the volume itself is normalized.
 - Do not run an unbounded optimization loop.
 - Do not claim that foreground percentage alone measures segmentation quality.
+- Do not load or compare the arrays locally; all deterministic volume and mask
+  processing must use the required MCP tools.

@@ -21,13 +21,12 @@ Every specimen has a committed
 
 New CT inputs are inspected through `.agents/skills/volume-metadata`. The skill
 delegates deterministic inspection to the `inspect_volume_metadata` MCP tool
-and retains its CLI only as a reported compatibility fallback. Their shared
+and fails closed when the required MCP server is unavailable. The
 `volume-metadata/1.0.0` envelope supplies repository-relative paths, streaming
 SHA-256, normalized dtype and byte order, axes, and per-axis spacing provenance
 to specimen ingestion. Missing axes or spacing remain `unknown`; they are never
 reconstructed from notes or array shape. Intake requires an authoritative,
-hashing-enabled envelope and rejects `sha256: unknown`; `--skip-hash` is only
-for a non-authoritative preview and cannot supply a specimen manifest.
+hashing-enabled envelope and rejects `sha256: unknown`.
 
 Derived records use a common envelope containing `method`, `method_version`,
 and provenance with input and canonical analysis-parameter hashes. Changing an

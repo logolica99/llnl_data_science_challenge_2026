@@ -29,17 +29,11 @@ deterministic `inspect_volume_metadata` MCP tool.
 Header-only mode avoids voxel decoding but still streams the file once for its
 authoritative hash.
 
-## CLI fallback
-
-Only when the MCP tool is unavailable, run:
-
-```bash
-python .agents/skills/volume-metadata/scripts/extract_metadata.py \
-  --header-only <volume.npy-or-tif>
-```
-
-For one file, the CLI emits the same authoritative envelope and
-`volume-metadata/1.0.0` contract as the MCP tool. Report that fallback was used.
+If `inspect_volume_metadata` is unavailable, fails to initialize, or exposes an
+incompatible schema, stop before inspecting the file. Explain that the required
+`segmentation-tools` MCP server must be configured and the client restarted.
+Never run a CLI, import `src/volume_metadata.py`, or write a substitute
+inspector.
 
 ## Constraints
 
