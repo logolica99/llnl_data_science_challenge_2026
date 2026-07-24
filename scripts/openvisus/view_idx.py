@@ -264,73 +264,101 @@ def _load_strut_segments(
     return segments, missing_ids
 
 
-def _draw_strut_overlays(axes, artists, segments, missing_ids, x, y, z, tol: float):
-    """Update line overlays on XY / XZ / YZ axes for the current slice."""
-    import numpy as np
+def _clear_artist_list(art_list):
+    for a in art_list:
+        a.remove()
+    art_list.clear()
 
-    for art_list in artists:
-        for a in art_list:
-            a.remove()
-        art_list.clear()
+
+def _draw_strut_overlays(
+    axes,
+    artists,
+    segments,
+    missing_ids,
+    x,
+    y,
+    z,
+    tol: float,
+    *,
+    active_views,
+    show_design: bool,
+    show_missing: bool,
+):
+    """Redraw strut overlays only on active views. Uses LineCollection for speed."""
+    import numpy as np
+    from matplotlib.collections import LineCollection
+
+    for i, art_list in enumerate(artists):
+        _clear_artist_list(art_list)
 
     ax_xy, ax_xz, ax_yz = axes
+    xy_segs, xz_segs, yz_segs = [], [], []
+    xy_miss, xz_miss, yz_miss = [], [], []
+    miss_labels = []  # (ax_idx, x, y, sid)
+
     for sid, p0, p1 in segments:
         is_missing = sid in missing_ids
-        # Only draw if the strut is near the current slice in at least one view.
-        near_z = min(p0[2], p1[2]) - tol <= z <= max(p0[2], p1[2]) + tol
-        near_y = min(p0[1], p1[1]) - tol <= y <= max(p0[1], p1[1]) + tol
-        near_x = min(p0[0], p1[0]) - tol <= x <= max(p0[0], p1[0]) + tol
+        if is_missing and not show_missing:
+            continue
+        if (not is_missing) and not show_design:
+            continue
+
+        near_z = active_views[0] and (
+            min(p0[2], p1[2]) - tol <= z <= max(p0[2], p1[2]) + tol
+        )
+        near_y = active_views[1] and (
+            min(p0[1], p1[1]) - tol <= y <= max(p0[1], p1[1]) + tol
+        )
+        near_x = active_views[2] and (
+            min(p0[0], p1[0]) - tol <= x <= max(p0[0], p1[0]) + tol
+        )
         if not (near_z or near_y or near_x):
             continue
 
-        color = "#ff3333" if is_missing else "#00e5ff"
-        lw = 2.0 if is_missing else 0.6
-        alpha = 0.95 if is_missing else 0.25
-        zorder = 5 if is_missing else 3
-
         if near_z:
-            (ln,) = ax_xy.plot(
-                [p0[0], p1[0]],
-                [p0[1], p1[1]],
-                color=color,
-                lw=lw,
-                alpha=alpha,
-                zorder=zorder,
-            )
-            artists[0].append(ln)
+            seg = [(p0[0], p0[1]), (p1[0], p1[1])]
+            (xy_miss if is_missing else xy_segs).append(seg)
             if is_missing:
                 mid = 0.5 * (p0 + p1)
-                artists[0].append(
-                    ax_xy.annotate(
-                        str(sid),
-                        (mid[0], mid[1]),
-                        color="yellow",
-                        fontsize=7,
-                        ha="center",
-                        va="bottom",
-                        zorder=6,
-                    )
-                )
+                miss_labels.append((0, float(mid[0]), float(mid[1]), sid))
         if near_y:
-            (ln,) = ax_xz.plot(
-                [p0[0], p1[0]],
-                [p0[2], p1[2]],
-                color=color,
-                lw=lw,
-                alpha=alpha,
-                zorder=zorder,
-            )
-            artists[1].append(ln)
+            seg = [(p0[0], p0[2]), (p1[0], p1[2])]
+            (xz_miss if is_missing else xz_segs).append(seg)
         if near_x:
-            (ln,) = ax_yz.plot(
-                [p0[1], p1[1]],
-                [p0[2], p1[2]],
-                color=color,
-                lw=lw,
-                alpha=alpha,
-                zorder=zorder,
+            seg = [(p0[1], p0[2]), (p1[1], p1[2])]
+            (yz_miss if is_missing else yz_segs).append(seg)
+
+    def _add_lc(ax, art_list, segs, color, lw, alpha, zorder):
+        if not segs:
+            return
+        lc = LineCollection(segs, colors=color, linewidths=lw, alpha=alpha, zorder=zorder)
+        ax.add_collection(lc)
+        art_list.append(lc)
+
+    if active_views[0]:
+        _add_lc(ax_xy, artists[0], xy_segs, "#00e5ff", 0.5, 0.2, 3)
+        _add_lc(ax_xy, artists[0], xy_miss, "#ff3333", 2.0, 0.95, 5)
+    if active_views[1]:
+        _add_lc(ax_xz, artists[1], xz_segs, "#00e5ff", 0.5, 0.2, 3)
+        _add_lc(ax_xz, artists[1], xz_miss, "#ff3333", 2.0, 0.95, 5)
+    if active_views[2]:
+        _add_lc(ax_yz, artists[2], yz_segs, "#00e5ff", 0.5, 0.2, 3)
+        _add_lc(ax_yz, artists[2], yz_miss, "#ff3333", 2.0, 0.95, 5)
+
+    for ax_i, mx, my, sid in miss_labels:
+        if not active_views[ax_i]:
+            continue
+        artists[ax_i].append(
+            axes[ax_i].annotate(
+                str(sid),
+                (mx, my),
+                color="yellow",
+                fontsize=7,
+                ha="center",
+                va="bottom",
+                zorder=6,
             )
-            artists[2].append(ln)
+        )
 
 
 def view_orthoslices(
@@ -344,7 +372,7 @@ def view_orthoslices(
 ) -> None:
     import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib.widgets import Slider
+    from matplotlib.widgets import Slider, CheckButtons
     from matplotlib.lines import Line2D
 
     data, _db = _read_volume(idx_path, downsample)
@@ -364,10 +392,13 @@ def view_orthoslices(
     elif overlay_struts:
         print("Strut overlay skipped: registered JSON not found.")
 
-    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+    # If a missing CSV is provided, default to missing-only (much faster).
+    default_show_design = not bool(missing_ids)
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 5.5))
     fig.suptitle(
-        f"OpenVisus IDX: {idx_path.name}  shape={data.shape}  ds={downsample}"
-        + ("  | cyan=design struts  red=missing CSV" if segments else "")
+        f"{idx_path.name}  shape={data.shape}  ds={downsample}"
+        + ("  | red=missing  cyan=design" if segments else "")
     )
 
     im_xy = axes[0].imshow(data[z0], cmap="gray", vmin=lo, vmax=hi, origin="lower")
@@ -382,71 +413,130 @@ def view_orthoslices(
     axes[2].set_title(f"YZ  x={x0}")
     axes[2].set_xlabel("Y →")
     axes[2].set_ylabel("Z →")
+    images = [im_xy, im_xz, im_yz]
     for ax in axes:
         ax.tick_params(labelsize=8)
 
     overlay_artists: list[list] = [[], [], []]
+    view_on = [True, True, True]
+    show_struts = True
+    show_design = default_show_design
+    show_missing = True
+
+    plt.tight_layout()
+    fig.subplots_adjust(bottom=0.30, right=0.78)
+    ax_z = fig.add_axes([0.12, 0.16, 0.50, 0.03])
+    ax_y = fig.add_axes([0.12, 0.11, 0.50, 0.03])
+    ax_x = fig.add_axes([0.12, 0.06, 0.50, 0.03])
+    s_z = Slider(ax_z, "Z", 0, zmax, valinit=z0, valstep=1)
+    s_y = Slider(ax_y, "Y", 0, ymax, valinit=y0, valstep=1)
+    s_x = Slider(ax_x, "X", 0, xmax, valinit=x0, valstep=1)
+
+    labels = ["XY view", "XZ view", "YZ view", "Struts", "All design"]
+    actives = [True, True, True, bool(segments), default_show_design]
+    check_ax = fig.add_axes([0.78, 0.04, 0.20, 0.22])
+    check = CheckButtons(check_ax, labels, actives)
+
     if segments:
-        _draw_strut_overlays(axes, overlay_artists, segments, missing_ids, x0, y0, z0, slice_tol)
         fig.legend(
             handles=[
-                Line2D([0], [0], color="#00e5ff", lw=2, label="design strut (near slice)"),
-                Line2D([0], [0], color="#ff3333", lw=2, label="missing strut (CSV)"),
+                Line2D([0], [0], color="#00e5ff", lw=2, label="design (if enabled)"),
+                Line2D([0], [0], color="#ff3333", lw=2, label="missing CSV"),
             ],
             loc="upper right",
             fontsize=8,
         )
 
-    plt.tight_layout()
-    fig.subplots_adjust(bottom=0.26)
-    ax_z = fig.add_axes([0.15, 0.14, 0.55, 0.03])
-    ax_y = fig.add_axes([0.15, 0.09, 0.55, 0.03])
-    ax_x = fig.add_axes([0.15, 0.04, 0.55, 0.03])
-    s_z = Slider(ax_z, "Z", 0, zmax, valinit=z0, valstep=1)
-    s_y = Slider(ax_y, "Y", 0, ymax, valinit=y0, valstep=1)
-    s_x = Slider(ax_x, "X", 0, xmax, valinit=x0, valstep=1)
+    def _apply_view_visibility():
+        for i, ax in enumerate(axes):
+            ax.set_visible(view_on[i])
 
-    show_struts = {"on": bool(segments)}
-    check_ax = None
-    check = None
-    if segments:
-        from matplotlib.widgets import CheckButtons
-
-        check_ax = fig.add_axes([0.78, 0.04, 0.18, 0.12])
-        check = CheckButtons(check_ax, ["Show struts"], [True])
-
-    def _clear_overlays():
-        for art_list in overlay_artists:
-            for a in art_list:
-                a.remove()
-            art_list.clear()
+    def _redraw_struts(x, y, z):
+        if not (segments and show_struts):
+            for art_list in overlay_artists:
+                _clear_artist_list(art_list)
+            return
+        _draw_strut_overlays(
+            axes,
+            overlay_artists,
+            segments,
+            missing_ids,
+            x,
+            y,
+            z,
+            slice_tol,
+            active_views=view_on,
+            show_design=show_design,
+            show_missing=show_missing,
+        )
 
     def update(_=None):
         z, y, x = int(s_z.val), int(s_y.val), int(s_x.val)
-        im_xy.set_data(data[z])
-        im_xz.set_data(data[:, y, :])
-        im_yz.set_data(data[:, :, x])
-        axes[0].set_title(f"XY  z={z}  (X→ horiz, Y→ vert)")
-        axes[1].set_title(f"XZ  y={y}  (X→ horiz, Z→ vert)")
-        axes[2].set_title(f"YZ  x={x}  (Y→ horiz, Z→ vert)")
-        if segments and show_struts["on"]:
-            _draw_strut_overlays(
-                axes, overlay_artists, segments, missing_ids, x, y, z, slice_tol
-            )
-        else:
-            _clear_overlays()
+        if view_on[0]:
+            images[0].set_data(data[z])
+            axes[0].set_title(f"XY  z={z}  (X→ horiz, Y→ vert)")
+        if view_on[1]:
+            images[1].set_data(data[:, y, :])
+            axes[1].set_title(f"XZ  y={y}  (X→ horiz, Z→ vert)")
+        if view_on[2]:
+            images[2].set_data(data[:, :, x])
+            axes[2].set_title(f"YZ  x={x}  (Y→ horiz, Z→ vert)")
+        _redraw_struts(x, y, z)
         fig.canvas.draw_idle()
 
-    def on_toggle(_label):
-        # CheckButtons status is a list of booleans after click.
-        show_struts["on"] = bool(check.get_status()[0])
+    def on_check(label):
+        nonlocal show_struts, show_design
+        status = check.get_status()
+        # labels: XY, XZ, YZ, Struts, All design
+        view_on[0], view_on[1], view_on[2] = status[0], status[1], status[2]
+        show_struts = status[3]
+        show_design = status[4]
+        _apply_view_visibility()
         update()
+
+    def on_key(event):
+        key = event.key
+        if key is None:
+            return
+
+        def _bump(slider, delta):
+            new_val = float(np.clip(slider.val + delta, slider.valmin, slider.valmax))
+            if new_val != slider.val:
+                slider.set_val(new_val)
+
+        if key in ("left", "a"):
+            _bump(s_x, -1)
+        elif key in ("right", "d"):
+            _bump(s_x, 1)
+        elif key in ("up", "w"):
+            _bump(s_z, 1)
+        elif key in ("down", "s"):
+            _bump(s_z, -1)
+        elif key in ("shift+up", "e"):
+            _bump(s_y, 1)
+        elif key in ("shift+down", "q"):
+            _bump(s_y, -1)
+        elif key == "1":
+            check.set_active(0)
+        elif key == "2":
+            check.set_active(1)
+        elif key == "3":
+            check.set_active(2)
+        elif key in ("t", "T") and segments:
+            check.set_active(3)
+        elif key in ("g", "G") and segments:
+            check.set_active(4)
+        else:
+            return
+
+    # initial strut draw (missing-only if CSV present)
+    _redraw_struts(x0, y0, z0)
 
     s_z.on_changed(update)
     s_y.on_changed(update)
     s_x.on_changed(update)
-    if check is not None:
-        check.on_clicked(on_toggle)
+    check.on_clicked(on_check)
+    fig.canvas.mpl_connect("key_press_event", on_key)
 
     if save_preview is not None:
         save_preview.parent.mkdir(parents=True, exist_ok=True)
@@ -454,8 +544,9 @@ def view_orthoslices(
         print(f"Saved preview: {save_preview}")
 
     print("Close the window to exit.")
-    if segments:
-        print("Cyan = design struts; red = CSV missing IDs. Use the 'Show struts' checkbox to toggle.")
+    print("Keys: ←/→ X | ↑/↓ Z | Shift+↑/↓ Y | 1/2/3 toggle views | T struts | G all design")
+    if missing_ids:
+        print("Tip: with a missing CSV, 'All design' is OFF by default (faster). Turn it on only if needed.")
     plt.show()
 
 
