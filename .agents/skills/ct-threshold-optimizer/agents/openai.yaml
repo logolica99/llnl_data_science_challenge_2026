@@ -2,3 +2,10 @@ interface:
   display_name: "CT Threshold Optimizer"
   short_description: "Compare CT masks across candidate thresholds"
   default_prompt: "Use $ct-threshold-optimizer to segment a CT volume at several thresholds and compare the masks."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools"
+      description: "Required CT metadata, segmentation, comparison, and visualization tools"
+      transport: "stdio"

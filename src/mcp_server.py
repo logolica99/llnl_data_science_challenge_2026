@@ -1,6 +1,7 @@
 from contextlib import redirect_stdout
 from pathlib import Path
 import sys
+from typing import Any, Literal
 
 import matplotlib
 import numpy as np
@@ -8,8 +9,20 @@ from fastmcp import FastMCP
 
 try:
     from .skeletonization import skeletonize_mask
+    from .volume_artifacts import (
+        compare_segmentation_masks as _compare_segmentation_masks,
+        render_volume_3d as _render_volume_3d,
+        summarize_nde_artifacts as _summarize_nde_artifacts,
+    )
+    from .volume_metadata import inspect_volume_envelope
 except ImportError:
     from skeletonization import skeletonize_mask
+    from volume_artifacts import (
+        compare_segmentation_masks as _compare_segmentation_masks,
+        render_volume_3d as _render_volume_3d,
+        summarize_nde_artifacts as _summarize_nde_artifacts,
+    )
+    from volume_metadata import inspect_volume_envelope
 
 
 # MCP servers may run without a display, so use Matplotlib's non-interactive
@@ -19,6 +32,30 @@ import matplotlib.pyplot as plt
 
 # Initialize the MCP server
 mcp = FastMCP("CT Segmentation")
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+
+@mcp.tool()
+def inspect_volume_metadata(
+    input_filepath: str,
+    header_only: bool = True,
+    include_sha256: bool = True,
+    retention: Literal["committed", "external", "regenerable"] = "external",
+) -> dict[str, Any]:
+    """Inspect one repository CT volume and return manifest-ready metadata.
+
+    Use header-only mode for specimen intake. It reads the NPY/TIFF header and
+    streams the file for SHA-256 without decoding voxel intensities. Set
+    include_sha256 to false only for a non-authoritative preview. Inputs are
+    constrained to this repository and are never modified.
+    """
+    return inspect_volume_envelope(
+        Path(input_filepath),
+        repository_root=REPOSITORY_ROOT,
+        header_only=header_only,
+        include_sha256=include_sha256,
+        retention=retention,
+    )
 
 
 def _input_npy_path(filepath: str) -> Path:
@@ -131,6 +168,72 @@ def visualize_slice(input_filepath: str, output_filepath: str, slice_index: int,
     finally:
         if figure is not None:
             plt.close(figure)
+
+
+@mcp.tool()
+def compare_segmentation_masks(
+    raw_filepath: str,
+    mask_filepaths: list[str],
+    thresholds: list[float],
+) -> dict[str, Any]:
+    """Compare threshold masks without returning voxel arrays.
+
+    The mask and threshold lists are positional pairs. Every mask must be a
+    three-dimensional boolean or integer NPY array with the same shape as the
+    raw volume.
+    """
+    return _compare_segmentation_masks(
+        raw_filepath,
+        mask_filepaths,
+        thresholds,
+    )
+
+
+@mcp.tool()
+def summarize_nde_artifacts(
+    raw_filepath: str,
+    mask_filepath: str,
+    skeleton_filepath: str | None = None,
+) -> dict[str, Any]:
+    """Summarize aligned raw, mask, and optional skeleton NPY artifacts.
+
+    The tool returns report-ready scalar metrics and never returns voxel arrays.
+    Skeleton endpoints and branch points use a 26-connected neighborhood.
+    """
+    return _summarize_nde_artifacts(
+        raw_filepath,
+        mask_filepath,
+        skeleton_filepath,
+    )
+
+
+@mcp.tool()
+def render_volume_3d(
+    input_filepath: str,
+    output_filepath: str,
+    surface_level: float = 0.5,
+    downsample_factor: int = 2,
+    elevation: float = 30.0,
+    azimuth: float = 45.0,
+    skeleton_filepath: str | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Render a volume isosurface and optional skeleton overlay to PNG.
+
+    surface_level is normalized to the downsampled volume range and must be
+    strictly between zero and one. The tool writes the image and returns only
+    compact render metadata.
+    """
+    return _render_volume_3d(
+        input_filepath=input_filepath,
+        output_filepath=output_filepath,
+        surface_level=surface_level,
+        downsample_factor=downsample_factor,
+        elevation=elevation,
+        azimuth=azimuth,
+        skeleton_filepath=skeleton_filepath,
+        overwrite=overwrite,
+    )
 
 
 @mcp.tool()

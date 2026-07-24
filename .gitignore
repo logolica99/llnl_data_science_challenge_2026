@@ -172,3 +172,16 @@ ehthumbs.db
 Thumbs.db
 
 result
+
+# Part 2 retention policy. Manifests and schemas under analysis/ stay tracked;
+# large deterministic artifacts are regenerated from their config/input hashes.
+analysis/**/segmentation/
+analysis/**/registration/
+analysis/**/profiles/
+analysis/**/evidence/
+analysis/**/poc/
+poc/**/results/
+**/mask.tif
+**/mask.tiff
+**/mask.npy
+**/exact_histogram_uint16.npy

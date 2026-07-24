@@ -1,0 +1,45 @@
+{
+  "schema_version": "agent-stage-contract/1.0.0",
+  "stage": "specimen_ingest",
+  "owner": "specimen_ingest",
+  "invoked_by": "orchestrator",
+  "maximum_attempts": 2,
+  "required_inputs": [
+    "specimen_id",
+    "cad_stl",
+    "nominal_graph_json",
+    "ct_volume",
+    "scientist_association_confirmation"
+  ],
+  "optional_inputs": [
+    "challenge_aligned_json"
+  ],
+  "required_outputs": [
+    "analysis/<specimen_id>/config/ingest_request.json",
+    "analysis/<specimen_id>/config/specimen_manifest.json",
+    "analysis/<specimen_id>/config/ingest_receipt.json",
+    "analysis/<specimen_id>/config/data_prep_handoff.json"
+  ],
+  "forbidden_operations": [
+    "threshold_selection",
+    "segmentation",
+    "registration",
+    "local_node_refinement",
+    "defect_label_derivation",
+    "scientific_qa"
+  ],
+  "next_stage": "data_prep",
+  "unlock_condition": {
+    "handoff_status": "ready",
+    "manifest_lifecycle_state": "ready_for_data_prep",
+    "matching_hashes_required": true
+  },
+  "halt_conditions": [
+    "unconfirmed_file_association",
+    "unresolved_required_identity_or_coordinate_fields",
+    "path_outside_configured_roots",
+    "invalid_graph_cad_or_ct",
+    "challenge_mode_without_aligned_json",
+    "attempt_limit_reached"
+  ]
+}

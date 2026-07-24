@@ -1,12 +1,12 @@
-# Floors chosen for numpy 2.x compatibility (the active env uses numpy 2.x);
-# numpy upper-bounded to avoid a future 3.0 ABI break across the stack.
-numpy>=2.0,<3
-scipy>=1.13          # first release with numpy 2 support; imported by segment_ct.py + strut metrics
-pandas>=2.2.2        # numpy 2 support; per_strut_metrics.csv handling
-scikit-image>=0.24   # numpy 2 support
-tifffile>=2024.7.2
-trimesh>=4.4
-pyvista>=0.44        # numpy 2 support; render_lattice_3d offscreen
-matplotlib>=3.9      # numpy 2 support
-fastmcp>=2.0
-napari[pyqt6]>=0.5
+# Direct runtime pins. `uv.lock` freezes the complete transitive environment.
+fastmcp==3.4.4
+jsonschema==4.26.0
+matplotlib==3.11.1
+napari[pyqt6]==0.8.0
+numpy==2.5.1
+pandas==3.0.5
+pyvista==0.48.4
+scikit-image==0.26.0
+scipy==1.18.0
+tifffile==2026.7.14
+trimesh==4.12.2
