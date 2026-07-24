@@ -16,6 +16,7 @@ from specimen_manifest import (  # noqa: E402
     ManifestValidationError,
     canonical_json_sha256,
     manifest_paths,
+    require_analysis_ready,
     topology_summary,
     validate_manifest,
 )
@@ -70,6 +71,80 @@ class SpecimenManifestTests(unittest.TestCase):
         self.assertEqual(10, threshold)
         self.assertEqual(1.0, separability)
         self.assertEqual(64, len(histogram_sha256(histogram)))
+
+    def test_autonomous_provisional_manifest_allows_pending_aligned_graph(self) -> None:
+        source = next(
+            path for path in manifest_paths() if "pacificvis" in path.as_posix()
+        )
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["lifecycle_state"] = "provisional"
+        manifest["unresolved_fields"] = ["analysis_parameters.coordinates.array_axes"]
+        manifest["analysis_parameters"]["coordinates"]["array_axes"] = "unknown"
+        del manifest["inputs"]["aligned_graph"]
+        graph_summary = manifest["derived"]["graph_summary"]
+        del graph_summary["aligned_values"]
+        graph_summary["provenance"]["input_sha256"] = [
+            manifest["inputs"]["design_graph"]["sha256"]
+        ]
+        manifest["derived"] = {"graph_summary": graph_summary}
+        manifest["analysis_parameters_sha256"] = canonical_json_sha256(
+            manifest["analysis_parameters"]
+        )
+        graph_summary["provenance"]["config_sha256"] = manifest[
+            "analysis_parameters_sha256"
+        ]
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        self.assertEqual([], validate_manifest(temporary))
+
+    def test_challenge_provisional_manifest_requires_supplied_aligned_graph(self) -> None:
+        source = next(
+            path for path in manifest_paths() if "brian_tran" in path.as_posix()
+        )
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["lifecycle_state"] = "provisional"
+        del manifest["inputs"]["aligned_graph"]
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        with self.assertRaisesRegex(ManifestValidationError, "aligned_graph"):
+            validate_manifest(temporary)
+
+    def test_ready_for_data_prep_rejects_unresolved_fields(self) -> None:
+        source = manifest_paths()[0]
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["lifecycle_state"] = "ready_for_data_prep"
+        manifest["unresolved_fields"] = ["inputs.ct_metadata.array_axes"]
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        with self.assertRaisesRegex(ManifestValidationError, "unresolved_fields"):
+            validate_manifest(temporary)
+
+    def test_downstream_consumer_rejects_provisional_manifest(self) -> None:
+        source = manifest_paths()[0]
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["lifecycle_state"] = "provisional"
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        with self.assertRaisesRegex(
+            ManifestValidationError, "roi_metrics rejected manifest"
+        ):
+            require_analysis_ready(temporary, consumer="roi_metrics")
+
+    def test_analysis_ready_rejects_failed_registration_gate(self) -> None:
+        source = manifest_paths()[0]
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["derived"]["registration_result"]["values"][
+            "metrology_gate_pass"
+        ] = False
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        with self.assertRaisesRegex(ManifestValidationError, "metrology_gate_pass"):
+            validate_manifest(temporary)
 
     def _write_temporary(self, manifest: dict[str, object]) -> Path:
         path = REPOSITORY_ROOT / "analysis" / "schema" / ".invalid-manifest.json"

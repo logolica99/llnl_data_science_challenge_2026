@@ -1,6 +1,8 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "specimen_id": "brian_tran_9x9x9_0point5dash1",
+  "lifecycle_state": "analysis_ready",
+  "unresolved_fields": [],
   "inputs": {
     "ct": {
       "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
@@ -85,14 +87,14 @@
       "maximum_agent_retries": 2
     },
     "artifact_schema_versions": {
-      "specimen_manifest": "1.0.0",
+      "specimen_manifest": "2.0.0",
       "registration_qa": "1.0.0",
       "per_strut_metrics": "1.0.0",
       "classified_struts": "1.0.0",
       "nde_report": "1.0.0"
     }
   },
-  "analysis_parameters_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a",
+  "analysis_parameters_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02",
   "derived": {
     "graph_summary": {
       "method": "canonical_lattice_topology",
@@ -103,7 +105,7 @@
           "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
           "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
         ],
-        "config_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a"
+        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
       },
       "values": {
         "junction_count": 10206,
@@ -128,7 +130,7 @@
           "24dcb40c13c4a729cdd84b760b803d78c61bb31ec6b2411724ff6f78cafc2ec4",
           "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
         ],
-        "config_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a"
+        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
       },
       "values": {
         "spacing": [
@@ -152,7 +154,7 @@
         "input_sha256": [
           "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
         ],
-        "config_sha256": "80a84416025e2e9aedc0620a12eb10bb75ca4d64df361539467178410b8afa5a"
+        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
       },
       "values": {
         "threshold": 40054,
@@ -169,6 +171,24 @@
         ],
         "histogram_sha256": "daed3b27ceb0b6c7842da7dea64fd1b3eaf7779e9fc0521905b7262114dab1f4",
         "overall_pass": true
+      }
+    },
+    "registration_result": {
+      "method": "registration_readiness_record",
+      "method_version": "1.0.0",
+      "provenance": {
+        "source": "supplied challenge-aligned graph and completed local recentering gates",
+        "input_sha256": [
+          "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
+        ],
+        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
+      },
+      "values": {
+        "aligned_graph_state": "input",
+        "overall_pass": true,
+        "local_recenter_complete": true,
+        "roi_gate_pass": true,
+        "metrology_gate_pass": true
       }
     }
   }

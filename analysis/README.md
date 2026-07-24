@@ -31,6 +31,95 @@ Derived records use a common envelope containing `method`, `method_version`,
 and provenance with input and canonical analysis-parameter hashes. Changing an
 analysis parameter invalidates all derived records until they are recomputed.
 
+## Manifest lifecycle
+
+Schema version 2 separates intake from scientific readiness:
+
+- `provisional` records hashed inputs and declared conventions while preserving
+  ambiguous fields in `unresolved_fields`; autonomous registration may omit the
+  future aligned graph and its hash.
+- `ready_for_data_prep` has no unresolved intake fields and is the deterministic
+  hand-off for Otsu, registration, local recentering, and QA.
+- `analysis_ready` requires the aligned graph, topology agreement, segmentation
+  pass, registration pass, local recentering, and ROI/metrology gates.
+
+Challenge mode requires the scientist-supplied aligned JSON at intake.
+Autonomous mode does not allow a fabricated aligned-graph artifact in the
+provisional contract. Downstream ROI, classification, and reporting code must
+call `specimen_manifest.require_analysis_ready` before reading scientific
+fields.
+
+## Deterministic intake core
+
+`scripts/ingest_specimen.py` accepts only explicitly associated CAD, nominal
+graph, and CT paths. It constrains them to configured repository data roots,
+streams every SHA-256, validates graph IDs/references, inspects STL bounds, and
+uses `volume-metadata` for the CT header. It does not accept a threshold and
+does not execute segmentation, registration, or defect labeling.
+
+Each run writes:
+
+- `analysis/<specimen_id>/config/ingest_request.json`;
+- `analysis/<specimen_id>/config/specimen_manifest.json`;
+- `analysis/<specimen_id>/config/ingest_receipt.json`.
+
+The receipt records input and canonical artifact hashes, warnings, unresolved
+fields, lifecycle state, method versions, and structured self-verification.
+Unchanged inputs and declarations reproduce byte-identical artifacts. A changed
+input hash changes the manifest and receipt hashes.
+
+Example autonomous intake:
+
+```bash
+python scripts/ingest_specimen.py \
+  --specimen-id new_specimen \
+  --cad data/new/design.stl \
+  --design-graph data/new/design.json \
+  --ct data/new/scan.tiff \
+  --registration-mode autonomous_v2 \
+  --confirm-association \
+  --cad-units millimeter \
+  --cad-units-provenance "scientist declaration" \
+  --array-axes zyx \
+  --aligned-graph-units voxel
+```
+
+## Agent and data-prep hand-off
+
+The orchestrator invokes `.codex/agents/specimen_ingest.toml` under the
+machine-readable contract in `analysis/contracts/specimen_ingest.json`. The
+agent may ask for missing declarations and invoke the deterministic intake
+scripts, but it is forbidden to inspect labels or run segmentation,
+registration, node refinement, or scientific QA. It stops after two failed
+correction attempts.
+
+After intake, seal the next-stage envelope:
+
+```bash
+python scripts/prepare_data_prep_handoff.py \
+  analysis/<specimen_id>/config/specimen_manifest.json \
+  analysis/<specimen_id>/config/ingest_receipt.json
+```
+
+A ready hand-off allowlists exact input paths/hashes and the registration mode.
+A provisional hand-off is an explicit `halt` containing unresolved fields.
+Tampered or stale manifests/receipts cannot unlock `data_prep`.
+
+Stage 2 writes a `data-prep-result/1.0.0` envelope containing its aligned graph,
+four derived records, and mandatory Otsu/registration/local-node/ROI/metrology
+self-verification. The boundary adapter atomically validates and advances the
+manifest:
+
+```bash
+python scripts/apply_data_prep_result.py \
+  analysis/<specimen_id>/config/specimen_manifest.json \
+  analysis/<specimen_id>/config/data_prep_result.json
+```
+
+The completion receipt is published before the manifest becomes
+`analysis_ready`; downstream stages must verify both hashes and call
+`require_analysis_ready`.
+
 Validate both committed examples:
 
 ```bash
@@ -39,7 +128,7 @@ python scripts/validate_specimen_manifests.py
 
 Add `--verify-files` to hash locally available inputs. External and regenerable
 artifacts may be absent; add `--require-all-files` when a fully restored dataset
-is required.
+is required. Add `--require-analysis-ready` at downstream stage boundaries.
 
 Replay the supplied scan's exact-histogram Otsu gate:
 

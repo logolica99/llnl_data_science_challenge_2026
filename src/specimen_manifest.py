@@ -20,7 +20,13 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEMA = (
     REPOSITORY_ROOT / "analysis" / "schema" / "specimen_manifest.schema.json"
 )
-DERIVED_SECTIONS = ("graph_summary", "voxel_spacing", "segmentation_result")
+DERIVED_SECTIONS = (
+    "graph_summary",
+    "voxel_spacing",
+    "segmentation_result",
+    "registration_result",
+)
+ANALYSIS_READY = "analysis_ready"
 
 
 class ManifestValidationError(ValueError):
@@ -113,6 +119,79 @@ def _artifact_items(manifest: dict[str, Any]) -> Iterable[tuple[str, dict[str, A
         yield name, artifact
 
 
+def _analysis_readiness_errors(manifest: dict[str, Any]) -> list[str]:
+    """Return deterministic reasons a manifest is unsafe for downstream use."""
+    errors: list[str] = []
+    if manifest["lifecycle_state"] != ANALYSIS_READY:
+        errors.append(
+            f"lifecycle_state is {manifest['lifecycle_state']!r}, expected "
+            f"{ANALYSIS_READY!r}"
+        )
+        return errors
+    if manifest["unresolved_fields"]:
+        errors.append("analysis_ready manifest has unresolved_fields")
+    aligned_graph = manifest["inputs"].get("aligned_graph")
+    if aligned_graph is None:
+        errors.append("analysis_ready manifest has no aligned graph")
+
+    required_sections = set(DERIVED_SECTIONS)
+    missing_sections = sorted(required_sections - set(manifest["derived"]))
+    if missing_sections:
+        errors.append("missing derived sections: " + ", ".join(missing_sections))
+        return errors
+
+    segmentation = manifest["derived"]["segmentation_result"]["values"]
+    if not segmentation["overall_pass"]:
+        errors.append("segmentation_result.overall_pass is false")
+
+    registration = manifest["derived"]["registration_result"]["values"]
+    failed_registration_gates = [
+        field
+        for field in (
+            "overall_pass",
+            "local_recenter_complete",
+            "roi_gate_pass",
+            "metrology_gate_pass",
+        )
+        if not registration[field]
+    ]
+    if failed_registration_gates:
+        errors.append(
+            "registration_result failed gates: "
+            + ", ".join(failed_registration_gates)
+        )
+    mode = manifest["analysis_parameters"]["registration"]["mode"]
+    expected_state = "input" if mode == "challenge_aligned_json" else "derived"
+    if registration["aligned_graph_state"] != expected_state:
+        errors.append(
+            "registration_result.aligned_graph_state is "
+            f"{registration['aligned_graph_state']!r}, expected {expected_state!r}"
+        )
+    return errors
+
+
+def require_analysis_ready(
+    manifest_path: Path,
+    *,
+    consumer: str,
+    schema_path: Path = DEFAULT_SCHEMA,
+    repository_root: Path = REPOSITORY_ROOT,
+    verify_files: bool = False,
+) -> dict[str, Any]:
+    """Validate and return a manifest only when downstream analysis is allowed."""
+    try:
+        validate_manifest(
+            manifest_path,
+            schema_path=schema_path,
+            repository_root=repository_root,
+            verify_files=verify_files,
+            required_lifecycle=ANALYSIS_READY,
+        )
+    except ManifestValidationError as exc:
+        raise ManifestValidationError(f"{consumer} rejected manifest: {exc}") from exc
+    return load_json(manifest_path.resolve())
+
+
 def validate_manifest(
     manifest_path: Path,
     *,
@@ -120,6 +199,7 @@ def validate_manifest(
     repository_root: Path = REPOSITORY_ROOT,
     verify_files: bool = False,
     require_all_files: bool = False,
+    required_lifecycle: str | None = None,
 ) -> list[str]:
     """Validate one manifest and return non-fatal file-availability warnings."""
     manifest_path = manifest_path.resolve()
@@ -143,11 +223,11 @@ def validate_manifest(
             "analysis_parameters_sha256 does not match canonical analysis_parameters"
         )
 
-    input_hashes = {
-        artifact["sha256"] for _, artifact in _artifact_items(manifest)
-    }
+    input_hashes = {artifact["sha256"] for _, artifact in _artifact_items(manifest)}
     for section in DERIVED_SECTIONS:
-        record = manifest["derived"][section]
+        record = manifest["derived"].get(section)
+        if record is None:
+            continue
         provenance = record["provenance"]
         if provenance["config_sha256"] != expected_config_hash:
             errors.append(f"derived.{section} uses a stale config_sha256")
@@ -159,20 +239,85 @@ def validate_manifest(
             )
 
     mode = manifest["analysis_parameters"]["registration"]["mode"]
-    aligned_role = manifest["inputs"]["aligned_graph"]["role"]
+    intake = manifest.get("intake")
+    if intake is not None:
+        if intake["registration_mode_selection"]["mode"] != mode:
+            errors.append(
+                "intake registration mode differs from analysis_parameters"
+            )
+        for input_name, inspection_name in (
+            ("cad", "cad_inspection"),
+            ("design_graph", "graph_inspection"),
+        ):
+            artifact = manifest["inputs"][input_name]
+            inspection = intake[inspection_name]
+            if inspection["path"] != artifact["path"]:
+                errors.append(
+                    f"intake.{inspection_name}.path differs from inputs.{input_name}"
+                )
+            if inspection["sha256"] != artifact["sha256"]:
+                errors.append(
+                    f"intake.{inspection_name}.sha256 differs from inputs.{input_name}"
+                )
+    aligned_artifact = manifest["inputs"].get("aligned_graph")
+    aligned_role = aligned_artifact["role"] if aligned_artifact else None
     if mode == "challenge_aligned_json" and aligned_role != "aligned_graph":
         errors.append(
             "challenge_aligned_json mode requires inputs.aligned_graph.role=aligned_graph"
         )
-    if mode == "autonomous_v2" and aligned_role != "derived_aligned_graph":
+    if (
+        mode == "autonomous_v2"
+        and aligned_role is not None
+        and aligned_role != "derived_aligned_graph"
+    ):
         errors.append(
             "autonomous_v2 mode requires an explicitly derived aligned graph"
         )
 
-    nominal = manifest["derived"]["graph_summary"]["values"]
-    aligned = manifest["derived"]["graph_summary"]["aligned_values"]
-    if nominal != aligned:
-        errors.append("nominal and aligned graph topology summaries differ")
+    graph_summary = manifest["derived"].get("graph_summary")
+    if intake is not None and graph_summary is not None:
+        inspection_summary = {
+            key: intake["graph_inspection"][key]
+            for key in (
+                "junction_count",
+                "strut_count",
+                "unit_cell_count",
+                "topology_sha256",
+            )
+        }
+        if inspection_summary != graph_summary["values"]:
+            errors.append(
+                "intake.graph_inspection differs from derived.graph_summary.values"
+            )
+    if graph_summary is not None and "aligned_values" in graph_summary:
+        nominal = graph_summary["values"]
+        aligned = graph_summary["aligned_values"]
+        if nominal != aligned:
+            errors.append("nominal and aligned graph topology summaries differ")
+
+    if manifest["lifecycle_state"] != "provisional":
+        coordinates = manifest["analysis_parameters"]["coordinates"]
+        unresolved_coordinates = sorted(
+            key for key, value in coordinates.items() if value == "unknown"
+        )
+        if manifest["inputs"]["ct_metadata"]["array_axes"] == "unknown":
+            unresolved_coordinates.append("inputs.ct_metadata.array_axes")
+        if unresolved_coordinates:
+            errors.append(
+                "non-provisional manifest has unresolved coordinate fields: "
+                + ", ".join(unresolved_coordinates)
+            )
+
+    if (
+        required_lifecycle is not None
+        and manifest["lifecycle_state"] != required_lifecycle
+    ):
+        errors.append(
+            f"consumer requires lifecycle_state={required_lifecycle}, found "
+            f"{manifest['lifecycle_state']}"
+        )
+    if manifest["lifecycle_state"] == ANALYSIS_READY:
+        errors.extend(_analysis_readiness_errors(manifest))
 
     if verify_files:
         for name, artifact in _artifact_items(manifest):
@@ -196,12 +341,22 @@ def validate_manifest(
                 )
 
         for graph_name in ("design_graph", "aligned_graph"):
-            artifact = manifest["inputs"][graph_name]
+            artifact = manifest["inputs"].get(graph_name)
+            if artifact is None:
+                continue
             path = repository_root / artifact["path"]
             if not path.is_file():
                 continue
             actual = topology_summary(path)
-            if actual != nominal:
+            graph_summary = manifest["derived"].get("graph_summary")
+            if graph_summary is None:
+                continue
+            expected = (
+                graph_summary.get("aligned_values", graph_summary["values"])
+                if graph_name == "aligned_graph"
+                else graph_summary["values"]
+            )
+            if actual != expected:
                 errors.append(
                     f"inputs.{graph_name} topology differs from derived.graph_summary"
                 )
@@ -239,6 +394,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="fail when an external or regenerable input is unavailable",
     )
+    parser.add_argument(
+        "--require-analysis-ready",
+        action="store_true",
+        help="reject manifests that downstream analysis must not consume",
+    )
     return parser.parse_args()
 
 
@@ -254,6 +414,9 @@ def main() -> int:
                 path,
                 verify_files=args.verify_files,
                 require_all_files=args.require_all_files,
+                required_lifecycle=(
+                    ANALYSIS_READY if args.require_analysis_ready else None
+                ),
             )
             print(f"PASS {path}")
             for warning in warnings:
