@@ -1,13 +1,23 @@
 from contextlib import redirect_stdout
+import hashlib
 from pathlib import Path
 import sys
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 import matplotlib
 import numpy as np
 from fastmcp import FastMCP
 
 try:
+    from .part2_core import (
+        error_response as _error_response,
+        load_volume as _load_volume,
+        normalize_lattice_graph as _normalize_lattice_graph,
+        replay_exact_otsu as _replay_exact_otsu,
+        success_response as _success_response,
+        volume_metadata as _volume_metadata,
+        write_otsu_artifacts as _write_otsu_artifacts,
+    )
     from .skeletonization import skeletonize_mask
     from .volume_artifacts import (
         compare_segmentation_masks as _compare_segmentation_masks,
@@ -16,6 +26,15 @@ try:
     )
     from .volume_metadata import inspect_volume_envelope
 except ImportError:
+    from part2_core import (
+        error_response as _error_response,
+        load_volume as _load_volume,
+        normalize_lattice_graph as _normalize_lattice_graph,
+        replay_exact_otsu as _replay_exact_otsu,
+        success_response as _success_response,
+        volume_metadata as _volume_metadata,
+        write_otsu_artifacts as _write_otsu_artifacts,
+    )
     from skeletonization import skeletonize_mask
     from volume_artifacts import (
         compare_segmentation_masks as _compare_segmentation_masks,
@@ -68,6 +87,87 @@ def _input_npy_path(filepath: str) -> Path:
     return path
 
 
+def _repository_path(
+    filepath: str,
+    *,
+    must_exist: bool,
+    expected_suffixes: set[str] | None = None,
+) -> tuple[Path, str]:
+    """Resolve one new Part 2 tool path without allowing repository escape."""
+
+    candidate = Path(filepath).expanduser()
+    resolved = (
+        (REPOSITORY_ROOT / candidate).resolve()
+        if not candidate.is_absolute()
+        else candidate.resolve()
+    )
+    try:
+        relative = resolved.relative_to(REPOSITORY_ROOT)
+    except ValueError as exc:
+        raise ValueError(f"Path escapes repository root: {resolved}") from exc
+    if must_exist and not resolved.is_file():
+        raise FileNotFoundError(f"Input file does not exist: {relative.as_posix()}")
+    if expected_suffixes and resolved.suffix.lower() not in expected_suffixes:
+        choices = ", ".join(sorted(expected_suffixes))
+        raise ValueError(
+            f"Expected one of [{choices}], found {relative.as_posix()}"
+        )
+    return resolved, relative.as_posix()
+
+
+def _repository_output_directory(filepath: str) -> tuple[Path, str]:
+    candidate = Path(filepath).expanduser()
+    resolved = (
+        (REPOSITORY_ROOT / candidate).resolve()
+        if not candidate.is_absolute()
+        else candidate.resolve()
+    )
+    try:
+        relative = resolved.relative_to(REPOSITORY_ROOT)
+    except ValueError as exc:
+        raise ValueError(f"Path escapes repository root: {resolved}") from exc
+    if resolved.exists() and not resolved.is_dir():
+        raise NotADirectoryError(
+            f"Output directory is an existing file: {relative.as_posix()}"
+        )
+    return resolved, relative.as_posix()
+
+
+def _sha256_file(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _structured_failure(tool: str, exc: Exception) -> dict[str, Any]:
+    if isinstance(exc, FileNotFoundError):
+        code = "input_not_found"
+    elif isinstance(exc, FileExistsError):
+        code = "artifact_exists"
+    elif isinstance(exc, (ValueError, TypeError, IndexError)):
+        code = "invalid_input"
+    else:
+        code = "tool_execution_failed"
+    return _error_response(
+        tool=tool,
+        code=code,
+        error_type=type(exc).__name__,
+        message=str(exc),
+    )
+
+
+def _run_structured_tool(
+    tool: str,
+    operation: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    try:
+        return operation()
+    except Exception as exc:
+        return _structured_failure(tool, exc)
+
+
 def _output_path(filepath: str, expected_suffix: str | None = None) -> Path:
     """Resolve an output path and create its parent directory."""
     path = Path(filepath).expanduser().resolve()
@@ -82,14 +182,192 @@ def _output_path(filepath: str, expected_suffix: str | None = None) -> Path:
 
 
 def _load_3d_array(filepath: str) -> tuple[Path, np.ndarray]:
-    """Load a three-dimensional array without permitting pickled objects."""
-    path = _input_npy_path(filepath)
-    array = np.load(path, allow_pickle=False)
-    if array.ndim != 3:
-        raise ValueError(
-            f"Expected a 3D array, but {path} has shape {array.shape}."
+    """Use the shared memory-mapped TIFF/NPY loader for legacy tools."""
+    volume = _load_volume(filepath)
+    return volume.path, volume.array
+
+
+@mcp.tool()
+def volume_info(
+    input_filepath: str,
+    include_sha256: bool = True,
+) -> dict[str, Any]:
+    """Return compact shared-loader metadata for a TIFF or NPY CT volume."""
+
+    def operation() -> dict[str, Any]:
+        path, relative = _repository_path(
+            input_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
         )
-    return path, array
+        volume = _load_volume(path)
+        result = _volume_metadata(volume)
+        result["path"] = relative
+        digest = _sha256_file(path) if include_sha256 else ""
+        warnings = [] if include_sha256 else ["input SHA-256 was explicitly omitted"]
+        return _success_response(
+            tool="volume_info",
+            gate="pass",
+            summary=f"Loaded 3-D {result['format']} volume {relative}",
+            result=result,
+            artifacts={
+                "input": {
+                    "path": relative,
+                    "role": "ct_volume",
+                    "retention": "external",
+                }
+            },
+            hashes={"input_sha256": digest} if digest else {},
+            warnings=warnings,
+        )
+
+    return _run_structured_tool("volume_info", operation)
+
+
+@mcp.tool()
+def load_lattice_graph(
+    input_filepath: str,
+    output_filepath: str,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Normalize a lattice JSON to NPZ with explicit node/edge/cell ID maps."""
+
+    def operation() -> dict[str, Any]:
+        source, source_relative = _repository_path(
+            input_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        output, output_relative = _repository_path(
+            output_filepath,
+            must_exist=False,
+            expected_suffixes={".npz"},
+        )
+        result = _normalize_lattice_graph(
+            source,
+            output,
+            overwrite=overwrite,
+        )
+        result["source_path"] = source_relative
+        result["output_path"] = output_relative
+        warnings = list(result["warnings"])
+        gate: Literal["pass", "manual_review"] = (
+            "pass" if not warnings else "manual_review"
+        )
+        return _success_response(
+            tool="load_lattice_graph",
+            gate=gate,
+            summary=(
+                f"Normalized {result['counts']['nodes']} nodes, "
+                f"{result['counts']['edges']} edges, and "
+                f"{result['counts']['cells']} cells"
+            ),
+            result=result,
+            artifacts={
+                "normalized_graph": {
+                    "path": output_relative,
+                    "sha256": result["artifact_sha256"],
+                    "role": "normalized_lattice_graph",
+                    "retention": "regenerable",
+                }
+            },
+            hashes={
+                "input_sha256": result["source_sha256"],
+                "artifact_sha256": result["artifact_sha256"],
+            },
+            warnings=warnings,
+        )
+
+    return _run_structured_tool("load_lattice_graph", operation)
+
+
+@mcp.tool()
+def replay_exact_otsu(
+    input_filepath: str,
+    output_directory: str,
+    histogram_encoding: Literal[
+        "auto", "native_uint16", "full_volume_affine_uint16"
+    ] = "auto",
+    edge_slices_excluded: int = 0,
+    chunk_voxels: int = 8 * 1024 * 1024,
+    coarse_bins: int = 1024,
+    peak_smoothing_sigma_bins: float = 2.0,
+    peak_prominence_fraction: float = 0.003,
+    minimum_significant_peaks: int = 2,
+    minimum_foreground_fraction: float = 0.01,
+    maximum_foreground_fraction: float = 0.35,
+    minimum_otsu_separability: float = 0.45,
+    minimum_class_mean_separation_sigma: float = 0.75,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Replay per-scan exact Otsu and persist its histogram and diagnostics."""
+
+    def operation() -> dict[str, Any]:
+        source, source_relative = _repository_path(
+            input_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
+        )
+        output, _ = _repository_output_directory(output_directory)
+        recipe = {
+            "histogram_encoding": histogram_encoding,
+            "edge_slices_excluded": edge_slices_excluded,
+            "chunk_voxels": chunk_voxels,
+            "coarse_bins": coarse_bins,
+            "peak_smoothing_sigma_bins": peak_smoothing_sigma_bins,
+            "peak_prominence_fraction": peak_prominence_fraction,
+            "minimum_significant_peaks": minimum_significant_peaks,
+            "minimum_foreground_fraction": minimum_foreground_fraction,
+            "maximum_foreground_fraction": maximum_foreground_fraction,
+            "minimum_otsu_separability": minimum_otsu_separability,
+            "minimum_class_mean_separation_sigma": (
+                minimum_class_mean_separation_sigma
+            ),
+        }
+        result, histogram = _replay_exact_otsu(source, recipe=recipe)
+        result["source_path"] = source_relative
+        artifacts = _write_otsu_artifacts(
+            output,
+            result,
+            histogram,
+            overwrite=overwrite,
+        )
+        for artifact in artifacts.values():
+            artifact_path = Path(artifact["path"])
+            artifact["path"] = artifact_path.relative_to(
+                REPOSITORY_ROOT
+            ).as_posix()
+        failed_gates = sorted(
+            name for name, passed in result["gates"].items() if not passed
+        )
+        gate: Literal["pass", "halt"] = (
+            "pass" if result["overall_pass"] else "halt"
+        )
+        warnings = (
+            []
+            if not failed_gates
+            else ["histogram rejection gates failed: " + ", ".join(failed_gates)]
+        )
+        input_hash = _sha256_file(source)
+        return _success_response(
+            tool="replay_exact_otsu",
+            gate=gate,
+            summary=(
+                f"Replayed Otsu threshold {result['threshold']} for "
+                f"{source_relative}"
+            ),
+            result=result,
+            artifacts=artifacts,
+            hashes={
+                "input_sha256": input_hash,
+                "histogram_sha256": result["histogram_sha256"],
+                "histogram_artifact_sha256": artifacts["histogram"]["sha256"],
+                "report_artifact_sha256": artifacts["report"]["sha256"],
+            },
+            warnings=warnings,
+        )
+
+    return _run_structured_tool("replay_exact_otsu", operation)
 
 
 @mcp.tool()
