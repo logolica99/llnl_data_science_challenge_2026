@@ -1,0 +1,90 @@
+{
+  "validation_only_ground_truth": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/registered_jsons/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json",
+  "ground_truth_read_phase": "after detected_nodes.npy, fitted_transform.json, and our_registered.json were written",
+  "ground_truth_used_for_fit": false,
+  "node_count": 10206,
+  "node_error_voxels": {
+    "median": 3.6805675352189557,
+    "mean": 3.597706407281579,
+    "p95": 5.654898535146985,
+    "p99": 6.340592798706409,
+    "maximum": 7.470779325685196
+  },
+  "fitted_transform": {
+    "scale": 39.182525147532075,
+    "rotation_deg": 0.3924662605916551,
+    "translation": [
+      60.907649325045725,
+      55.671847613986074,
+      29.628577473070777
+    ],
+    "rotation_matrix": [
+      [
+        0.9999766893617555,
+        0.006220086296109469,
+        -0.002816249202840629
+      ],
+      [
+        -0.006218546206940516,
+        0.9999805104808962,
+        0.0005552850073270894
+      ],
+      [
+        0.0028196482361625566,
+        -0.0005377590874809543,
+        0.9999958801910077
+      ]
+    ]
+  },
+  "held_out_transform": {
+    "scale": 39.48880949493017,
+    "rotation_deg": 0.33510849611461374,
+    "translation": [
+      59.33960418617096,
+      52.1828934867313,
+      26.46173195820751
+    ],
+    "rotation_matrix": [
+      [
+        0.999986728616512,
+        0.005087147630571754,
+        -0.0008145672659472733
+      ],
+      [
+        -0.005084872943297161,
+        0.9999832336528703,
+        0.0027706461880856815
+      ],
+      [
+        0.0008286482948206045,
+        -0.0027664674467264305,
+        0.9999958299912404
+      ]
+    ]
+  },
+  "transform_error": {
+    "relative_scale": 0.0077562314821727485,
+    "rotation_magnitude_deg": 0.057357764477041384,
+    "rotation_matrix_delta_deg": 0.18305382010553892,
+    "translation_delta_xyz": [
+      1.5680451388747656,
+      3.4889541272547717,
+      3.166845514863269
+    ],
+    "translation_delta_norm": 4.965931632095481
+  },
+  "ct_node_sampling": {
+    "foreground_voxel_fraction_5x5x5": 0.922278659611993,
+    "nodes_with_any_foreground_5x5x5": 0.9587497550460513,
+    "center_voxel_foreground_rate": 0.9275916127767979
+  },
+  "gates": {
+    "median_node_error_under_5_voxels": true,
+    "scale_within_1_percent": true,
+    "rotation_magnitude_within_0.2_deg": true,
+    "translation_within_few_voxels": true,
+    "foreground_fraction_5x5x5_at_least_85_percent": true
+  },
+  "overall_pass": true,
+  "total_elapsed_seconds": 15.34214429196436
+}
