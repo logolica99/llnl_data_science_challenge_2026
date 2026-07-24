@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "input_identity": {
+    "ct_path": "C:\\Users\\Claire\\Documents\\GitHub\\llnl_data_science_challenge_2026\\data\\missing_struts\\tif_stacks\\210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+    "ct_file_size_bytes": 1038433319,
+    "ct_shape_zyx": [
+      761,
+      815,
+      837
+    ],
+    "ct_dtype": ">u2",
+    "registered_graph_path": "C:\\Users\\Claire\\Documents\\GitHub\\llnl_data_science_challenge_2026\\poc\\ct_registration\\test_results\\our_registered.json",
+    "registered_graph_sha256": "0d76917ecdc90198adeb21dfbb1c9e3b1b9cf0c6fe54ee189fc9616146149576",
+    "junction_count": 10206,
+    "strut_count": 18468,
+    "frozen_threshold": 40129
+  },
+  "corridor_calibration": {
+    "method": "central-slice nearest-component radial-extent bootstrap",
+    "label_blind": true,
+    "threshold": 40129,
+    "sample_count_requested": 24,
+    "sample_count_used": 24,
+    "accepted_strut_count": 17,
+    "central_fraction": 0.6,
+    "minimum_valid_slice_fraction": 0.75,
+    "radial_extent_quantile": 0.9,
+    "radius_safety_voxels": 0.5,
+    "calibration_half_width_voxels": 12.0,
+    "quantile_radial_extent_voxels": 6.841042434547619,
+    "corridor_radius_voxels": 8.0,
+    "per_strut": [
+      {
+        "strut_id": 9063,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 3.1622776601683795,
+        "median_equivalent_radius_voxels": 2.6462837142006137,
+        "median_centroid_offset_voxels": 0.6470588235294118
+      },
+      {
+        "strut_id": 16133,
+        "central_slice_count": 33,
+        "valid_slice_count": 0,
+        "valid_slice_fraction": 0.0,
+        "accepted": false
+      },
+      {
+        "strut_id": 16358,
+        "central_slice_count": 33,
+        "valid_slice_count": 0,
+        "valid_slice_fraction": 0.0,
+        "accepted": false
+      },
+      {
+        "strut_id": 18180,
+        "central_slice_count": 33,
+        "valid_slice_count": 0,
+        "valid_slice_fraction": 0.0,
+        "accepted": false
+      },
+      {
+        "strut_id": 8,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 5.830951894845301,
+        "median_equivalent_radius_voxels": 2.985410660720923,
+        "median_centroid_offset_voxels": 2.613001679635468
+      },
+      {
+        "strut_id": 18439,
+        "central_slice_count": 33,
+        "valid_slice_count": 2,
+        "valid_slice_fraction": 0.06060606060606061,
+        "accepted": false
+      },
+      {
+        "strut_id": 205,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 7.615773105863909,
+        "median_equivalent_radius_voxels": 3.0901936161855166,
+        "median_centroid_offset_voxels": 4.187340317982958
+      },
+      {
+        "strut_id": 1765,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 4.123105625617661,
+        "median_equivalent_radius_voxels": 2.5854414729132054,
+        "median_centroid_offset_voxels": 2.0928844424038795
+      },
+      {
+        "strut_id": 1993,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 4.47213595499958,
+        "median_equivalent_radius_voxels": 2.8209479177387813,
+        "median_centroid_offset_voxels": 2.1702694405175693
+      },
+      {
+        "strut_id": 10186,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 5.0990195135927845,
+        "median_equivalent_radius_voxels": 2.6462837142006137,
+        "median_centroid_offset_voxels": 2.9105110170149313
+      },
+      {
+        "strut_id": 17298,
+        "central_slice_count": 33,
+        "valid_slice_count": 0,
+        "valid_slice_fraction": 0.0,
+        "accepted": false
+      },
+      {
+        "strut_id": 8510,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 4.47213595499958,
+        "median_equivalent_radius_voxels": 2.5854414729132054,
+        "median_centroid_offset_voxels": 2.0174100448904664
+      },
+      {
+        "strut_id": 8707,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 5.830951894845301,
+        "median_equivalent_radius_voxels": 2.6462837142006137,
+        "median_centroid_offset_voxels": 3.3231594048062254
+      },
+      {
+        "strut_id": 555,
+        "central_slice_count": 33,
+        "valid_slice_count": 12,
+        "valid_slice_fraction": 0.36363636363636365,
+        "accepted": false
+      },
+      {
+        "strut_id": 13994,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 3.1622776601683795,
+        "median_equivalent_radius_voxels": 2.5231325220201604,
+        "median_centroid_offset_voxels": 1.0793516572461452
+      },
+      {
+        "strut_id": 1655,
+        "central_slice_count": 33,
+        "valid_slice_count": 31,
+        "valid_slice_fraction": 0.9393939393939394,
+        "accepted": true,
+        "median_radial_extent_voxels": 4.47213595499958,
+        "median_equivalent_radius_voxels": 3.949327084834294,
+        "median_centroid_offset_voxels": 0.18200274723201293
+      },
+      {
+        "strut_id": 9624,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 3.1622776601683795,
+        "median_equivalent_radius_voxels": 2.393653682408596,
+        "median_centroid_offset_voxels": 1.0613873985857112
+      },
+      {
+        "strut_id": 9820,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 2.8284271247461903,
+        "median_equivalent_radius_voxels": 2.1850968611841584,
+        "median_centroid_offset_voxels": 0.6155536126122565
+      },
+      {
+        "strut_id": 17196,
+        "central_slice_count": 33,
+        "valid_slice_count": 29,
+        "valid_slice_fraction": 0.8787878787878788,
+        "accepted": true,
+        "median_radial_extent_voxels": 5.830951894845301,
+        "median_equivalent_radius_voxels": 3.6996385101659595,
+        "median_centroid_offset_voxels": 1.7960405821843741
+      },
+      {
+        "strut_id": 1088,
+        "central_slice_count": 33,
+        "valid_slice_count": 26,
+        "valid_slice_fraction": 0.7878787878787878,
+        "accepted": true,
+        "median_radial_extent_voxels": 7.615773105863909,
+        "median_equivalent_radius_voxels": 3.2162803252128747,
+        "median_centroid_offset_voxels": 4.489496882785863
+      },
+      {
+        "strut_id": 898,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 6.082762530298219,
+        "median_equivalent_radius_voxels": 3.431831258788849,
+        "median_centroid_offset_voxels": 2.216229580553199
+      },
+      {
+        "strut_id": 7960,
+        "central_slice_count": 33,
+        "valid_slice_count": 0,
+        "valid_slice_fraction": 0.0,
+        "accepted": false
+      },
+      {
+        "strut_id": 15414,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 4.242640687119285,
+        "median_equivalent_radius_voxels": 2.4592453796829674,
+        "median_centroid_offset_voxels": 1.9420675316728444
+      },
+      {
+        "strut_id": 6201,
+        "central_slice_count": 33,
+        "valid_slice_count": 33,
+        "valid_slice_fraction": 1.0,
+        "accepted": true,
+        "median_radial_extent_voxels": 6.324555320336759,
+        "median_equivalent_radius_voxels": 3.141274657157109,
+        "median_centroid_offset_voxels": 3.1931628618816172
+      }
+    ]
+  },
+  "normalized_cuboid": {
+    "node_a_first_slice": true,
+    "node_b_last_slice": true,
+    "axial_margin_voxels": 0.0,
+    "transverse_margin_fraction": 0.2,
+    "transverse_margin_voxels": 2.0,
+    "half_width_voxels": 10.0,
+    "interpolation": "trilinear (scipy.ndimage.map_coordinates order=1)"
+  }
+}

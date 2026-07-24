@@ -3,3 +3,4 @@ matplotlib
 fastmcp
 scikit-image
 tifffile
+scipy
