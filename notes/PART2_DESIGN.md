@@ -219,6 +219,31 @@ gates, and interpretation guidance.
 - **`nde-report-generator` (current `nde_report_expert`; Part 2 upgrade planned):** currently calls `summarize_nde_artifacts` and `render_volume_3d`, with `segment_ct_dataset` and `skeletonize` only when artifacts are absent. The Part 2 template adds the per-strut findings table, blind-findings vs attribution appendix (§5.1), spatial statistics, 3D figure, and methods/provenance pinned to the config hash. Rendering and metric extraction remain MCP-owned; no `3d_visualize.py` skill script is retained.
 - **`part2-pipeline-runbook` (NEW, orchestrator-facing):** stage order, artifact paths, gate conditions, retry policy, presentation checklist.
 
+### 3.5 Non-goals: interaction surfaces outside the autonomous loop
+
+After the scientist-confirmed Stage 0 intake produces a verified `ready`
+hand-off, the primary goal is a closed, auditable Stage 1–6 loop:
+measurement → classification → independent verification → sealed scoring →
+reporting. The orchestrator gates every transition on immutable artifacts and
+completion receipts; deterministic tools and bounded agents replace the manual
+adjudication used in an interactive inspection workflow.
+
+The following LatticeAnalytics capabilities remain explicit non-goals for this
+pipeline. They are human-facing interaction or infrastructure choices, not
+missing scientific primitives:
+
+| Non-goal | Why it is excluded |
+|---|---|
+| **VR-guided alignment** | Requires manual alignment for each specimen. Challenge mode instead consumes the README-authorized aligned graph; autonomous mode uses CT-only v2 coarse localization followed by independent local node recentering in Stage 2. |
+| **Contour-view or roughness-map dashboard** | Its purpose is human histogram browsing and candidate adjudication. Stage 4 replaces that decision loop with calibrated cutoffs, evidence packets, `classifier_verifier`, and logged triage. |
+| **OpenVisus multi-resolution streaming** | It supports interactive browsing of very large network-hosted volumes. The current headless pipeline processes local specimen files with memory mapping, bounded chunks, and per-corridor subvolumes. |
+| **Interactive Plotly/Dash application** | The deliverables are machine-generated artifacts—a metrics table, classified findings, evidence, a traceable report, and static 3D figures—not a continuously operated application. |
+
+These exclusions apply to interaction surfaces, not to the underlying
+capabilities. The pipeline retains the relevant registration, per-strut
+sampling, centerline, curvature, and defect-analysis methods described in
+§2.1.
+
 ---
 
 ## 4. Pipeline stages, artifacts, and milestones
@@ -312,3 +337,20 @@ One rubric doing real work, one lightweight check:
 5. **M3 (Stage 3):** 20 %-padded normalized ROI extraction + `compute_strut_metrics` — the core primitive.
 6. **M4–M5 (Stages 4–6):** defect team (`defect_lead` + the three class subagents), sealed scoring + triage, spatial stats, `render_lattice_3d`, NDE report.
 7. **Presentation (owner: orchestrator/us):** demo workflow walks Stage 0 and M1→M5; show both registration modes, v2's ROI-vs-metrology gate result, the locally refined junction overlay, the 3D defect render, and the confusion matrix.
+
+---
+
+## 8. References
+
+- Miao, H., Narain, A., Chheang, V., Hooten, J., Seede, R., Klacansky, P.,
+  Bertsch, K., Guss, G., Giera, B., and Bremer, P.-T.,
+  [“LatticeAnalytics: Strut-Level Visualization and Inspection of Additively
+  Manufactured Lattice
+  Structures”](https://doi.org/10.1109/TVCG.2025.3593230), *IEEE Transactions
+  on Visualization and Computer Graphics* 31(10), 2025.
+- Tran, B., Fisher, K. A., Wang, J., Divin, C., Balensiefer, G. J., Townsend,
+  A. P.,
+  [“Resonant ultrasound spectroscopy measurement and modeling of additively
+  manufactured octet truss lattice
+  cubes”](https://www.osti.gov/pages/biblio/2246722), *NDT&E International*
+  138 (2023) 102870.
