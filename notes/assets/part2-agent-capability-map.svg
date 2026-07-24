@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="950" viewBox="0 0 1600 950" role="img" aria-labelledby="diagram-title diagram-desc">
+<title id="diagram-title">Agent to Skill to MCP Map</title>
+<desc id="diagram-desc">Eight agent rows mapped to their scientific-policy skills and deterministic MCP tools. Solid outlines are implemented and dashed outlines are planned.</desc>
+<defs>
+<marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#845ef7"/></marker>
+<marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4dabf7"/></marker>
+</defs>
+<rect width="1600" height="950" fill="#ffffff"/>
+<text x="60" y="60" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="32" text-anchor="start" dominant-baseline="middle">Agent → Skill → MCP Map</text>
+<text x="60" y="88" fill="#757575" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="start" dominant-baseline="middle">Who sets policy and where deterministic compute runs</text>
+<text x="1260" y="56" fill="#757575" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="start" dominant-baseline="middle">Created 2026-07-24</text>
+<text x="990" y="97" fill="#757575" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="15" text-anchor="start" dominant-baseline="middle">solid = implemented (incl. 515d88c)   •   dashed = planned</text>
+<text x="60" y="140" fill="#6d28d9" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="start" dominant-baseline="middle">AGENT</text>
+<text x="365" y="140" fill="#b45309" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="start" dominant-baseline="middle">SKILL</text>
+<text x="820" y="140" fill="#2563eb" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="start" dominant-baseline="middle">MCP TOOLS</text>
+<line x1="280" y1="196" x2="355" y2="196" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="196" x2="810" y2="196" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="280" y1="292" x2="355" y2="292" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="292" x2="810" y2="292" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="280" y1="388" x2="355" y2="388" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="388" x2="810" y2="388" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="280" y1="484" x2="355" y2="484" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="484" x2="810" y2="484" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="280" y1="580" x2="355" y2="580" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="580" x2="810" y2="580" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="280" y1="676" x2="355" y2="676" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="676" x2="810" y2="676" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="280" y1="772" x2="355" y2="772" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="772" x2="810" y2="772" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<line x1="280" y1="868" x2="355" y2="868" stroke="#845ef7" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<line x1="725" y1="868" x2="810" y2="868" stroke="#4dabf7" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<rect x="60" y="160" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="170" y="196" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle" dominant-baseline="middle">Orchestrator</text>
+<rect x="365" y="160" width="360" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="545" y="196" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">part2-pipeline-runbook</text>
+<rect x="820" y="160" width="720" height="72" rx="14" fill="#f1f3f5" stroke="#adb5bd" stroke-width="2"/>
+<text x="1180" y="196" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">No direct MCP — orchestrates agents and receipts</text>
+<rect x="60" y="256" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-width="2"/>
+<text x="170" y="292" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle" dominant-baseline="middle">0  Specimen Ingest</text>
+<rect x="365" y="256" width="360" height="72" rx="14" fill="#fff3bf" stroke="#f59f00" stroke-width="2"/>
+<text x="545" y="292" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">volume-metadata</text>
+<rect x="820" y="256" width="720" height="72" rx="14" fill="#a5d8ff" stroke="#4dabf7" stroke-width="2"/>
+<text x="1180" y="292" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">inspect_volume_metadata</text>
+<rect x="60" y="352" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="170" y="388" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle" dominant-baseline="middle">1  Design Diff</text>
+<rect x="365" y="352" width="360" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="545" y="388" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">stl-design-diff</text>
+<rect x="820" y="352" width="230" height="72" rx="14" fill="#a5d8ff" stroke="#4dabf7" stroke-width="2"/>
+<text x="935" y="388" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="15" text-anchor="middle" dominant-baseline="middle">load_lattice_graph</text>
+<rect x="1070" y="352" width="470" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="1305" y="388" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="15" text-anchor="middle" dominant-baseline="middle">resolve CAD orientation  •  label_deleted_edges</text>
+<rect x="60" y="448" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="170" y="484" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle" dominant-baseline="middle">2  Data Prep</text>
+<rect x="365" y="448" width="170" height="72" rx="14" fill="#fff3bf" stroke="#f59f00" stroke-width="2"/>
+<text x="450" y="484" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="13" text-anchor="middle" dominant-baseline="middle">ct-threshold-optimizer</text>
+<rect x="555" y="448" width="170" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="640" y="484" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">ct-registration</text>
+<rect x="820" y="448" width="360" height="72" rx="14" fill="#a5d8ff" stroke="#4dabf7" stroke-width="2"/>
+<text x="1000" y="475.25" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">volume_info  •  replay_exact_otsu</text><text x="1000" y="492.75" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">segment  •  compare  •  visualize</text>
+<rect x="1200" y="448" width="340" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="1370" y="484" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">registration  •  local nodes  •  QA</text>
+<rect x="60" y="544" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="170" y="580" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle" dominant-baseline="middle">3  Strut Metrics</text>
+<rect x="365" y="544" width="360" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="545" y="580" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">strut-defect-analyzer</text>
+<rect x="820" y="544" width="720" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="1180" y="580" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">compute_strut_metrics</text>
+<rect x="60" y="640" width="220" height="72" rx="14" fill="#b197fc" stroke="#7048e8" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="170" y="666" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">4  Defect Team</text><text x="170" y="686" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">4 specialists</text>
+<rect x="365" y="640" width="360" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="545" y="676" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">strut-defect-analyzer</text>
+<rect x="820" y="640" width="720" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="1180" y="676" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">classify_struts  •  render_strut_evidence</text>
+<rect x="60" y="736" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="170" y="772" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle" dominant-baseline="middle">5  Eval Agent</text>
+<rect x="365" y="736" width="360" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="545" y="772" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">part2-pipeline-runbook</text>
+<rect x="820" y="736" width="720" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="1180" y="772" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">compute_detection_metrics  •  get_strut_report</text>
+<rect x="60" y="832" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="170" y="868" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle" dominant-baseline="middle">6  Report Agent</text>
+<rect x="365" y="832" width="360" height="72" rx="14" fill="#fff3bf" stroke="#f59f00" stroke-width="2"/>
+<text x="545" y="868" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle" dominant-baseline="middle">nde_report_expert</text>
+<rect x="820" y="832" width="420" height="72" rx="14" fill="#a5d8ff" stroke="#4dabf7" stroke-width="2"/>
+<text x="1030" y="868" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">summarize_nde_artifacts  •  render_volume_3d</text>
+<rect x="1260" y="832" width="280" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2" stroke-dasharray="9 7"/>
+<text x="1400" y="868" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">spatial stats  •  lattice 3D</text>
+</svg>
