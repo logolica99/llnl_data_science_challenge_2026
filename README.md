@@ -335,6 +335,14 @@ Tran, B. et al., [“Resonant ultrasound spectroscopy measurement and modeling o
 
 > **Note:** The STL file is not aligned/registered with the TIF or JSON file. Registration is a problem by itself. If you do not want to work on registration, `210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json` is already aligned with the respective TIF file of the same name.
 
+The registered JSON aligns the complete lattice geometry, but the lattice's
+cube symmetry leaves the STL missing-strut pattern's signed axis permutation
+ambiguous. Do not transfer STL-derived strut IDs directly into the registered
+JSON. The corrected Napari overlay remaps each deleted edge through the
+CT-validated cube orientation first. See
+[`data/missing_struts/analysis/0_5_stl_heatmap/README.md`](data/missing_struts/analysis/0_5_stl_heatmap/README.md)
+for the detection method, coordinate transform, validation, and usage.
+
 ### Project Goals
 
 Your objective is to implement a multi-agent system that can visualize, analyze, and reason about this dataset. You should build upon what you learned in Part 1 (MCP tools, skills, subagents) but aim for a higher level of autonomy and integration.
