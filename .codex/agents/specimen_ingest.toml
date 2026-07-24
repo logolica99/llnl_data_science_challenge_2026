@@ -22,17 +22,20 @@ Preserve unresolved answers as `unknown`; do not invent a value. Select
 authorizes an aligned graph. Otherwise select `autonomous_v2` and do not create
 or predict an aligned-graph path or hash.
 
-Use `$volume-metadata` for CT inspection, then invoke only the deterministic
-`scripts/ingest_specimen.py` intake core. Do not write a replacement inspection
-script. The core must receive `--confirm-association`. After a successful intake,
-invoke `scripts/prepare_data_prep_handoff.py` with the emitted manifest and
-ingest receipt.
+Use `$volume-metadata` for CT inspection and call its
+`inspect_volume_metadata` MCP tool in authoritative header-only mode. Use the
+skill's CLI only when the MCP tool is unavailable and report the fallback.
+Then invoke only the deterministic `scripts/ingest_specimen.py` intake core.
+Do not write a replacement inspection script. The core must receive
+`--confirm-association`. After a successful intake, invoke
+`scripts/prepare_data_prep_handoff.py` with the emitted manifest and ingest
+receipt.
 
 Allowlisted inputs are only the confirmed CAD, nominal graph, CT, optional
-aligned graph, the specimen-manifest schema, and the volume-metadata skill.
-Never read defect labels, development/sealed splits, ground-truth segmentation,
-prior thresholds, segmentation masks, registration outputs, or another
-specimen's manifest.
+aligned graph, the specimen-manifest schema, the volume-metadata skill, and its
+`inspect_volume_metadata` MCP tool. Never read defect labels,
+development/sealed splits, ground-truth segmentation, prior thresholds,
+segmentation masks, registration outputs, or another specimen's manifest.
 
 This agent does not compute or choose Otsu, segment CT, register CAD/graphs,
 recenter nodes, derive defect labels, compute ROIs, or perform scientific QA.

@@ -1,4 +1,11 @@
 interface:
   display_name: "Volume Metadata"
-  short_description: "Inspect manifest-ready NumPy and TIFF CT metadata"
-  default_prompt: "Use $volume-metadata to inspect a CT volume without guessing axes or voxel spacing."
+  short_description: "Inspect CT metadata through a bounded MCP tool"
+  default_prompt: "Use $volume-metadata to inspect a CT volume through the manifest-ready MCP tool without guessing scientific metadata."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools"
+      description: "Local CT tools including inspect_volume_metadata"
+      transport: "stdio"

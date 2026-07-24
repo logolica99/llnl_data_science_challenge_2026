@@ -122,6 +122,12 @@ if __name__ == "__main__":
 
 The server script in this repository, `src/mcp_server.py`, should follow this pattern as you add each tool.
 
+The server also exposes `inspect_volume_metadata`, a structured Part 2 tool
+used by the `volume-metadata` skill. It constrains NPY/TIFF inputs to the
+repository, performs header-only inspection plus streaming SHA-256 by default,
+and returns compact manifest-ready JSON. The skill owns the scientific policy
+and call sequence; the MCP tool owns deterministic file inspection.
+
 #### Basic Image Processing Terms
 Before starting Tasks 1-3, here are a few image-processing terms you will use with respect to a volume/image:
 

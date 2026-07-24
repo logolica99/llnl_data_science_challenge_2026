@@ -12,7 +12,11 @@ import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from volume_metadata import VolumeMetadataError, inspect_volumes  # noqa: E402
+from volume_metadata import (  # noqa: E402
+    VolumeMetadataError,
+    inspect_volume_envelope,
+    inspect_volumes,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,14 +56,17 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     try:
-        result = inspect_volumes(
-            args.files,
-            repository_root=args.repository_root,
-            header_only=args.header_only,
-            include_sha256=not args.skip_hash,
-            chunk_voxels=args.chunk_voxels,
-            retention=args.retention,
-        )
+        common = {
+            "repository_root": args.repository_root,
+            "header_only": args.header_only,
+            "include_sha256": not args.skip_hash,
+            "chunk_voxels": args.chunk_voxels,
+            "retention": args.retention,
+        }
+        if len(args.files) == 1:
+            result = inspect_volume_envelope(args.files[0], **common)
+        else:
+            result = inspect_volumes(args.files, **common)
     except (OSError, TypeError, ValueError, VolumeMetadataError) as exc:
         raise SystemExit(f"error: {exc}") from exc
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))

@@ -1,6 +1,7 @@
 from contextlib import redirect_stdout
 from pathlib import Path
 import sys
+from typing import Any, Literal
 
 import matplotlib
 import numpy as np
@@ -8,8 +9,10 @@ from fastmcp import FastMCP
 
 try:
     from .skeletonization import skeletonize_mask
+    from .volume_metadata import inspect_volume_envelope
 except ImportError:
     from skeletonization import skeletonize_mask
+    from volume_metadata import inspect_volume_envelope
 
 
 # MCP servers may run without a display, so use Matplotlib's non-interactive
@@ -19,6 +22,30 @@ import matplotlib.pyplot as plt
 
 # Initialize the MCP server
 mcp = FastMCP("CT Segmentation")
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+
+@mcp.tool()
+def inspect_volume_metadata(
+    input_filepath: str,
+    header_only: bool = True,
+    include_sha256: bool = True,
+    retention: Literal["committed", "external", "regenerable"] = "external",
+) -> dict[str, Any]:
+    """Inspect one repository CT volume and return manifest-ready metadata.
+
+    Use header-only mode for specimen intake. It reads the NPY/TIFF header and
+    streams the file for SHA-256 without decoding voxel intensities. Set
+    include_sha256 to false only for a non-authoritative preview. Inputs are
+    constrained to this repository and are never modified.
+    """
+    return inspect_volume_envelope(
+        Path(input_filepath),
+        repository_root=REPOSITORY_ROOT,
+        header_only=header_only,
+        include_sha256=include_sha256,
+        retention=retention,
+    )
 
 
 def _input_npy_path(filepath: str) -> Path:

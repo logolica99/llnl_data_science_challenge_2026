@@ -421,6 +421,34 @@ def inspect_volume(
     }
 
 
+def inspect_volume_envelope(
+    path: Path,
+    *,
+    repository_root: Path,
+    header_only: bool = False,
+    include_sha256: bool = True,
+    chunk_voxels: int = 8 * 1024 * 1024,
+    retention: str = "external",
+) -> dict[str, Any]:
+    """Return one inspection with shared MCP/CLI authority metadata."""
+    inspection = inspect_volume(
+        path,
+        repository_root=repository_root,
+        header_only=header_only,
+        include_sha256=include_sha256,
+        chunk_voxels=chunk_voxels,
+        retention=retention,
+    )
+    return {
+        "status": "ok",
+        "authoritative": include_sha256,
+        "inspection_mode": (
+            "header_only" if header_only else "streaming_statistics"
+        ),
+        **inspection,
+    }
+
+
 def inspect_volumes(
     paths: Iterable[Path],
     *,
@@ -438,7 +466,7 @@ def inspect_volumes(
         "header_only": header_only,
         "sha256_included": include_sha256,
         "volumes": [
-            inspect_volume(
+            inspect_volume_envelope(
                 path,
                 repository_root=repository_root,
                 header_only=header_only,
