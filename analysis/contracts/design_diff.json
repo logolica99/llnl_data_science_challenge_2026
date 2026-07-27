@@ -1,0 +1,250 @@
+{
+  "schema_version": "agent-stage-contract/1.0.0",
+  "stage_number": 1,
+  "stage": "design_diff",
+  "owner": "design_diff",
+  "invoked_by": "orchestrator",
+  "execution_kind": "hybrid",
+  "maximum_attempts": 2,
+  "one_shot": false,
+  "required_dependencies": {
+    "agents": [
+      {
+        "name": "design_diff",
+        "contract_version": "agent-stage-contract/1.0.0"
+      }
+    ],
+    "mcp_tools": [
+      {
+        "server": "segmentation-tools",
+        "name": "resolve_cad_graph_orientation",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "label_deleted_edges",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      }
+    ]
+  },
+  "required_inputs": [
+    "verified_stage_0_receipt_hash_in_control_metadata",
+    "attempt_scoped_stage_1_handoff",
+    "frozen_analysis_parameters_sha256",
+    "nominal_graph_json",
+    "full_design_stl_0p0",
+    "intentional_deletion_stl_0p1",
+    "intentional_deletion_stl_0p5",
+    "intentional_deletion_stl_1p0"
+  ],
+  "optional_inputs": [],
+  "required_outputs": [
+    "analysis/<specimen_id>/labels/cad_graph_orientation.json",
+    "analysis/<specimen_id>/labels/intentional_deletions_0p1.json",
+    "analysis/<specimen_id>/labels/intentional_deletions_0p5.json",
+    "analysis/<specimen_id>/labels/intentional_deletions_1p0.json",
+    "analysis/<specimen_id>/labels/dev_split.json",
+    "evals/labels/sealed_split.json",
+    "analysis/<specimen_id>/labels/label_report.md"
+  ],
+  "forbidden_operations": [
+    "ct_volume_access",
+    "aligned_graph_access",
+    "bounding_box_registration",
+    "ambiguous_orientation_guessing",
+    "ambiguous_edge_guessing",
+    "segmentation",
+    "ct_registration",
+    "roi_measurement",
+    "defect_classification",
+    "sealed_evaluation",
+    "mcp_cli_or_direct_import_fallback"
+  ],
+  "input_artifacts": {
+    "allowed": [
+      {
+        "role": "stage_handoff",
+        "path": "analysis/<specimen_id>/handoffs/stage_1_design_diff_attempt_<attempt>.json",
+        "consumers": [
+          "design_diff"
+        ]
+      },
+      {
+        "role": "nominal_graph",
+        "path": "<manifest-declared-nominal-graph-json>",
+        "consumers": [
+          "design_diff",
+          "resolve_cad_graph_orientation",
+          "label_deleted_edges"
+        ]
+      },
+      {
+        "role": "full_design_stl",
+        "path": "data/missing_struts/stls/0.stl",
+        "consumers": [
+          "resolve_cad_graph_orientation",
+          "label_deleted_edges"
+        ]
+      },
+      {
+        "role": "intentional_deletion_stl_0p1",
+        "path": "data/missing_struts/stls/0.1.stl",
+        "consumers": [
+          "label_deleted_edges"
+        ]
+      },
+      {
+        "role": "intentional_deletion_stl_0p5",
+        "path": "data/missing_struts/stls/0.5.stl",
+        "consumers": [
+          "label_deleted_edges"
+        ]
+      },
+      {
+        "role": "intentional_deletion_stl_1p0",
+        "path": "data/missing_struts/stls/1.stl",
+        "consumers": [
+          "label_deleted_edges"
+        ]
+      }
+    ],
+    "required_roles": [
+      "stage_handoff",
+      "nominal_graph",
+      "full_design_stl",
+      "intentional_deletion_stl_0p1",
+      "intentional_deletion_stl_0p5",
+      "intentional_deletion_stl_1p0"
+    ],
+    "forbidden": [
+      {
+        "role": "ct_volume",
+        "path": "<manifest-declared-ct-volume>"
+      },
+      {
+        "role": "challenge_aligned_graph",
+        "path": "<manifest-declared-aligned-graph-json>"
+      },
+      {
+        "role": "segmentation_artifact",
+        "path": "analysis/<specimen_id>/segmentation/**"
+      },
+      {
+        "role": "registration_artifact",
+        "path": "analysis/<specimen_id>/registration/**"
+      },
+      {
+        "role": "prior_defect_labels",
+        "path": "analysis/<specimen_id>/labels/**"
+      }
+    ]
+  },
+  "output_artifacts": {
+    "allowed": [
+      {
+        "role": "manual_review_evidence",
+        "path": "analysis/<specimen_id>/reviews/stage_1_attempt_<attempt>/**",
+        "allow_multiple": true
+      },
+      {
+        "role": "cad_graph_orientation",
+        "path": "analysis/<specimen_id>/labels/cad_graph_orientation.json"
+      },
+      {
+        "role": "intentional_deletions_0p1",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_0p1.json"
+      },
+      {
+        "role": "intentional_deletions_0p5",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_0p5.json"
+      },
+      {
+        "role": "intentional_deletions_1p0",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_1p0.json"
+      },
+      {
+        "role": "development_labels",
+        "path": "analysis/<specimen_id>/labels/dev_split.json"
+      },
+      {
+        "role": "sealed_labels",
+        "path": "evals/labels/sealed_split.json"
+      },
+      {
+        "role": "label_report",
+        "path": "analysis/<specimen_id>/labels/label_report.md"
+      }
+    ],
+    "required_roles": [
+      "cad_graph_orientation",
+      "intentional_deletions_0p1",
+      "intentional_deletions_0p5",
+      "intentional_deletions_1p0",
+      "development_labels",
+      "sealed_labels",
+      "label_report"
+    ],
+    "sensitive_roles": {
+      "intentional_deletions_0p5": {
+        "authorized_consumers": [
+          "eval_agent"
+        ],
+        "unlock_stage": 5
+      },
+      "development_labels": {
+        "authorized_consumers": [
+          "missing_strut_agent"
+        ],
+        "unlock_stage": 4
+      },
+      "sealed_labels": {
+        "authorized_consumers": [
+          "eval_agent"
+        ],
+        "unlock_stage": 5
+      }
+    }
+  },
+  "required_receipt_assertions": [
+    "contract_version_matches",
+    "stage_0_receipt_hash_matches",
+    "frozen_config_hash_matches",
+    "stage_handoff_excludes_ct_aligned_registration_and_label_metadata",
+    "input_artifact_hashes_match",
+    "output_artifact_hashes_match",
+    "design_space_only",
+    "cad_graph_orientation_unambiguous",
+    "deletion_counts_equal_18_93_186",
+    "deletion_counts_monotone",
+    "triangle_deficit_ratio_between_170_and_180",
+    "all_label_ids_exist_in_nominal_topology",
+    "development_and_sealed_splits_disjoint_and_exhaustive",
+    "split_stratified_by_x_bin_and_z_shell",
+    "sensitive_artifacts_sealed_after_creation",
+    "accessed_inputs_within_allowlist",
+    "forbidden_inputs_not_accessed"
+  ],
+  "next_stage": "data_prep",
+  "unlock_condition": {
+    "terminal_state": "pass",
+    "completion_receipt_verified": true,
+    "matching_hashes_required": true,
+    "frozen_config_hash_required": true,
+    "all_count_and_ambiguity_gates_pass": true,
+    "next_stage_locked_until_verified": true
+  },
+  "manual_review_conditions": [
+    "equivalent_cad_graph_orientation_hypotheses",
+    "ambiguous_edge_assignment_before_label_propagation"
+  ],
+  "halt_conditions": [
+    "missing_or_schema_incompatible_dependency",
+    "deterministic_count_consistency_gate_failure",
+    "triangle_deficit_ratio_gate_failure",
+    "invalid_or_duplicate_nominal_strut_id",
+    "ct_or_aligned_graph_access",
+    "forbidden_input_access",
+    "receipt_or_artifact_hash_mismatch",
+    "attempt_limit_reached"
+  ]
+}

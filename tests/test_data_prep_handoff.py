@@ -298,7 +298,7 @@ class DataPrepHandoffTests(unittest.TestCase):
         self.assertIn("does not compute or choose Otsu", agent["developer_instructions"])
         self.assertEqual("orchestrator", contract["invoked_by"])
         self.assertEqual(2, contract["maximum_attempts"])
-        self.assertEqual("data_prep", contract["next_stage"])
+        self.assertEqual("design_diff", contract["next_stage"])
 
 
 if __name__ == "__main__":
