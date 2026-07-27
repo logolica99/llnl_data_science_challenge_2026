@@ -1,15 +1,38 @@
 {
   "schema_version": "agent-stage-contract/1.0.0",
+  "stage_number": 0,
   "stage": "specimen_ingest",
   "owner": "specimen_ingest",
   "invoked_by": "orchestrator",
+  "execution_kind": "hybrid",
   "maximum_attempts": 2,
+  "one_shot": false,
+  "required_dependencies": {
+    "agents": [
+      {
+        "name": "specimen_ingest",
+        "contract_version": "agent-stage-contract/1.0.0"
+      }
+    ],
+    "mcp_tools": [
+      {
+        "server": "segmentation-tools",
+        "name": "inspect_volume_metadata",
+        "response_schema_version": "volume-metadata/1.0.0"
+      }
+    ]
+  },
   "required_inputs": [
+    "attempt_scoped_stage_0_handoff",
     "specimen_id",
     "cad_stl",
     "nominal_graph_json",
     "ct_volume",
-    "scientist_association_confirmation"
+    "scientist_association_confirmation",
+    "cad_units_and_provenance",
+    "graph_axes",
+    "ct_array_axes",
+    "aligned_graph_units"
   ],
   "optional_inputs": [
     "challenge_aligned_json"
@@ -21,25 +44,175 @@
     "analysis/<specimen_id>/config/data_prep_handoff.json"
   ],
   "forbidden_operations": [
+    "filename_or_directory_based_specimen_association",
     "threshold_selection",
     "segmentation",
     "registration",
     "local_node_refinement",
     "defect_label_derivation",
-    "scientific_qa"
+    "scientific_qa",
+    "mcp_cli_or_direct_import_fallback"
   ],
-  "next_stage": "data_prep",
+  "input_artifacts": {
+    "allowed": [
+      {
+        "role": "stage_handoff",
+        "path": "analysis/<specimen_id>/handoffs/stage_0_specimen_ingest_attempt_<attempt>.json",
+        "consumers": [
+          "specimen_ingest"
+        ]
+      },
+      {
+        "role": "cad_stl",
+        "path": "<scientist-confirmed-cad-stl>",
+        "consumers": [
+          "specimen_ingest"
+        ]
+      },
+      {
+        "role": "nominal_graph",
+        "path": "<scientist-confirmed-nominal-graph-json>",
+        "consumers": [
+          "specimen_ingest"
+        ]
+      },
+      {
+        "role": "ct_volume",
+        "path": "<scientist-confirmed-ct-volume>",
+        "consumers": [
+          "specimen_ingest",
+          "inspect_volume_metadata"
+        ]
+      },
+      {
+        "role": "challenge_aligned_graph",
+        "path": "<scientist-authorized-aligned-graph-json>",
+        "consumers": [
+          "specimen_ingest"
+        ],
+        "phases": [
+          "challenge_aligned_json"
+        ]
+      },
+      {
+        "role": "specimen_manifest_schema",
+        "path": "analysis/schema/specimen_manifest.schema.json",
+        "consumers": [
+          "specimen_ingest"
+        ]
+      },
+      {
+        "role": "volume_metadata_skill",
+        "path": ".agents/skills/volume-metadata/SKILL.md",
+        "consumers": [
+          "specimen_ingest"
+        ]
+      }
+    ],
+    "required_roles": [
+      "stage_handoff",
+      "cad_stl",
+      "nominal_graph",
+      "ct_volume",
+      "specimen_manifest_schema",
+      "volume_metadata_skill"
+    ],
+    "forbidden": [
+      {
+        "role": "defect_labels",
+        "path": "analysis/<specimen_id>/labels/**"
+      },
+      {
+        "role": "development_labels",
+        "path": "analysis/<specimen_id>/labels/dev_split.json"
+      },
+      {
+        "role": "sealed_labels",
+        "path": "evals/labels/sealed_split.json"
+      },
+      {
+        "role": "segmentation_mask",
+        "path": "analysis/<specimen_id>/segmentation/**"
+      },
+      {
+        "role": "registration_output",
+        "path": "analysis/<specimen_id>/registration/**"
+      },
+      {
+        "role": "other_specimen_manifest",
+        "path": "analysis/<other-specimen-id>/config/specimen_manifest.json"
+      }
+    ]
+  },
+  "output_artifacts": {
+    "allowed": [
+      {
+        "role": "manual_review_evidence",
+        "path": "analysis/<specimen_id>/reviews/stage_0_attempt_<attempt>/**",
+        "allow_multiple": true
+      },
+      {
+        "role": "ingest_request",
+        "path": "analysis/<specimen_id>/config/ingest_request.json"
+      },
+      {
+        "role": "specimen_manifest",
+        "path": "analysis/<specimen_id>/config/specimen_manifest.json"
+      },
+      {
+        "role": "ingest_receipt",
+        "path": "analysis/<specimen_id>/config/ingest_receipt.json"
+      },
+      {
+        "role": "data_prep_handoff",
+        "path": "analysis/<specimen_id>/config/data_prep_handoff.json"
+      }
+    ],
+    "required_roles": [
+      "ingest_request",
+      "specimen_manifest",
+      "ingest_receipt",
+      "data_prep_handoff"
+    ]
+  },
+  "required_receipt_assertions": [
+    "contract_version_matches",
+    "association_explicit",
+    "all_paths_repository_relative",
+    "all_supplied_inputs_hashed",
+    "manifest_schema_valid",
+    "canonical_ingest_receipt_hash_valid",
+    "analysis_parameters_sha256_preserved",
+    "accessed_inputs_within_allowlist",
+    "forbidden_inputs_not_accessed",
+    "segmentation_not_run",
+    "registration_not_run",
+    "defect_labels_not_derived",
+    "output_artifact_hashes_match"
+  ],
+  "next_stage": "design_diff",
   "unlock_condition": {
+    "terminal_state": "pass",
     "handoff_status": "ready",
     "manifest_lifecycle_state": "ready_for_data_prep",
-    "matching_hashes_required": true
+    "completion_receipt_verified": true,
+    "matching_hashes_required": true,
+    "frozen_config_hash_required": true,
+    "next_stage_locked_until_verified": true
   },
+  "manual_review_conditions": [
+    "scientist_clarification_required_before_attempt_limit",
+    "ambiguous_units_axes_or_provenance"
+  ],
   "halt_conditions": [
+    "missing_or_schema_incompatible_dependency",
     "unconfirmed_file_association",
-    "unresolved_required_identity_or_coordinate_fields",
+    "unresolved_required_identity_or_coordinate_fields_after_attempt_limit",
     "path_outside_configured_roots",
     "invalid_graph_cad_or_ct",
     "challenge_mode_without_aligned_json",
+    "forbidden_input_access",
+    "receipt_or_artifact_hash_mismatch",
     "attempt_limit_reached"
   ]
 }

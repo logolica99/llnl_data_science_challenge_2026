@@ -1,0 +1,495 @@
+{
+  "schema_version": "agent-stage-contract/1.0.0",
+  "stage_number": 4,
+  "stage": "defect_analysis",
+  "owner": "defect_lead",
+  "invoked_by": "orchestrator",
+  "execution_kind": "agent_judgment",
+  "maximum_attempts": 2,
+  "one_shot": false,
+  "scoped_handoffs": [
+    {
+      "consumer": "missing_strut_agent",
+      "path": "analysis/<specimen_id>/handoffs/stage_4_missing_strut_agent_attempt_<attempt>.json",
+      "required_roles": [
+        "development_labels"
+      ],
+      "forbidden_roles": [
+        "sealed_labels"
+      ]
+    }
+  ],
+  "required_dependencies": {
+    "agents": [
+      {
+        "name": "defect_lead",
+        "contract_version": "agent-stage-contract/1.0.0"
+      },
+      {
+        "name": "missing_strut_agent",
+        "contract_version": "agent-stage-contract/1.0.0"
+      },
+      {
+        "name": "thin_strut_agent",
+        "contract_version": "agent-stage-contract/1.0.0"
+      },
+      {
+        "name": "broken_strut_agent",
+        "contract_version": "agent-stage-contract/1.0.0"
+      },
+      {
+        "name": "classifier_verifier",
+        "contract_version": "agent-stage-contract/1.0.0"
+      }
+    ],
+    "mcp_tools": [
+      {
+        "server": "segmentation-tools",
+        "name": "classify_struts",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "render_strut_evidence",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      }
+    ]
+  },
+  "required_inputs": [
+    "verified_stage_3_receipt_hash_in_control_metadata",
+    "attempt_scoped_stage_4_handoff",
+    "frozen_analysis_config",
+    "corridor_calibration",
+    "per_strut_metrics",
+    "per_strut_profiles",
+    "development_split_for_missing_strut_agent_only"
+  ],
+  "optional_inputs": [],
+  "required_outputs": [
+    "analysis/<specimen_id>/struts/findings_missing.json",
+    "analysis/<specimen_id>/struts/missing_calibration_attestation.json",
+    "analysis/<specimen_id>/struts/findings_thin.json",
+    "analysis/<specimen_id>/struts/findings_bent.json",
+    "analysis/<specimen_id>/struts/findings_broken.json",
+    "analysis/<specimen_id>/struts/thresholds.json",
+    "analysis/<specimen_id>/struts/classified_struts.json",
+    "analysis/<specimen_id>/struts/decision_log.md",
+    "analysis/<specimen_id>/evidence/strut_<id>/manifest.json",
+    "analysis/<specimen_id>/struts/verifier_report.json"
+  ],
+  "forbidden_operations": [
+    "sealed_split_access",
+    "development_split_access_by_any_agent_except_missing_strut_agent",
+    "full_intentional_deletion_label_access",
+    "registration_recomputation",
+    "roi_measurement_recomputation",
+    "threshold_or_metric_modification",
+    "silent_lead_override",
+    "classification_without_fixed_precedence",
+    "bent_as_competing_primary_class",
+    "verifier_participation_in_classification_decisions",
+    "mcp_cli_or_direct_import_fallback"
+  ],
+  "input_artifacts": {
+    "allowed": [
+      {
+        "role": "stage_handoff",
+        "path": "analysis/<specimen_id>/handoffs/stage_4_defect_analysis_attempt_<attempt>.json",
+        "consumers": [
+          "defect_lead",
+          "missing_strut_agent",
+          "thin_strut_agent",
+          "broken_strut_agent",
+          "classifier_verifier"
+        ]
+      },
+      {
+        "role": "analysis_config",
+        "path": "analysis/<specimen_id>/config/analysis_config.json",
+        "consumers": [
+          "defect_lead",
+          "missing_strut_agent",
+          "thin_strut_agent",
+          "broken_strut_agent",
+          "classifier_verifier"
+        ]
+      },
+      {
+        "role": "corridor_calibration",
+        "path": "analysis/<specimen_id>/struts/corridor_calibration.json",
+        "consumers": [
+          "defect_lead",
+          "missing_strut_agent",
+          "thin_strut_agent",
+          "broken_strut_agent",
+          "classifier_verifier"
+        ]
+      },
+      {
+        "role": "per_strut_metrics",
+        "path": "analysis/<specimen_id>/struts/per_strut_metrics.csv",
+        "consumers": [
+          "defect_lead",
+          "missing_strut_agent",
+          "thin_strut_agent",
+          "broken_strut_agent",
+          "classifier_verifier",
+          "classify_struts"
+        ]
+      },
+      {
+        "role": "per_strut_profiles",
+        "path": "analysis/<specimen_id>/struts/per_strut_profiles.json",
+        "consumers": [
+          "broken_strut_agent",
+          "defect_lead",
+          "classifier_verifier",
+          "render_strut_evidence"
+        ]
+      },
+      {
+        "role": "localized_graph",
+        "path": "analysis/<specimen_id>/registration/localized_graph.json",
+        "consumers": [
+          "render_strut_evidence"
+        ]
+      },
+      {
+        "role": "ct_volume",
+        "path": "<manifest-declared-ct-volume>",
+        "consumers": [
+          "render_strut_evidence"
+        ]
+      },
+      {
+        "role": "development_labels",
+        "path": "analysis/<specimen_id>/labels/dev_split.json",
+        "consumers": [
+          "missing_strut_agent"
+        ],
+        "phases": [
+          "missing_boundary_calibration"
+        ]
+      },
+      {
+        "role": "missing_calibration_attestation",
+        "path": "analysis/<specimen_id>/struts/missing_calibration_attestation.json",
+        "consumers": [
+          "defect_lead",
+          "classifier_verifier"
+        ],
+        "phases": [
+          "merge",
+          "independent_verification"
+        ]
+      },
+      {
+        "role": "specialist_findings",
+        "path": "analysis/<specimen_id>/struts/findings_*.json",
+        "allow_multiple": true,
+        "consumers": [
+          "defect_lead",
+          "classifier_verifier"
+        ],
+        "phases": [
+          "merge",
+          "independent_verification"
+        ]
+      },
+      {
+        "role": "classification_thresholds",
+        "path": "analysis/<specimen_id>/struts/thresholds.json",
+        "consumers": [
+          "classifier_verifier"
+        ],
+        "phases": [
+          "independent_verification"
+        ]
+      },
+      {
+        "role": "classified_struts",
+        "path": "analysis/<specimen_id>/struts/classified_struts.json",
+        "consumers": [
+          "classifier_verifier"
+        ],
+        "phases": [
+          "independent_verification"
+        ]
+      },
+      {
+        "role": "classification_decision_log",
+        "path": "analysis/<specimen_id>/struts/decision_log.md",
+        "consumers": [
+          "classifier_verifier"
+        ],
+        "phases": [
+          "independent_verification"
+        ]
+      },
+      {
+        "role": "evidence_packets",
+        "path": "analysis/<specimen_id>/evidence/strut_<id>/**",
+        "allow_multiple": true,
+        "consumers": [
+          "classifier_verifier"
+        ],
+        "phases": [
+          "independent_verification"
+        ]
+      }
+    ],
+    "required_roles": [
+      "stage_handoff",
+      "analysis_config",
+      "corridor_calibration",
+      "per_strut_metrics",
+      "per_strut_profiles",
+      "localized_graph",
+      "ct_volume",
+      "development_labels"
+    ],
+    "forbidden": [
+      {
+        "role": "sealed_labels",
+        "path": "evals/labels/sealed_split.json"
+      },
+      {
+        "role": "intentional_deletions_0p5",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_0p5.json"
+      },
+      {
+        "role": "intentional_deletions_0p1",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_0p1.json"
+      },
+      {
+        "role": "intentional_deletions_1p0",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_1p0.json"
+      }
+    ]
+  },
+  "output_artifacts": {
+    "allowed": [
+      {
+        "role": "manual_review_evidence",
+        "path": "analysis/<specimen_id>/reviews/stage_4_attempt_<attempt>/**",
+        "allow_multiple": true
+      },
+      {
+        "role": "findings_missing",
+        "path": "analysis/<specimen_id>/struts/findings_missing.json"
+      },
+      {
+        "role": "missing_calibration_attestation",
+        "path": "analysis/<specimen_id>/struts/missing_calibration_attestation.json",
+        "schema_version": "missing-calibration-attestation/1.0.0"
+      },
+      {
+        "role": "findings_thin",
+        "path": "analysis/<specimen_id>/struts/findings_thin.json"
+      },
+      {
+        "role": "findings_bent",
+        "path": "analysis/<specimen_id>/struts/findings_bent.json"
+      },
+      {
+        "role": "findings_broken",
+        "path": "analysis/<specimen_id>/struts/findings_broken.json"
+      },
+      {
+        "role": "classification_thresholds",
+        "path": "analysis/<specimen_id>/struts/thresholds.json"
+      },
+      {
+        "role": "classified_struts",
+        "path": "analysis/<specimen_id>/struts/classified_struts.json"
+      },
+      {
+        "role": "classification_decision_log",
+        "path": "analysis/<specimen_id>/struts/decision_log.md"
+      },
+      {
+        "role": "evidence_packets",
+        "path": "analysis/<specimen_id>/evidence/strut_<id>/manifest.json",
+        "allow_multiple": true
+      },
+      {
+        "role": "classifier_verifier_report",
+        "path": "analysis/<specimen_id>/struts/verifier_report.json",
+        "schema_version": "classifier-verifier-report/1.0.0"
+      }
+    ],
+    "required_roles": [
+      "findings_missing",
+      "missing_calibration_attestation",
+      "findings_thin",
+      "findings_bent",
+      "findings_broken",
+      "classification_thresholds",
+      "classified_struts",
+      "classification_decision_log",
+      "evidence_packets",
+      "classifier_verifier_report"
+    ],
+    "sensitive_roles": {
+      "missing_calibration_attestation": {
+        "must_not_contain_raw_development_labels": true,
+        "authorized_consumers": [
+          "defect_lead",
+          "classifier_verifier"
+        ]
+      }
+    }
+  },
+  "output_document_schemas": {
+    "missing_calibration_attestation": {
+      "schema_version": "missing-calibration-attestation/1.0.0",
+      "additional_properties": false,
+      "required_fields": [
+        "schema_version",
+        "owner",
+        "gate",
+        "specimen_id",
+        "stage_number",
+        "attempt",
+        "run_token",
+        "scoped_handoff_sha256",
+        "per_strut_metrics_sha256",
+        "findings_missing_sha256",
+        "development_split_accessed",
+        "raw_development_labels_included",
+        "calibration_summary"
+      ],
+      "constant_fields": {
+        "owner": "missing_strut_agent",
+        "gate": "pass",
+        "stage_number": 4,
+        "development_split_accessed": true,
+        "raw_development_labels_included": false
+      },
+      "hash_bindings": {
+        "scoped_handoff_sha256": "current missing_strut_agent scoped handoff canonical SHA-256",
+        "per_strut_metrics_sha256": "current Stage 4 per_strut_metrics input SHA-256",
+        "findings_missing_sha256": "current findings_missing output SHA-256"
+      },
+      "calibration_summary": {
+        "additional_properties": false,
+        "required_fields": [
+          "method",
+          "development_sample_count",
+          "selected_missing_boundary"
+        ],
+        "method": "development_split_calibration",
+        "development_sample_count": "positive integer",
+        "selected_missing_boundary": "finite number"
+      }
+    },
+    "classifier_verifier_report": {
+      "schema_version": "classifier-verifier-report/1.0.0",
+      "additional_properties": false,
+      "required_fields": [
+        "schema_version",
+        "owner",
+        "gate",
+        "specimen_id",
+        "stage_number",
+        "attempt",
+        "run_token",
+        "config_sha256",
+        "contract_sha256",
+        "predecessor_receipt_sha256",
+        "input_handoff_sha256",
+        "participated_in_classification",
+        "label_access",
+        "bindings",
+        "self_verification"
+      ],
+      "constant_fields": {
+        "owner": "classifier_verifier",
+        "gate": "pass",
+        "stage_number": 4,
+        "participated_in_classification": false
+      },
+      "label_access": {
+        "development_split_read": false,
+        "sealed_split_read": false
+      },
+      "binding_fields": [
+        "classified_struts_sha256",
+        "thresholds_sha256",
+        "decision_log_sha256",
+        "evidence_set_sha256",
+        "per_strut_metrics_sha256",
+        "specialist_findings_sha256"
+      ],
+      "evidence_set_sha256": "SHA-256 of canonical JSON for every evidence output sorted by path then SHA-256",
+      "specialist_findings_roles": [
+        "findings_missing",
+        "missing_calibration_attestation",
+        "findings_thin",
+        "findings_bent",
+        "findings_broken"
+      ],
+      "required_true_self_verification_fields": [
+        "every_strut_labeled_once",
+        "fixed_precedence_respected",
+        "bent_kept_separate",
+        "every_adjudication_logged",
+        "evidence_support_checked",
+        "cutoffs_audited",
+        "decision_log_matches_execution",
+        "development_split_not_accessed",
+        "sealed_split_not_accessed"
+      ]
+    }
+  },
+  "required_receipt_assertions": [
+    "contract_version_matches",
+    "stage_3_receipt_hash_matches",
+    "frozen_config_hash_matches",
+    "stage_handoff_excludes_sealed_and_full_intentional_label_roles_paths_and_hashes",
+    "input_artifact_hashes_match",
+    "output_artifact_hashes_match",
+    "development_split_readers_exactly_missing_strut_agent",
+    "development_split_path_and_hash_disclosed_only_in_missing_strut_agent_scope",
+    "sealed_split_not_accessed",
+    "full_intentional_deletion_labels_not_accessed",
+    "missing_calibration_attestation_contains_no_raw_labels",
+    "thin_broken_bent_cutoffs_are_distribution_derived",
+    "every_strut_labeled_exactly_once",
+    "classification_precedence_is_missing_broken_thin_present",
+    "bent_is_separate_non_competing_attribute",
+    "every_lead_adjudication_logged",
+    "every_non_present_strut_has_hashed_evidence_packet",
+    "deterministic_classification_matches_thresholds_and_decision_log",
+    "classifier_verifier_was_independent",
+    "classifier_verifier_report_passed",
+    "accessed_inputs_within_consumer_and_phase_allowlists",
+    "forbidden_inputs_not_accessed"
+  ],
+  "next_stage": "sealed_evaluation",
+  "unlock_condition": {
+    "terminal_state": "pass",
+    "completion_receipt_verified": true,
+    "matching_hashes_required": true,
+    "frozen_config_hash_required": true,
+    "classifier_verifier_pass_required": true,
+    "sealed_split_remains_locked": true,
+    "next_stage_locked_until_verified": true
+  },
+  "manual_review_conditions": [
+    "classifier_verifier_requests_bounded_correction_before_attempt_limit",
+    "specialist_conflict_requires_logged_lead_adjudication"
+  ],
+  "halt_conditions": [
+    "missing_or_schema_incompatible_dependency",
+    "development_split_read_by_unauthorized_agent",
+    "sealed_or_full_intentional_label_access",
+    "classifier_verifier_missing_or_not_independent",
+    "classification_precedence_or_exhaustiveness_failure",
+    "evidence_or_decision_log_gate_failure",
+    "deterministic_classification_gate_failure_without_retry",
+    "receipt_or_artifact_hash_mismatch",
+    "frozen_config_hash_mismatch",
+    "attempt_limit_reached"
+  ]
+}
