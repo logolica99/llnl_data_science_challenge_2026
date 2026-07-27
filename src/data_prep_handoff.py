@@ -170,6 +170,8 @@ def create_data_prep_handoff(
         "required_outputs": [
             "aligned graph",
             "exact-histogram Otsu result",
+            "canonical uint8 ZYX mask contract",
+            "bounded segmentation-mask comparison",
             "registration QA",
             "local node recentering",
             "ROI capture gate",
@@ -212,6 +214,9 @@ def _validate_data_prep_result(
         != manifest["analysis_parameters_sha256"]
     ):
         raise DataPrepHandoffError("Data-prep result uses stale analysis parameters")
+    declared_mode = manifest["analysis_parameters"]["registration"]["mode"]
+    if result.get("registration_mode", declared_mode) != declared_mode:
+        raise DataPrepHandoffError("Data-prep result registration_mode mismatch")
     if set(result.get("derived", {})) != REQUIRED_DERIVED:
         raise DataPrepHandoffError(
             "Data-prep result must provide exactly: "
@@ -252,6 +257,31 @@ def _validate_data_prep_result(
             f"Aligned graph role must be {expected_role!r} in {mode}"
         )
 
+    canonical_mask = result.get("canonical_mask")
+    if canonical_mask is not None:
+        if not isinstance(canonical_mask, dict):
+            raise DataPrepHandoffError("canonical_mask must be an artifact object")
+        required = {"path", "sha256", "role", "retention", "dtype", "shape", "array_axes"}
+        if set(canonical_mask) != required:
+            raise DataPrepHandoffError("canonical_mask contract fields are incomplete")
+        mask_relative = Path(str(canonical_mask.get("path", "")))
+        if mask_relative.is_absolute() or ".." in mask_relative.parts:
+            raise DataPrepHandoffError("Canonical mask path escapes repository")
+        mask_path = repository_root.resolve() / mask_relative
+        if not mask_path.is_file() or sha256_file(mask_path) != canonical_mask.get("sha256"):
+            raise DataPrepHandoffError("Canonical mask is missing or has a SHA-256 mismatch")
+        expected_shape = manifest["inputs"]["ct_metadata"]["shape"]
+        if (
+            canonical_mask.get("role") != "canonical_segmentation_mask"
+            or canonical_mask.get("dtype") != "uint8"
+            or canonical_mask.get("shape") != expected_shape
+            or canonical_mask.get("array_axes") != ["z", "y", "x"]
+            or canonical_mask.get("retention") not in {"committed", "regenerable"}
+        ):
+            raise DataPrepHandoffError(
+                "Canonical mask path/role/dtype/shape/retention/axes contract mismatch"
+            )
+
 
 def apply_data_prep_result(
     manifest_path: Path,
@@ -278,6 +308,8 @@ def apply_data_prep_result(
     prior_manifest_hash = canonical_json_sha256(manifest)
     finalized = json.loads(json.dumps(manifest))
     finalized["inputs"]["aligned_graph"] = result["aligned_graph"]
+    if "canonical_mask" in result:
+        finalized["inputs"]["canonical_mask"] = result["canonical_mask"]
     finalized["derived"] = result["derived"]
     finalized["lifecycle_state"] = ANALYSIS_READY
     finalized["unresolved_fields"] = []
@@ -311,7 +343,9 @@ def apply_data_prep_result(
         "data_prep_result_sha256": result_hash,
         "analysis_parameters_sha256": finalized["analysis_parameters_sha256"],
         "lifecycle_state": ANALYSIS_READY,
+        "registration_mode": finalized["analysis_parameters"]["registration"]["mode"],
         "self_verification": result["self_verification"],
+        "canonical_mask": result.get("canonical_mask"),
     }
     completion = {
         **completion_base,

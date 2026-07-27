@@ -73,6 +73,20 @@ DEFAULT_REGISTRATION_CONFIG: dict[str, Any] = {
         "maximum_translation_error_voxels": 2.0,
         "minimum_pass_fraction": 0.9,
     },
+    "robustness": {
+        "cases": [
+            {"name": "threshold_low", "threshold_offset": -500.0},
+            {"name": "baseline", "threshold_offset": 0.0},
+            {"name": "threshold_high", "threshold_offset": 500.0},
+            {"name": "downsample_three", "threshold_offset": 0.0, "downsample_factor": 3},
+            {"name": "seed_alternative", "threshold_offset": 0.0, "random_seed": 20260724},
+            {"name": "edt_low_trim_high", "threshold_offset": 0.0, "edt_peak_threshold_downsampled_voxels": 1.8, "icp_keep_fraction": 0.75},
+            {"name": "edt_high_trim_low", "threshold_offset": 0.0, "edt_peak_threshold_downsampled_voxels": 2.2, "icp_keep_fraction": 0.65},
+        ],
+        "maximum_source_points": 2048,
+        "minimum_successful_cases": 4,
+        "maximum_p95_prediction_spread_voxels": 2.0,
+    },
 }
 
 
@@ -416,6 +430,10 @@ def run_synthetic_suite(
     """Exercise autonomous fitting against seeded missing/outlier cases."""
 
     merged = _merged_config(config)
+    source_xyz = np.asarray(source_xyz, dtype=np.float64)
+    if len(source_xyz) > 256:
+        rows = np.linspace(0, len(source_xyz) - 1, 256, dtype=int)
+        source_xyz = source_xyz[rows]
     params = merged["synthetic"]
     rng = np.random.default_rng(int(merged["random_seed"]) + 202)
     cases: list[dict[str, Any]] = []
@@ -478,6 +496,91 @@ def run_synthetic_suite(
     }
 
 
+def run_robustness_suite(
+    source_xyz: np.ndarray,
+    ct_path: str | Path,
+    threshold: float,
+    baseline: SimilarityTransform,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run bounded threshold/EDT/trim perturbations without aligned data."""
+
+    merged = _merged_config(config)
+    params = merged["robustness"]
+    source = np.asarray(source_xyz, dtype=np.float64)
+    maximum = int(params["maximum_source_points"])
+    if len(source) > maximum:
+        source = source[np.linspace(0, len(source) - 1, maximum, dtype=int)]
+    cases: list[dict[str, Any]] = []
+    transforms: list[SimilarityTransform] = []
+    for case in params["cases"]:
+        case_config = _merged_config(merged)
+        if "edt_peak_threshold_downsampled_voxels" in case:
+            case_config["detection"]["edt_peak_threshold_downsampled_voxels"] = float(
+                case["edt_peak_threshold_downsampled_voxels"]
+            )
+        if "downsample_factor" in case:
+            case_config["detection"]["downsample_factor"] = int(case["downsample_factor"])
+        if "icp_keep_fraction" in case:
+            case_config["fitting"]["icp_keep_fraction"] = float(case["icp_keep_fraction"])
+        if "random_seed" in case:
+            case_config["random_seed"] = int(case["random_seed"])
+        case_threshold = float(threshold) + float(case.get("threshold_offset", 0.0))
+        try:
+            candidates, detection = detect_ct_nodes(ct_path, case_threshold, case_config)
+            fit, holdout, _, _ = split_candidates(
+                candidates,
+                float(case_config["detection"]["candidate_holdout_fraction"]),
+                int(case_config["random_seed"]),
+            )
+            transform, diagnostics = multistart_fit(source, fit, baseline, case_config)
+            holdout_distances, _ = cKDTree(transform.apply(source)).query(
+                holdout, k=1, workers=1
+            )
+            transforms.append(transform)
+            cases.append(
+                {
+                    "name": str(case["name"]),
+                    "status": "ok",
+                    "threshold": case_threshold,
+                    "detected_node_count": detection["detected_node_count"],
+                    "holdout_median_distance_voxels": float(np.median(holdout_distances)),
+                    "multistart_overall_pass": diagnostics["overall_pass"],
+                    "config_sha256": sha256_json(case_config),
+                    "transform": transform.to_dict(),
+                }
+            )
+        except Exception as exc:
+            cases.append(
+                {
+                    "name": str(case["name"]),
+                    "status": "rejected",
+                    "threshold": case_threshold,
+                    "reason": str(exc),
+                }
+            )
+    prediction_shifts: list[float] = []
+    for transform in transforms:
+        prediction_shifts.extend(
+            np.linalg.norm(transform.apply(source) - baseline.apply(source), axis=1).tolist()
+        )
+    p95 = float(np.quantile(prediction_shifts, 0.95)) if prediction_shifts else math.inf
+    gates = {
+        "successful_case_count_sufficient": len(transforms)
+        >= int(params["minimum_successful_cases"]),
+        "prediction_spread_within_limit": p95
+        <= float(params["maximum_p95_prediction_spread_voxels"]),
+    }
+    return {
+        "case_count": len(cases),
+        "successful_case_count": len(transforms),
+        "p95_prediction_spread_voxels": p95,
+        "gates": gates,
+        "overall_pass": bool(all(gates.values())),
+        "cases": cases,
+    }
+
+
 def register_lattice_to_ct(
     nominal_graph_path: str | Path,
     output_graph_path: str | Path,
@@ -488,6 +591,8 @@ def register_lattice_to_ct(
     aligned_graph_path: str | Path | None = None,
     threshold: float | None = None,
     config: dict[str, Any] | None = None,
+    analysis_config_path: str | Path | None = None,
+    freeze_receipt_path: str | Path | None = None,
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """Register a lattice using exactly one declared production mode."""
@@ -561,6 +666,14 @@ def register_lattice_to_ct(
             ],
         )
         transform, multistart = multistart_fit(unique_source, fit, base, merged)
+        synthetic = run_synthetic_suite(unique_source, merged)
+        robustness = run_robustness_suite(
+            unique_source,
+            volume.path,
+            float(threshold),
+            transform,
+            merged,
+        )
         registered_positions = transform.apply(nominal.node_positions_xyz)
         unique_predictions = transform.apply(unique_source)
         holdout_distances, _ = cKDTree(unique_predictions).query(
@@ -582,6 +695,8 @@ def register_lattice_to_ct(
             "fit_holdout_disjoint": bool(
                 not np.intersect1d(fit_indices, holdout_indices).size
             ),
+            "synthetic_recovery_passed": bool(synthetic["overall_pass"]),
+            "bounded_robustness_passed": bool(robustness["overall_pass"]),
         }
         transform_payload = transform.to_dict()
         volume_hash = sha256_file(volume.path)
@@ -601,6 +716,8 @@ def register_lattice_to_ct(
                 "maximum": float(np.max(holdout_distances)),
             },
             "multistart": multistart,
+            "synthetic_recovery": synthetic,
+            "bounded_robustness": robustness,
             "coordinate_bounds_xyz": {
                 "minimum": registered_positions.min(axis=0).tolist(),
                 "maximum": registered_positions.max(axis=0).tolist(),
@@ -614,6 +731,14 @@ def register_lattice_to_ct(
     else:
         gate = "pass"
     registered_document = nominal.document_with_positions(registered_positions)
+    registered_document["part2_provenance"] = {
+        "schema_version": "part2-coordinate-provenance/1.0.0",
+        "registration_mode": mode,
+        "nominal_graph_sha256": nominal.source_sha256,
+        "ct_sha256": volume_hash,
+        "aligned_graph_used_for_fit": mode == "challenge_aligned_json",
+        "config_sha256": sha256_json(merged),
+    }
     graph_artifact = write_json_atomic(
         output_graph,
         registered_document,
@@ -664,4 +789,74 @@ def register_lattice_to_ct(
         "retention": "committed",
     }
     report["hashes"]["registration_report_sha256"] = report_artifact["sha256"]
+    if analysis_config_path is not None:
+        analysis_config = {
+            "schema_version": "part2-analysis-config/1.0.0",
+            "registration_mode": mode,
+            "threshold": float(threshold) if threshold is not None else None,
+            "axis_mapping": AXIS_MAPPING,
+            "config": merged,
+            "config_sha256": sha256_json(merged),
+            "input_hashes": {
+                "nominal_graph_sha256": nominal.source_sha256,
+                **({"ct_sha256": volume_hash} if volume_hash else {}),
+                **(
+                    {"authorized_aligned_graph_sha256": mode_details["authorized_aligned_graph_sha256"]}
+                    if mode == "challenge_aligned_json"
+                    else {}
+                ),
+            },
+            "label_inputs_accessed": False,
+        }
+        config_artifact = write_json_atomic(
+            analysis_config_path, analysis_config, overwrite=overwrite
+        )
+        report["artifacts"]["analysis_config"] = {
+            **config_artifact,
+            "role": "analysis_config",
+            "retention": "committed",
+        }
+        report["hashes"]["analysis_config_sha256"] = config_artifact["sha256"]
+    if freeze_receipt_path is not None:
+        if mode != "autonomous_v2":
+            raise ValueError("A CT-only fit freeze receipt is valid only in autonomous_v2")
+        if gate != "pass":
+            report["warnings"].append(
+                "CT-only fit freeze was not published because registration gates did not pass"
+            )
+            return report
+        freeze = {
+            "schema_version": "part2-registration-freeze/1.0.0",
+            "registration_mode": mode,
+            "gate": gate,
+            "frozen_artifacts": [
+                {
+                    "path": graph_artifact["path"],
+                    "sha256": graph_artifact["sha256"],
+                    "role": "registered_graph",
+                },
+                {
+                    "path": report_artifact["path"],
+                    "sha256": report_artifact["sha256"],
+                    "role": "registration_report",
+                },
+            ],
+            "fit_inputs": {
+                "nominal_graph_sha256": nominal.source_sha256,
+                "ct_sha256": volume_hash,
+            },
+            "aligned_graph_accessed": False,
+            "label_inputs_accessed": False,
+            "config_sha256": sha256_json(merged),
+        }
+        freeze["canonical_freeze_sha256"] = sha256_json(freeze)
+        freeze_artifact = write_json_atomic(
+            freeze_receipt_path, freeze, overwrite=overwrite
+        )
+        report["artifacts"]["registration_freeze"] = {
+            **freeze_artifact,
+            "role": "registration_fit_freeze",
+            "retention": "committed",
+        }
+        report["hashes"]["registration_freeze_sha256"] = freeze_artifact["sha256"]
     return report

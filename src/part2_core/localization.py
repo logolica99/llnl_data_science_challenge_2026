@@ -218,9 +218,19 @@ def localize_lattice_nodes(
     else:
         gate = "pass"
 
+    localized_document = graph.document_with_positions(localized)
+    localized_document["part2_provenance"] = {
+        "schema_version": "part2-coordinate-provenance/1.0.0",
+        "registration_mode": registration_mode,
+        "input_registered_graph_sha256": graph.source_sha256,
+        "ct_sha256": sha256_file(volume.path),
+        "independent_positions_retained": True,
+        "global_refit_performed": False,
+        "config_sha256": sha256_json(merged),
+    }
     graph_artifact = write_json_atomic(
         output_graph_path,
-        graph.document_with_positions(localized),
+        localized_document,
         overwrite=overwrite,
     )
     registration_report_hash = (

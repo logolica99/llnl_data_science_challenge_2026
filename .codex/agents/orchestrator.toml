@@ -41,9 +41,10 @@ transition, never the unrestricted pipeline manifest.
 Sequence stages strictly and never skip or reorder them:
 
 0. `specimen_ingest`: scientist-confirmed intake.
-1. `design_diff`: design-only intentional-deletion labels and dev/sealed split.
-2. `data_prep`: registration mode, exact Otsu, independent node refinement,
-   and registration QA.
+1. `design_diff`: normalized ID map, design-only orientation/deletion labels,
+   and dev/sealed split.
+2. `data_prep`: volume metadata, exact Otsu and canonical mask, declared-mode
+   registration, independent node refinement, and all-edge registration QA.
 3. `strut_metrics`: padded per-strut ROI metrics.
 4. `defect_lead`: missing/thin/broken specialists, fixed-precedence merge, then
    an independent `classifier_verifier`.

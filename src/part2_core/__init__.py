@@ -5,6 +5,11 @@ functions and is responsible only for path policy and structured envelopes.
 """
 
 from .evaluation import compute_detection_metrics, wilson_interval
+from .design_diff import (
+    deterministic_stratified_split,
+    label_deleted_edges,
+    resolve_cad_graph_orientation,
+)
 from .evidence import render_strut_evidence
 from .graph import GraphNormalizationError, normalize_lattice_graph
 from .localization import localize_lattice_nodes
@@ -27,12 +32,18 @@ from .registration import (
     multistart_fit,
     register_lattice_to_ct,
     rotation_difference_deg,
+    run_robustness_suite,
     run_synthetic_suite,
     solve_similarity,
     split_candidates,
     trimmed_icp,
 )
 from .reports import get_strut_report
+from .segmentation import (
+    compare_segmentation_masks,
+    segment_ct_dataset,
+    visualize_slice,
+)
 from .response import (
     GATES,
     RESPONSE_SCHEMA_VERSION,
@@ -67,13 +78,16 @@ __all__ = [
     "compute_detection_metrics",
     "compute_registration_qa",
     "compute_strut_metrics",
+    "compare_segmentation_masks",
     "detect_ct_nodes",
     "deterministic_histogram",
+    "deterministic_stratified_split",
     "error_response",
     "get_strut_report",
     "histogram_diagnostics",
     "histogram_sha256",
     "iter_array_chunks",
+    "label_deleted_edges",
     "load_volume",
     "localize_lattice_nodes",
     "multistart_fit",
@@ -83,14 +97,18 @@ __all__ = [
     "replay_exact_otsu",
     "register_lattice_to_ct",
     "render_strut_evidence",
+    "resolve_cad_graph_orientation",
     "rotation_difference_deg",
+    "run_robustness_suite",
     "run_synthetic_suite",
     "sample_xyz",
+    "segment_ct_dataset",
     "solve_similarity",
     "split_candidates",
     "success_response",
     "trimmed_icp",
     "volume_metadata",
+    "visualize_slice",
     "wilson_interval",
     "write_otsu_artifacts",
     "xyz_to_zyx_indices",

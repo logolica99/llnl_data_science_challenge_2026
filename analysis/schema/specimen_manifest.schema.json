@@ -56,6 +56,9 @@
         "aligned_graph": {
           "$ref": "#/$defs/artifact"
         },
+        "canonical_mask": {
+          "$ref": "#/$defs/canonicalMaskArtifact"
+        },
         "cad": {
           "$ref": "#/$defs/artifact"
         },
@@ -933,6 +936,44 @@
             "external",
             "regenerable"
           ]
+        }
+      }
+    },
+    "canonicalMaskArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "role",
+        "retention",
+        "dtype",
+        "shape",
+        "array_axes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "role": {
+          "const": "canonical_segmentation_mask"
+        },
+        "retention": {
+          "enum": ["committed", "regenerable"]
+        },
+        "dtype": {
+          "const": "uint8"
+        },
+        "shape": {
+          "$ref": "#/$defs/positiveIntegerTriplet"
+        },
+        "array_axes": {
+          "const": ["z", "y", "x"]
         }
       }
     },

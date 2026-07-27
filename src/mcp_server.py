@@ -1,34 +1,38 @@
 from contextlib import redirect_stdout
 import hashlib
+import json
 from pathlib import Path
 import sys
 from typing import Any, Callable, Literal
 
-import matplotlib
 import numpy as np
 from fastmcp import FastMCP
 
 try:
     from .part2_core import (
         classify_struts as _classify_struts,
+        compare_segmentation_masks as _compare_masks_core,
         compute_detection_metrics as _compute_detection_metrics,
         compute_registration_qa as _compute_registration_qa,
         compute_strut_metrics as _compute_strut_metrics,
         error_response as _error_response,
         get_strut_report as _get_strut_report,
+        label_deleted_edges as _label_deleted_edges,
         load_volume as _load_volume,
         localize_lattice_nodes as _localize_lattice_nodes,
         normalize_lattice_graph as _normalize_lattice_graph,
         register_lattice_to_ct as _register_lattice_to_ct,
         render_strut_evidence as _render_strut_evidence,
         replay_exact_otsu as _replay_exact_otsu,
+        resolve_cad_graph_orientation as _resolve_cad_graph_orientation,
         success_response as _success_response,
+        segment_ct_dataset as _segment_ct_dataset_core,
         volume_metadata as _volume_metadata,
+        visualize_slice as _visualize_slice_core,
         write_otsu_artifacts as _write_otsu_artifacts,
     )
     from .skeletonization import skeletonize_mask
     from .volume_artifacts import (
-        compare_segmentation_masks as _compare_segmentation_masks,
         render_volume_3d as _render_volume_3d,
         summarize_nde_artifacts as _summarize_nde_artifacts,
     )
@@ -36,34 +40,33 @@ try:
 except ImportError:
     from part2_core import (
         classify_struts as _classify_struts,
+        compare_segmentation_masks as _compare_masks_core,
         compute_detection_metrics as _compute_detection_metrics,
         compute_registration_qa as _compute_registration_qa,
         compute_strut_metrics as _compute_strut_metrics,
         error_response as _error_response,
         get_strut_report as _get_strut_report,
+        label_deleted_edges as _label_deleted_edges,
         load_volume as _load_volume,
         localize_lattice_nodes as _localize_lattice_nodes,
         normalize_lattice_graph as _normalize_lattice_graph,
         register_lattice_to_ct as _register_lattice_to_ct,
         render_strut_evidence as _render_strut_evidence,
         replay_exact_otsu as _replay_exact_otsu,
+        resolve_cad_graph_orientation as _resolve_cad_graph_orientation,
         success_response as _success_response,
+        segment_ct_dataset as _segment_ct_dataset_core,
         volume_metadata as _volume_metadata,
+        visualize_slice as _visualize_slice_core,
         write_otsu_artifacts as _write_otsu_artifacts,
     )
     from skeletonization import skeletonize_mask
     from volume_artifacts import (
-        compare_segmentation_masks as _compare_segmentation_masks,
         render_volume_3d as _render_volume_3d,
         summarize_nde_artifacts as _summarize_nde_artifacts,
     )
     from volume_metadata import inspect_volume_envelope
 
-
-# MCP servers may run without a display, so use Matplotlib's non-interactive
-# backend before importing pyplot.
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 # Initialize the MCP server
 mcp = FastMCP("CT Segmentation")
@@ -155,6 +158,13 @@ def _sha256_file(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
     return digest.hexdigest()
 
 
+def _config_sha256(value: dict[str, Any]) -> str:
+    payload = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _structured_failure(tool: str, exc: Exception) -> dict[str, Any]:
     if isinstance(exc, FileNotFoundError):
         code = "input_not_found"
@@ -192,8 +202,11 @@ def _relative_artifacts(artifacts: dict[str, Any]) -> dict[str, Any]:
             continue
         item = dict(metadata)
         if "path" in item:
+            artifact_path = Path(item["path"])
             item["path"] = (
-                Path(item["path"]).resolve().relative_to(REPOSITORY_ROOT).as_posix()
+                artifact_path.resolve().relative_to(REPOSITORY_ROOT).as_posix()
+                if artifact_path.is_absolute()
+                else artifact_path.as_posix()
             )
         result[name] = item
     return result
@@ -206,11 +219,15 @@ def _core_response(
 ) -> dict[str, Any]:
     """Expose a deterministic core result without adding computation."""
 
-    result = {
-        key: value
-        for key, value in payload.items()
-        if key not in {"artifacts", "hashes", "warnings"}
-    }
+    result = (
+        dict(payload["result"])
+        if isinstance(payload.get("result"), dict)
+        else {
+            key: value
+            for key, value in payload.items()
+            if key not in {"artifacts", "hashes", "warnings"}
+        }
+    )
     return _success_response(
         tool=tool,
         gate=payload["gate"],
@@ -235,16 +252,11 @@ def _output_path(filepath: str, expected_suffix: str | None = None) -> Path:
     return path
 
 
-def _load_3d_array(filepath: str) -> tuple[Path, np.ndarray]:
-    """Use the shared memory-mapped TIFF/NPY loader for legacy tools."""
-    volume = _load_volume(filepath)
-    return volume.path, volume.array
-
-
 @mcp.tool()
 def volume_info(
     input_filepath: str,
     include_sha256: bool = True,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
 ) -> dict[str, Any]:
     """Return compact shared-loader metadata for a TIFF or NPY CT volume."""
 
@@ -257,6 +269,7 @@ def volume_info(
         volume = _load_volume(path)
         result = _volume_metadata(volume)
         result["path"] = relative
+        result["registration_mode"] = registration_mode
         digest = _sha256_file(path) if include_sha256 else ""
         warnings = [] if include_sha256 else ["input SHA-256 was explicitly omitted"]
         return _success_response(
@@ -271,7 +284,15 @@ def volume_info(
                     "retention": "external",
                 }
             },
-            hashes={"input_sha256": digest} if digest else {},
+            hashes={
+                **({"input_sha256": digest} if digest else {}),
+                "config_sha256": _config_sha256(
+                    {
+                        "include_sha256": include_sha256,
+                        "registration_mode": registration_mode,
+                    }
+                ),
+            },
             warnings=warnings,
         )
 
@@ -304,6 +325,9 @@ def load_lattice_graph(
         )
         result["source_path"] = source_relative
         result["output_path"] = output_relative
+        result["config_sha256"] = _config_sha256(
+            {"normalization_schema": "normalized-lattice-graph/1.0.0"}
+        )
         warnings = list(result["warnings"])
         gate: Literal["pass", "manual_review"] = (
             "pass" if not warnings else "manual_review"
@@ -328,11 +352,145 @@ def load_lattice_graph(
             hashes={
                 "input_sha256": result["source_sha256"],
                 "artifact_sha256": result["artifact_sha256"],
+                "config_sha256": result["config_sha256"],
             },
             warnings=warnings,
         )
 
     return _run_structured_tool("load_lattice_graph", operation)
+
+
+@mcp.tool()
+def resolve_cad_graph_orientation(
+    nominal_graph_filepath: str,
+    full_design_stl_filepath: str,
+    output_filepath: str,
+    sample_count: int = 9,
+    scale_candidates: list[float] | None = None,
+    ambiguity_absolute_mm: float = 0.0001,
+    ambiguity_relative_fraction: float = 0.001,
+    config_sha256: str | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Resolve CAD/graph orientation from design geometry without CT access."""
+
+    def operation() -> dict[str, Any]:
+        graph, _ = _repository_path(
+            nominal_graph_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        stl, _ = _repository_path(
+            full_design_stl_filepath, must_exist=True, expected_suffixes={".stl"}
+        )
+        output, _ = _repository_path(
+            output_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        payload = _resolve_cad_graph_orientation(
+            graph,
+            stl,
+            output,
+            sample_count=sample_count,
+            scale_candidates=scale_candidates,
+            ambiguity_absolute_mm=ambiguity_absolute_mm,
+            ambiguity_relative_fraction=ambiguity_relative_fraction,
+            config_sha256=config_sha256,
+            overwrite=overwrite,
+        )
+        artifact = dict(payload["artifact"])
+        artifact["path"] = Path(artifact["path"]).relative_to(REPOSITORY_ROOT).as_posix()
+        result = {
+            key: value
+            for key, value in payload.items()
+            if key not in {"artifact", "hashes", "warnings"}
+        }
+        return _success_response(
+            tool="resolve_cad_graph_orientation",
+            gate=payload["gate"],
+            summary=(
+                "Resolved one CAD/graph orientation"
+                if payload["gate"] == "pass"
+                else "CAD/graph orientation requires bounded review"
+            ),
+            result=result,
+            artifacts={"cad_graph_orientation": artifact},
+            hashes={
+                **payload["hashes"],
+                "orientation_artifact_sha256": artifact["sha256"],
+            },
+            warnings=list(payload.get("warnings", [])),
+        )
+
+    return _run_structured_tool("resolve_cad_graph_orientation", operation)
+
+
+@mcp.tool()
+def label_deleted_edges(
+    nominal_graph_filepath: str,
+    baseline_stl_filepath: str,
+    variant_stl_filepaths: dict[str, str],
+    orientation_filepath: str,
+    output_directory: str,
+    development_split_filepath: str | None = None,
+    sealed_split_filepath: str | None = None,
+    label_report_filepath: str | None = None,
+    expected_deletions: dict[str, int] | None = None,
+    sample_count: int = 9,
+    split_seed: int = 20260723,
+    config_sha256: str | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Label all nominal edges by memory-aware, tube-emptiness CAD analysis."""
+
+    def operation() -> dict[str, Any]:
+        graph, _ = _repository_path(
+            nominal_graph_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        baseline, _ = _repository_path(
+            baseline_stl_filepath, must_exist=True, expected_suffixes={".stl"}
+        )
+        orientation, _ = _repository_path(
+            orientation_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        variants = {
+            name: _repository_path(path, must_exist=True, expected_suffixes={".stl"})[0]
+            for name, path in variant_stl_filepaths.items()
+        }
+        output, _ = _repository_output_directory(output_directory)
+
+        def optional_output(
+            path: str | None, suffixes: set[str] | None = None
+        ) -> Path | None:
+            return (
+                _repository_path(
+                    path,
+                    must_exist=False,
+                    expected_suffixes=suffixes or {".json"},
+                )[0]
+                if path
+                else None
+            )
+
+        payload = _label_deleted_edges(
+            graph,
+            baseline,
+            variants,
+            orientation,
+            output,
+            development_split_path=optional_output(development_split_filepath),
+            sealed_split_path=optional_output(sealed_split_filepath),
+            label_report_path=optional_output(label_report_filepath, {".md", ".json"}),
+            expected_deletions=expected_deletions,
+            sample_count=sample_count,
+            split_seed=split_seed,
+            config_sha256=config_sha256,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "label_deleted_edges",
+            f"Labeled every nominal edge with gate {payload['gate']}",
+            payload,
+        )
+
+    return _run_structured_tool("label_deleted_edges", operation)
 
 
 @mcp.tool()
@@ -352,6 +510,10 @@ def replay_exact_otsu(
     maximum_foreground_fraction: float = 0.35,
     minimum_otsu_separability: float = 0.45,
     minimum_class_mean_separation_sigma: float = 0.75,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    enforce_reference_replay: bool = False,
+    reference_threshold: int = 40054,
+    reference_foreground_voxels: int = 58653410,
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """Replay per-scan exact Otsu and persist its histogram and diagnostics."""
@@ -380,6 +542,41 @@ def replay_exact_otsu(
         }
         result, histogram = _replay_exact_otsu(source, recipe=recipe)
         result["source_path"] = source_relative
+        reference_gates = {
+            "reference_threshold_matches": result["threshold"] == reference_threshold,
+            "reference_foreground_count_matches": result["foreground_voxel_count"]
+            == reference_foreground_voxels,
+        }
+        if enforce_reference_replay:
+            result["gates"].update(reference_gates)
+            result["overall_pass"] = bool(all(result["gates"].values()))
+        config_hash = _config_sha256(
+            {
+                "recipe": recipe,
+                "registration_mode": registration_mode,
+                "enforce_reference_replay": enforce_reference_replay,
+                "reference_threshold": reference_threshold,
+                "reference_foreground_voxels": reference_foreground_voxels,
+            }
+        )
+        input_hash = _sha256_file(source)
+        result["registration_mode"] = registration_mode
+        result["reference_replay"] = {
+            "enforced": enforce_reference_replay,
+            "expected_threshold": reference_threshold,
+            "expected_foreground_voxels": reference_foreground_voxels,
+            "gates": reference_gates,
+        }
+        result["hashes"] = {
+            "input_sha256": input_hash,
+            "config_sha256": config_hash,
+        }
+        result["provenance"] = {
+            "registration_mode": registration_mode,
+            "threshold_selected_per_scan": True,
+            "target_foreground_fraction_used": False,
+            "defect_labels_read": False,
+        }
         artifacts = _write_otsu_artifacts(
             output,
             result,
@@ -398,7 +595,6 @@ def replay_exact_otsu(
             if not failed_gates
             else ["histogram rejection gates failed: " + ", ".join(failed_gates)]
         )
-        input_hash = _sha256_file(source)
         return _success_response(
             tool="replay_exact_otsu",
             gate=gate,
@@ -412,6 +608,7 @@ def replay_exact_otsu(
                 "histogram_sha256": result["histogram_sha256"],
                 "histogram_artifact_sha256": artifacts["histogram"]["sha256"],
                 "report_artifact_sha256": artifacts["report"]["sha256"],
+                "config_sha256": config_hash,
             },
             warnings=warnings,
         )
@@ -429,6 +626,8 @@ def register_lattice_to_ct(
     aligned_graph_filepath: str | None = None,
     threshold: float | None = None,
     config: dict[str, Any] | None = None,
+    analysis_config_filepath: str | None = None,
+    freeze_receipt_filepath: str | None = None,
     overwrite: bool = False,
 ) -> dict[str, Any]:
     """Register through challenge aligned-JSON or isolated autonomous-v2 mode."""
@@ -461,6 +660,20 @@ def register_lattice_to_ct(
             if aligned_graph_filepath
             else None
         )
+        analysis_config = (
+            _repository_path(
+                analysis_config_filepath, must_exist=False, expected_suffixes={".json"}
+            )[0]
+            if analysis_config_filepath
+            else None
+        )
+        freeze_receipt = (
+            _repository_path(
+                freeze_receipt_filepath, must_exist=False, expected_suffixes={".json"}
+            )[0]
+            if freeze_receipt_filepath
+            else None
+        )
         payload = _register_lattice_to_ct(
             nominal,
             output_graph,
@@ -470,6 +683,8 @@ def register_lattice_to_ct(
             aligned_graph_path=aligned,
             threshold=threshold,
             config=config,
+            analysis_config_path=analysis_config,
+            freeze_receipt_path=freeze_receipt,
             overwrite=overwrite,
         )
         return _core_response(
@@ -532,13 +747,20 @@ def localize_lattice_nodes(
             registration_report_path=registration_report,
             overwrite=overwrite,
         )
+        compact_payload = dict(payload)
+        compact_payload.pop("records", None)
+        compact_payload["localization"] = {
+            **dict(payload["localization"]),
+            "record_count": int(payload["counts"]["nodes"]),
+            "records_persisted_only": True,
+        }
         return _core_response(
             "localize_lattice_nodes",
             (
                 f"Localized {payload['counts']['accepted_nodes']} of "
                 f"{payload['counts']['nodes']} nodes"
             ),
-            payload,
+            compact_payload,
         )
 
     return _run_structured_tool("localize_lattice_nodes", operation)
@@ -554,6 +776,9 @@ def compute_registration_qa(
     local_search_radius_voxels: float,
     registration_uncertainty_voxels: float,
     localization_report_filepath: str | None = None,
+    slice_output_filepath: str | None = None,
+    bias_output_filepath: str | None = None,
+    slice_index: int = 380,
     config: dict[str, Any] | None = None,
     overwrite: bool = False,
 ) -> dict[str, Any]:
@@ -582,6 +807,20 @@ def compute_registration_qa(
             if localization_report_filepath
             else None
         )
+        slice_output = (
+            _repository_path(
+                slice_output_filepath, must_exist=False, expected_suffixes={".png"}
+            )[0]
+            if slice_output_filepath
+            else None
+        )
+        bias_output = (
+            _repository_path(
+                bias_output_filepath, must_exist=False, expected_suffixes={".png"}
+            )[0]
+            if bias_output_filepath
+            else None
+        )
         payload = _compute_registration_qa(
             ct,
             graph,
@@ -591,6 +830,9 @@ def compute_registration_qa(
             local_search_radius_voxels=local_search_radius_voxels,
             registration_uncertainty_voxels=registration_uncertainty_voxels,
             localization_report_path=localization_report,
+            slice_output_path=slice_output,
+            bias_output_path=bias_output,
+            slice_index=slice_index,
             config=config,
             overwrite=overwrite,
         )
@@ -855,81 +1097,80 @@ def get_strut_report(
 
 
 @mcp.tool()
-def segment_ct_dataset(input_filepath: str, output_filepath: str, threshold: float) -> str:
-    """
-    Segments a 3D CT dataset based on a given density threshold value.
+def segment_ct_dataset(
+    input_filepath: str,
+    output_filepath: str,
+    threshold: float,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    retention: Literal["committed", "regenerable"] = "committed",
+    chunk_depth: int = 16,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Write the canonical uint8 TIFF/NPY threshold mask in bounded slabs."""
 
-    Args:
-        input_filepath: Path to the input .npy file containing the 3D CT scan data.
-        output_filepath: Path indicating where the segmented .npy file should be saved.
-        threshold: The density value to use as a threshold. Voxels >= threshold will be set to 1, others to 0.
-
-    Returns:
-        A status message indicating success and the save location, or an error message.
-    """
-    try:
-        input_path, volume = _load_3d_array(input_filepath)
-        if not np.isfinite(threshold):
-            raise ValueError("Threshold must be a finite number.")
-
-        output_path = _output_path(output_filepath, ".npy")
-        segmented = (volume >= threshold).astype(np.uint8)
-        np.save(output_path, segmented, allow_pickle=False)
-
-        foreground_voxels = int(np.count_nonzero(segmented))
-        return (
-            f"Segmented {input_path} at threshold {threshold}. "
-            f"Saved {foreground_voxels} foreground voxels out of "
-            f"{segmented.size} total voxels to {output_path}."
+    def operation() -> dict[str, Any]:
+        input_path, _ = _repository_path(
+            input_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
         )
-    except Exception as exc:
-        return f"Error segmenting CT dataset: {exc}"
+        output_path, _ = _repository_path(
+            output_filepath, must_exist=False, expected_suffixes={".npy"}
+        )
+        payload = _segment_ct_dataset_core(
+            input_path,
+            output_path,
+            threshold=threshold,
+            registration_mode=registration_mode,
+            retention=retention,
+            chunk_depth=chunk_depth,
+            overwrite=overwrite,
+        )
+        message = (
+            f"Saved {payload['result']['foreground_voxels']} foreground voxels "
+            f"out of {payload['result']['total_voxels']} total voxels"
+        )
+        payload["result"]["message"] = message
+        return _core_response("segment_ct_dataset", message, payload)
+
+    return _run_structured_tool("segment_ct_dataset", operation)
 
 
 @mcp.tool()
-def visualize_slice(input_filepath: str, output_filepath: str, slice_index: int, axis: int = 0) -> str:
-    """
-    Loads a 3D CT dataset from a .npy file and saves a visualization of a specific slice to an image file.
+def visualize_slice(
+    input_filepath: str,
+    output_filepath: str,
+    slice_index: int,
+    axis: int = 0,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Render one TIFF/NPY slice and return only compact artifact metadata."""
 
-    Args:
-        input_filepath: Path to the input .npy file containing the 3D CT data.
-        output_filepath: Path indicating where the output image should be saved (e.g., .png).
-        slice_index: The index of the slice to visualize.
-        axis: The axis along which to take the slice (0, 1, or 2). Default is 0.
-
-    Returns:
-        A status message indicating success and the save location, or an error message.
-    """
-    figure = None
-    try:
-        input_path, volume = _load_3d_array(input_filepath)
-        if axis not in (0, 1, 2):
-            raise ValueError(f"Axis must be 0, 1, or 2; received {axis}.")
-        if not 0 <= slice_index < volume.shape[axis]:
-            raise IndexError(
-                f"Slice index {slice_index} is outside axis {axis}, which has "
-                f"valid indices 0 through {volume.shape[axis] - 1}."
-            )
-
-        output_path = _output_path(output_filepath)
-        image = np.take(volume, slice_index, axis=axis)
-
-        figure, axes = plt.subplots(figsize=(8, 8))
-        axes.imshow(image, cmap="gray")
-        axes.set_title(f"{input_path.name}: axis {axis}, slice {slice_index}")
-        axes.axis("off")
-        figure.tight_layout()
-        figure.savefig(output_path, dpi=150, bbox_inches="tight")
-
-        return (
-            f"Saved axis {axis}, slice {slice_index} from {input_path} "
-            f"to {output_path}."
+    def operation() -> dict[str, Any]:
+        input_path, _ = _repository_path(
+            input_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
         )
-    except Exception as exc:
-        return f"Error visualizing CT slice: {exc}"
-    finally:
-        if figure is not None:
-            plt.close(figure)
+        output_path, _ = _repository_path(
+            output_filepath, must_exist=False, expected_suffixes={".png"}
+        )
+        payload = _visualize_slice_core(
+            input_path,
+            output_path,
+            slice_index=slice_index,
+            axis=axis,
+            registration_mode=registration_mode,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "visualize_slice",
+            f"Saved axis {axis}, slice {slice_index}",
+            payload,
+        )
+
+    return _run_structured_tool("visualize_slice", operation)
 
 
 @mcp.tool()
@@ -937,6 +1178,9 @@ def compare_segmentation_masks(
     raw_filepath: str,
     mask_filepaths: list[str],
     thresholds: list[float],
+    output_report_filepath: str | None = None,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     """Compare threshold masks without returning voxel arrays.
 
@@ -944,11 +1188,42 @@ def compare_segmentation_masks(
     three-dimensional boolean or integer NPY array with the same shape as the
     raw volume.
     """
-    return _compare_segmentation_masks(
-        raw_filepath,
-        mask_filepaths,
-        thresholds,
-    )
+    def operation() -> dict[str, Any]:
+        raw, _ = _repository_path(
+            raw_filepath, must_exist=True, expected_suffixes={".npy", ".tif", ".tiff"}
+        )
+        masks = [
+            _repository_path(path, must_exist=True, expected_suffixes={".npy", ".tif", ".tiff"})[0]
+            for path in mask_filepaths
+        ]
+        report_path = (
+            _repository_path(
+                output_report_filepath, must_exist=False, expected_suffixes={".json"}
+            )[0]
+            if output_report_filepath
+            else None
+        )
+        payload = _compare_masks_core(
+            raw,
+            masks,
+            thresholds,
+            registration_mode=registration_mode,
+            output_report_path=report_path,
+            overwrite=overwrite,
+            repository_root=REPOSITORY_ROOT,
+        )
+        stats = dict(payload["result"])
+        stats["candidates"] = [dict(item) for item in stats["candidates"]]
+        payload["result"] = stats
+        envelope = _core_response(
+            "compare_segmentation_masks",
+            f"Compared {len(masks)} aligned segmentation mask(s)",
+            payload,
+        )
+        # Preserve compact legacy summary fields for direct Python callers.
+        return {**envelope, **stats}
+
+    return _run_structured_tool("compare_segmentation_masks", operation)
 
 
 @mcp.tool()

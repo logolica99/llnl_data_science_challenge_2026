@@ -49,15 +49,10 @@ def write_json_atomic(
     value: Any,
     *,
     overwrite: bool = False,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Write stable pretty JSON atomically and return path/hash metadata."""
 
     destination = Path(path).expanduser().resolve()
-    if destination.exists() and not overwrite:
-        raise FileExistsError(
-            f"Artifact already exists; enable overwrite explicitly: {destination}"
-        )
-    destination.parent.mkdir(parents=True, exist_ok=True)
     payload = (
         json.dumps(
             value,
@@ -68,6 +63,18 @@ def write_json_atomic(
         ).encode("utf-8")
         + b"\n"
     )
+    if destination.exists():
+        if destination.is_file() and destination.read_bytes() == payload:
+            return {
+                "path": str(destination),
+                "sha256": sha256_file(destination),
+                "changed": False,
+            }
+        raise FileExistsError(
+            "Artifact already exists with different bytes; choose a new path: "
+            f"{destination}"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         dir=destination.parent,
         prefix=f".{destination.name}.",
@@ -82,7 +89,53 @@ def write_json_atomic(
         os.replace(temporary, destination)
     finally:
         temporary.unlink(missing_ok=True)
-    return {"path": str(destination), "sha256": sha256_file(destination)}
+    return {
+        "path": str(destination),
+        "sha256": sha256_file(destination),
+        "changed": True,
+    }
+
+
+def write_text_atomic(
+    path: str | Path,
+    text: str,
+    *,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Write UTF-8 text atomically with exact-replay idempotency."""
+
+    destination = Path(path).expanduser().resolve()
+    payload = text.encode("utf-8")
+    if destination.exists():
+        if destination.is_file() and destination.read_bytes() == payload:
+            return {
+                "path": str(destination),
+                "sha256": sha256_file(destination),
+                "changed": False,
+            }
+        raise FileExistsError(
+            f"Artifact already exists with different bytes: {destination}"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        dir=destination.parent,
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as stream:
+        temporary = Path(stream.name)
+        stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
+    try:
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return {
+        "path": str(destination),
+        "sha256": sha256_file(destination),
+        "changed": True,
+    }
 
 
 def require_new_path(path: str | Path, overwrite: bool) -> Path:

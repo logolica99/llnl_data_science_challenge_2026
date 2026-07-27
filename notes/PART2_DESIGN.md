@@ -78,10 +78,10 @@ JSON `thickness = 0.1` design units ≈ **231 µm**, which matches neither the R
 
 | Component | Exists today | Part 2 gap |
 |---|---|---|
-| **MCP server** (`src/mcp_server.py`) | 10 implemented tools: `inspect_volume_metadata`, `volume_info`, `load_lattice_graph`, `replay_exact_otsu`, `segment_ct_dataset`, `visualize_slice`, `compare_segmentation_masks`, `summarize_nde_artifacts`, `render_volume_3d`, and `skeletonize`. The shared loader supports memory-mapped TIFF/NPY volume metadata, graph normalization emits explicit ID maps, and exact Otsu replay writes hashed diagnostics. | The six legacy array-processing tools remain `.npy`-only, and CAD-orientation, STL labeling, registration, per-strut, evaluation, and Part 2 reporting primitives are still dashed/planned. Generalize the relevant legacy tools to TIFF and add the remaining Stage 1–6 tools in §3.3. |
-| **Registration POCs** (`poc/ct_registration/`, `poc/ct_registration_v2/`) | V1 establishes the CT-only similarity fit. V2 adds automatic per-scan Otsu, histogram rejection, synthetic recovery, 21 starts, robustness sweeps, candidate holdout, all-node/all-corridor image validation, downstream gates, artifact hashes, and a separate post-fit validator (§1.7). | Integrate v2 as the autonomous coarse-ROI mode; add independent per-node recentering that is not collapsed back to a global transform; support the README-authorized aligned JSON as the challenge-default mode; record the selected mode in every artifact. |
-| **Skills** (`.agents/skills/`) | `ct-threshold-optimizer`, `volume-metadata`, and `nde_report_expert`; every skill declares `segmentation-tools`, fails closed when MCP is unavailable, and contains no committed executable processing script. | `volume-metadata` already provides the manifest-ready TIFF/NPY contract. Threshold comparison and NDE reporting use MCP exclusively but their processing tools remain NPY-only; the Part 2 upgrades in §3.4 must preserve the same fail-closed boundary. |
-| **Subagents** (`.codex/agents/`) | Two bounded agents: `specimen_ingest.toml` performs scientist-confirmed intake and authoritative MCP metadata inspection; `segmentation_agent.toml` captures the earlier bounded segmentation contract. | `specimen_ingest` is the Stage 0 intake agent and hands off to `data_prep`. The older segmentation agent still references retired skill/script behavior and must be revised to the MCP-only contracts before reuse. Codex TOML remains platform-specific. |
+| **MCP server** (`src/mcp_server.py`) | Production Stage 1/2 tools are implemented: normalized graph loading, design-only CAD orientation and deletion labeling, exact Otsu, slab-wise canonical masks, bounded mask comparison/visualization, declared-mode registration, independent node localization, and separate all-edge QA gates. TIFF/NPY operations share the memory-aware loader and all new interfaces return `part2-mcp-response/1.0.0`. | Stage 3–6 reporting and specialist primitives remain the downstream implementation gap. |
+| **Registration POCs** (`poc/ct_registration/`, `poc/ct_registration_v2/`) | V2 is promoted into `part2_core`: per-scan Otsu rejection, holdout, 21 starts, seeded synthetic recovery, bounded threshold/downsample/trim/EDT robustness, CT-only freeze, independent local recentering, and challenge-aligned validation. | Optional post-freeze aligned-reference validation remains control-plane scoped; the autonomous fit never opens it. |
+| **Skills** (`.agents/skills/`) | `stl-design-diff`, `ct-registration`, `ct-threshold-optimizer`, `volume-metadata`, and reporting/runbook skills all declare `segmentation-tools`, fail closed when MCP is unavailable, and contain no executable scientific scripts. | Stage 3–6 skills must preserve the same MCP-only boundary. |
+| **Subagents** (`.codex/agents/`) | `specimen_ingest`, production `design_diff`, production `data_prep`, and the earlier bounded `segmentation_agent` are checked in with explicit contracts. The production agents use `gpt-5.6-sol` and immutable handoffs. | Stage 3–6 bounded agents remain to be implemented. |
 | **Evals** (`evals/`) | One LLM-judge rubric (well-written) + one single-sample result (4/5); `verification.json` checks format only | No objective metrics at all; no repeats/calibration/metadata; single-slice coverage; **the dataset's one exact ground truth (STL diff → intentional deletions) is unused** |
 | **Notes** | `notes/CHALLENGE_NOTES.md` is current and good | Root `STUDY_NOTES.md` is a stale truncation that dies mid-heading — a context-poisoning hazard; replace with a pointer |
 | **Deps** (`pyproject.toml` + `uv.lock`) | FastMCP and the scientific stack are pinned, including NumPy, SciPy, tifffile, scikit-image, trimesh, pandas, Matplotlib, and PyVista. | Keep the lock synchronized as planned graph/STL/registration tools move behind MCP; no separate skill-script dependency path is permitted. |
@@ -161,8 +161,9 @@ cores sequenced by the orchestrator.
 
 ### 3.3 MCP server v2 (`src/mcp_server.py` extended)
 
-The current `segmentation-tools` server exposes ten tools. These are the
-authoritative boundaries for the existing skills:
+The `segmentation-tools` server now exposes the production Stage 1/2 tools in
+addition to the earlier reporting utilities. These are authoritative MCP
+boundaries; agents and skills never import their implementations.
 
 | Current tool | Input support | Contract |
 |---|---|---|
@@ -170,9 +171,11 @@ authoritative boundaries for the existing skills:
 | `volume_info` | TIFF/NPY | Compact structured metadata through the shared memory-mapped loader, including format, axes, spacing provenance, repository path, and optional input SHA-256. |
 | `load_lattice_graph` | JSON | Normalizes nodes, edges, and cells to NPZ with explicit ID maps, count/topology warnings, artifact hashes, and a structured pass/manual-review gate. |
 | `replay_exact_otsu` | TIFF/NPY | Replays deterministic per-scan histogram/Otsu analysis, writes hashed histogram and report artifacts, and returns explicit pass/halt diagnostics. |
-| `segment_ct_dataset` | NPY | Writes a threshold mask; returns compact status rather than voxel data. |
-| `visualize_slice` | NPY | Writes one 2D slice image. |
-| `compare_segmentation_masks` | NPY | Validates aligned masks and returns compact foreground statistics. |
+| `resolve_cad_graph_orientation` / `label_deleted_edges` | JSON + binary STL | Resolve scale-preserving design orientation with ambiguity abstention, then label every nominal ID through sequential mesh tube-emptiness evidence. |
+| `segment_ct_dataset` | TIFF/NPY | Writes the canonical uint8 ZYX mask in slabs and returns its pinned contract. |
+| `visualize_slice` | TIFF/NPY | Writes one bounded 2D slice image. |
+| `compare_segmentation_masks` | TIFF/NPY | Validates aligned masks, persists a compact report, and returns foreground statistics. |
+| `register_lattice_to_ct` / `localize_lattice_nodes` / `compute_registration_qa` | JSON + TIFF/NPY | Execute the declared registration branch, preserve independent local positions, and emit separate coarse-capture, padded-ROI, and metrology gates with figures. |
 | `summarize_nde_artifacts` | NPY | Returns report-ready raw/mask/skeleton scalar metrics using bounded slab processing. |
 | `render_volume_3d` | NPY | Writes a PNG isosurface with an optional skeleton overlay; refuses implicit overwrite. |
 | `skeletonize` | NPY | Writes a skeleton artifact for optional QA and Part 1 reporting. |
@@ -186,7 +189,7 @@ subvolume QA operation. Every new tool must write large outputs to artifact
 paths, return compact structured metadata and hashes, and surface failures
 through MCP so the calling skill can halt.
 
-Planned Part 2 tools:
+Production Stage 1/2 skills and planned downstream skills:
 
 | Tool | Purpose |
 |---|---|
@@ -213,13 +216,13 @@ in §3.3, while skills retain scientific policy, stage ordering, acceptance
 gates, and interpretation guidance.
 
 - **`strut-defect-analyzer` (NEW):** owns Stages 3–4; documents the registered-JSON schema, the pinned axis mapping, the corridor-radius bootstrap, the corridor-local connectivity method (and its limitation: sub-voxel lack-of-fusion is undetectable at 58 µm/voxel), and dev/sealed label discipline.
-- **`ct-registration` (NEW):** owns Stage 2a; documents challenge vs autonomous mode, CT-only isolation for v2, automatic Otsu diagnostics, candidate holdout, multi-start ICP, robustness sweeps, independent local recentering, transform convention, ROI-vs-metrology gates, the registered-graph schema, and the hard prohibition on reading the aligned JSON before an autonomous fit is frozen.
-- **`stl-design-diff` (NEW):** owns Stage 1; documents that STLs are mm, origin-centered, unregistered, with extra Y geometry; the tube-emptiness method; labels transfer **by edge ID only**.
+- **`ct-registration` (implemented):** owns Stage 2; documents challenge vs autonomous mode, CT-only isolation for v2, automatic Otsu diagnostics, candidate holdout, multi-start ICP, robustness sweeps, independent local recentering, transform convention, ROI-vs-metrology gates, the registered-graph schema, and the hard prohibition on reading the aligned JSON before an autonomous fit is frozen.
+- **`stl-design-diff` (implemented):** owns Stage 1; documents that STLs are mm, origin-centered, unregistered, with extra Y geometry; the tube-emptiness method; labels transfer **by edge ID only**.
 - **`volume-metadata`:** memory-aware TIFF/NPY headers, hashes and optional
   statistics through `inspect_volume_metadata`; file metadata is the only
   sanctioned source of voxel spacing, and unavailable axes/spacing remain
   explicitly `unknown`. No CLI fallback exists.
-- **`ct-threshold-optimizer` (current, off critical path; Part 2 skill integration planned):** performs bounded NPY threshold sweeps through `segment_ct_dataset` and compares candidates through `compare_segmentation_masks`. The MCP server now implements TIFF/NPY per-scan exact-histogram Otsu replay through `replay_exact_otsu` (40054 / 58,653,410 on this scan), including histogram-rejection diagnostics; the remaining upgrade is to teach the skill when to invoke that production path and how to consume its gate/artifact contract. Exploratory candidates remain provisional; unavailable MCP tooling halts the skill rather than triggering a script fallback.
+- **`ct-threshold-optimizer` (implemented, off critical path):** defaults to TIFF/NPY exact per-scan Otsu replay and canonical-mask verification. Explicit exploratory candidates remain bounded and provisional; unavailable MCP tooling halts the skill without fallback.
 - **`nde-report-generator` (current `nde_report_expert`; Part 2 upgrade planned):** currently calls `summarize_nde_artifacts` and `render_volume_3d`, with `segment_ct_dataset` and `skeletonize` only when artifacts are absent. The Part 2 template adds the per-strut findings table, blind-findings vs attribution appendix (§5.1), spatial statistics, 3D figure, and methods/provenance pinned to the config hash. Rendering and metric extraction remain MCP-owned; no `3d_visualize.py` skill script is retained.
 - **`part2-pipeline-runbook` (NEW, orchestrator-facing):** stage order, artifact paths, gate conditions, retry policy, presentation checklist.
 
@@ -335,9 +338,9 @@ One rubric doing real work, one lightweight check:
 ## 7. Immediate next steps (implementation order)
 
 1. **Stage 0 intake:** use the implemented `specimen_ingest` agent to confirm the specimen association, produce the provisional manifest and receipt, and gate entry into `data_prep` on a verified `ready` hand-off.
-2. **Stage 2 registration contract now:** write `analysis/<specimen_id>/config/analysis_config.json` with the explicit `challenge_aligned_json` / `autonomous_v2` mode, per-scan Otsu provenance (40054 here), ROI and metrology budgets, and artifact hashes; fix `STUDY_NOTES.md`; keep `pyproject.toml` and `uv.lock` synchronized.
-3. **M1 (Stage 1):** `label_deleted_edges` MCP tool + `stl-design-diff` skill — independent of the CT, and it produces the ground-truth labels everything else is scored against.
-4. **M2 (Stage 2):** add the registration-mode selector; expose the v2 registration core through MCP; implement `localize_lattice_nodes` without re-collapsing nodes to a global transform; add exact-Otsu replay, all-edge QA, ROI containment, and separate metrology reporting.
+2. **Stage 1 and Stage 2 are implemented:** run them through the immutable orchestration handoffs; require every deterministic gate and the autonomous CT-only freeze before Stage 3.
+3. **M1 (complete):** `resolve_cad_graph_orientation`, `label_deleted_edges`, normalized ID map, sealed split, agent, skill, contracts, and MCP-client tests.
+4. **M2 (complete):** exact Otsu/canonical mask, both registration modes, v2 robustness, independent node localization, separate all-edge QA gates/figures, data-prep handoff/manifest contract, agents, skills, and reference replay tests.
 5. **M3 (Stage 3):** 20 %-padded normalized ROI extraction + `compute_strut_metrics` — the core primitive.
 6. **M4–M5 (Stages 4–6):** defect team (`defect_lead` + the three class subagents), sealed scoring + triage, spatial stats, `render_lattice_3d`, NDE report.
 7. **Presentation (owner: orchestrator/us):** demo workflow walks Stage 0 and M1→M5; show both registration modes, v2's ROI-vs-metrology gate result, the locally refined junction overlay, the 3D defect render, and the confusion matrix.

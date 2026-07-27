@@ -19,10 +19,10 @@ This reference explains their intended routing; it does not replace them.
 - Owner: `design_diff`.
 - Inputs: nominal graph plus `0.stl`, `0.1.stl`, `0.5.stl`, and `1.stl`; no CT
   or aligned graph.
-- Outputs: orientation evidence, three intentional-deletion lists,
+- Outputs: normalized explicit ID map, orientation evidence, three intentional-deletion lists,
   `labels/dev_split.json`, `evals/labels/sealed_split.json`, and
   `labels/label_report.md`.
-- Gate: counts 18/93/186, monotonicity, triangle-deficit ratio 170–180, valid
+- Gate: counts 18/93/186, monotone deletion sets, triangle-deficit ratio 170–180, valid
   IDs, unambiguous orientation/edges, and a disjoint stratified 30/70 split.
 
 ## Stage 2 — data preparation
@@ -30,7 +30,8 @@ This reference explains their intended routing; it does not replace them.
 - Owner: `data_prep`.
 - Inputs: verified Stage 0 data-prep handoff, CT, nominal graph, and frozen
   configuration. No Stage 1 label artifact enters the handoff.
-- Outputs: analysis config; exact Otsu histogram/report; registered and
+- Outputs: analysis config; exact Otsu histogram/report; canonical uint8 mask
+  and bounded mask comparison; registered and
   independently localized graphs/reports; registration QA and figures; data
   prep result/completion receipt.
 - Gate: histogram, topology, registration-image support, independent node
@@ -43,7 +44,8 @@ This reference explains their intended routing; it does not replace them.
 ## Stage 3 — per-strut measurement
 
 - Owner: `strut_metrics`.
-- Inputs: CT, frozen analysis config/Otsu result, localized graph, and QA only.
+- Inputs: CT, frozen analysis config/Otsu result, canonical mask contract,
+  localized graph, and QA only.
 - Outputs: corridor calibration, `per_strut_metrics.csv`, profiles, and metrics
   report.
 - Gate: empirical radius bootstrap, unique/exhaustive IDs, one row per nominal

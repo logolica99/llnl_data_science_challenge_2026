@@ -17,6 +17,11 @@
     "mcp_tools": [
       {
         "server": "segmentation-tools",
+        "name": "load_lattice_graph",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
         "name": "resolve_cad_graph_orientation",
         "response_schema_version": "part2-mcp-response/1.0.0"
       },
@@ -40,6 +45,7 @@
   "optional_inputs": [],
   "required_outputs": [
     "analysis/<specimen_id>/labels/cad_graph_orientation.json",
+    "analysis/<specimen_id>/design/normalized_nominal_graph.npz",
     "analysis/<specimen_id>/labels/intentional_deletions_0p1.json",
     "analysis/<specimen_id>/labels/intentional_deletions_0p5.json",
     "analysis/<specimen_id>/labels/intentional_deletions_1p0.json",
@@ -74,6 +80,7 @@
         "path": "<manifest-declared-nominal-graph-json>",
         "consumers": [
           "design_diff",
+          "load_lattice_graph",
           "resolve_cad_graph_orientation",
           "label_deleted_edges"
         ]
@@ -151,6 +158,10 @@
         "path": "analysis/<specimen_id>/labels/cad_graph_orientation.json"
       },
       {
+        "role": "normalized_nominal_graph",
+        "path": "analysis/<specimen_id>/design/normalized_nominal_graph.npz"
+      },
+      {
         "role": "intentional_deletions_0p1",
         "path": "analysis/<specimen_id>/labels/intentional_deletions_0p1.json"
       },
@@ -177,6 +188,7 @@
     ],
     "required_roles": [
       "cad_graph_orientation",
+      "normalized_nominal_graph",
       "intentional_deletions_0p1",
       "intentional_deletions_0p5",
       "intentional_deletions_1p0",
@@ -215,7 +227,7 @@
     "design_space_only",
     "cad_graph_orientation_unambiguous",
     "deletion_counts_equal_18_93_186",
-    "deletion_counts_monotone",
+    "deletion_sets_monotone",
     "triangle_deficit_ratio_between_170_and_180",
     "all_label_ids_exist_in_nominal_topology",
     "development_and_sealed_splits_disjoint_and_exhaustive",

@@ -17,7 +17,27 @@
     "mcp_tools": [
       {
         "server": "segmentation-tools",
+        "name": "volume_info",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
         "name": "replay_exact_otsu",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "segment_ct_dataset",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "compare_segmentation_masks",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "visualize_slice",
         "response_schema_version": "part2-mcp-response/1.0.0"
       },
       {
@@ -44,6 +64,7 @@
     "frozen_analysis_parameters_sha256",
     "ct_volume",
     "nominal_graph_json",
+    "normalized_nominal_graph_map",
     "registration_mode"
   ],
   "optional_inputs": [
@@ -54,6 +75,8 @@
     "analysis/<specimen_id>/config/analysis_config.json",
     "analysis/<specimen_id>/segmentation/exact_histogram_uint16.npy",
     "analysis/<specimen_id>/segmentation/histogram_report.json",
+    "analysis/<specimen_id>/segmentation/canonical_mask.npy",
+    "analysis/<specimen_id>/segmentation/mask_comparison.json",
     "analysis/<specimen_id>/registration/registered_graph.json",
     "analysis/<specimen_id>/registration/registration_report.json",
     "analysis/<specimen_id>/registration/localized_graph.json",
@@ -62,7 +85,8 @@
     "analysis/<specimen_id>/qa/slice_380.png",
     "analysis/<specimen_id>/qa/bias_by_xyz.png",
     "analysis/<specimen_id>/config/data_prep_result.json",
-    "analysis/<specimen_id>/config/data_prep_completion_receipt.json"
+    "analysis/<specimen_id>/config/data_prep_completion_receipt.json",
+    "analysis/<specimen_id>/config/specimen_manifest.json (analysis-ready replacement)"
   ],
   "forbidden_operations": [
     "defect_label_access",
@@ -119,6 +143,13 @@
         ]
       },
       {
+        "role": "normalized_nominal_graph",
+        "path": "analysis/<specimen_id>/design/normalized_nominal_graph.npz",
+        "consumers": [
+          "data_prep"
+        ]
+      },
+      {
         "role": "challenge_aligned_graph",
         "path": "<manifest-declared-aligned-graph-json>",
         "consumers": [
@@ -145,7 +176,8 @@
       "data_prep_handoff",
       "specimen_manifest",
       "ct_volume",
-      "nominal_graph"
+      "nominal_graph",
+      "normalized_nominal_graph"
     ],
     "forbidden": [
       {
@@ -190,12 +222,28 @@
         "path": "analysis/<specimen_id>/segmentation/histogram_report.json"
       },
       {
+        "role": "canonical_segmentation_mask",
+        "path": "analysis/<specimen_id>/segmentation/canonical_mask.npy",
+        "dtype": "uint8",
+        "shape_source": "specimen_manifest.inputs.ct_metadata.shape",
+        "array_axes": ["z", "y", "x"],
+        "retention": "committed"
+      },
+      {
+        "role": "segmentation_mask_comparison",
+        "path": "analysis/<specimen_id>/segmentation/mask_comparison.json"
+      },
+      {
         "role": "registered_graph",
         "path": "analysis/<specimen_id>/registration/registered_graph.json"
       },
       {
         "role": "registration_report",
         "path": "analysis/<specimen_id>/registration/registration_report.json"
+      },
+      {
+        "role": "registration_fit_freeze",
+        "path": "analysis/<specimen_id>/registration/ct_only_fit_freeze.json"
       },
       {
         "role": "localized_graph",
@@ -235,6 +283,8 @@
       "analysis_config",
       "exact_histogram",
       "otsu_report",
+      "canonical_segmentation_mask",
+      "segmentation_mask_comparison",
       "registered_graph",
       "registration_report",
       "localized_graph",

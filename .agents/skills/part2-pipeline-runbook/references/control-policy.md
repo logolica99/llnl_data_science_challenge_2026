@@ -51,6 +51,9 @@ a label file does not declassify it.
 - Stage 6: no raw dev/sealed split; use evaluation/attribution artifacts.
 - Autonomous Stage 2: aligned JSON only in a supplemental post-freeze validator
   handoff tied to the CT-only freeze receipt.
+- Stage 2→3: bind the canonical mask's exact path, role, dtype, ZYX shape,
+  retention, and SHA-256 in both handoffs; neither handoff may contain any
+  label path, role, hash, count, or content.
 
 ## Fail-closed dependency behavior
 

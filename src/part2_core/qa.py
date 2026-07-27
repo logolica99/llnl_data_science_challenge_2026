@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
+import tempfile
 from typing import Any
 
+import matplotlib
 import numpy as np
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from .artifacts import read_json_object, sha256_file, sha256_json, write_json_atomic
 from .lattice import load_lattice_json, positions_in_volume
@@ -46,6 +52,9 @@ def compute_registration_qa(
     local_search_radius_voxels: float,
     registration_uncertainty_voxels: float,
     localization_report_path: str | Path | None = None,
+    slice_output_path: str | Path | None = None,
+    bias_output_path: str | Path | None = None,
+    slice_index: int = 380,
     config: dict[str, Any] | None = None,
     overwrite: bool = False,
 ) -> dict[str, Any]:
@@ -166,6 +175,8 @@ def compute_registration_qa(
         "independent_node_positions_retained": independent_positions,
         "localization_graph_hash_matches": localization_graph_hash_matches,
         "localization_not_halted": localization_gate != "halt",
+    }
+    roi_gates = {
         "padded_rois_in_bounds": bool(
             roi_fraction >= float(merged["minimum_roi_in_bounds_fraction"])
         ),
@@ -183,12 +194,94 @@ def compute_registration_qa(
             <= float(merged["maximum_uncertainty_to_radius_ratio"])
         ),
     }
-    if not all(image_gates.values()) or not all(coarse_gates.values()):
+    if (
+        not all(image_gates.values())
+        or not all(coarse_gates.values())
+        or not all(roi_gates.values())
+    ):
         gate = "halt"
     elif not all(metrology_gates.values()):
         gate = "manual_review"
     else:
         gate = "pass"
+
+    figure_artifacts: dict[str, Any] = {}
+
+    def publish_figure(destination_value: str | Path, draw: Any) -> dict[str, Any]:
+        destination = Path(destination_value).expanduser().resolve()
+        if destination.suffix.lower() != ".png":
+            raise ValueError(f"QA figure output must be PNG: {destination}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            dir=destination.parent,
+            prefix=f".{destination.name}.",
+            suffix=".png",
+        )
+        os.close(descriptor)
+        temporary = Path(temporary_name)
+        try:
+            draw(temporary)
+            if destination.exists():
+                if destination.read_bytes() == temporary.read_bytes():
+                    return {"path": str(destination), "sha256": sha256_file(destination), "changed": False}
+                raise FileExistsError(f"QA figure already exists with different bytes: {destination}")
+            os.replace(temporary, destination)
+            return {"path": str(destination), "sha256": sha256_file(destination), "changed": True}
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    if slice_output_path is not None:
+        if not 0 <= int(slice_index) < volume.shape[0]:
+            raise IndexError(f"Slice {slice_index} is outside CT depth {volume.shape[0]}")
+
+        def draw_slice(path: Path) -> None:
+            figure, axes = plt.subplots(figsize=(8, 8))
+            try:
+                axes.imshow(np.asarray(volume.array[int(slice_index)]), cmap="gray")
+                near = np.abs(graph.node_positions_xyz[:, 2] - int(slice_index)) <= 2.0
+                axes.scatter(
+                    graph.node_positions_xyz[near, 0],
+                    graph.node_positions_xyz[near, 1],
+                    s=8,
+                    facecolors="none",
+                    edgecolors="#ff3b30",
+                    linewidths=0.7,
+                )
+                axes.set_title(f"Localized junction overlay, z={slice_index}")
+                axes.axis("off")
+                figure.tight_layout()
+                figure.savefig(path, dpi=150, bbox_inches="tight", metadata={"Software": "part2-core"})
+            finally:
+                plt.close(figure)
+
+        figure_artifacts["junction_overlay"] = {
+            **publish_figure(slice_output_path, draw_slice),
+            "role": "junction_overlay",
+            "retention": "committed",
+        }
+
+    if bias_output_path is not None:
+        def draw_bias(path: Path) -> None:
+            figure, axes = plt.subplots(figsize=(8, 5))
+            try:
+                for axis_name, color in zip("xyz", ("#007aff", "#34c759", "#ff9500"), strict=True):
+                    values = spatial[axis_name]["bin_median_corridor_foreground_fraction"]
+                    axes.plot(range(len(values)), values, marker="o", label=axis_name.upper(), color=color)
+                axes.set_xlabel("Stable spatial bin")
+                axes.set_ylabel("Median corridor foreground fraction")
+                axes.set_title("Registration QA spatial bias by XYZ")
+                axes.grid(alpha=0.25)
+                axes.legend()
+                figure.tight_layout()
+                figure.savefig(path, dpi=150, bbox_inches="tight", metadata={"Software": "part2-core"})
+            finally:
+                plt.close(figure)
+
+        figure_artifacts["spatial_bias_figure"] = {
+            **publish_figure(bias_output_path, draw_bias),
+            "role": "spatial_bias_figure",
+            "retention": "committed",
+        }
 
     report = {
         "schema_version": REGISTRATION_QA_SCHEMA_VERSION,
@@ -219,20 +312,30 @@ def compute_registration_qa(
         "coarse_capture": {
             "registration_uncertainty_voxels": float(registration_uncertainty_voxels),
             "local_search_radius_voxels": float(local_search_radius_voxels),
-            "padded_roi_in_bounds_fraction": roi_fraction,
             "localization_report_gate": localization_gate,
             "gates": coarse_gates,
             "overall_pass": bool(all(coarse_gates.values())),
+        },
+        "padded_roi_capture": {
+            "padding_fraction": padding,
+            "in_bounds_fraction": roi_fraction,
+            "gates": roi_gates,
+            "overall_pass": bool(all(roi_gates.values())),
         },
         "metrology": {
             "registration_uncertainty_voxels": float(registration_uncertainty_voxels),
             "measured_strut_radius_voxels": measured_radius,
             "uncertainty_to_measured_radius_ratio": metrology_ratio_value,
             "direct_narrow_corridor_allowed": bool(all(metrology_gates.values())),
+            "required_resolution": (
+                "none"
+                if all(metrology_gates.values())
+                else "explicit_roi_only_authorization"
+            ),
             "gates": metrology_gates,
             "overall_pass": bool(all(metrology_gates.values())),
         },
-        "artifacts": {},
+        "artifacts": figure_artifacts,
         "hashes": {
             "ct_sha256": sha256_file(volume.path),
             "localized_graph_sha256": graph.source_sha256,

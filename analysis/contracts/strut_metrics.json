@@ -29,7 +29,8 @@
     "ct_volume",
     "independently_localized_graph",
     "registration_qa",
-    "exact_otsu_result"
+    "exact_otsu_result",
+    "canonical_segmentation_mask_contract"
   ],
   "optional_inputs": [],
   "required_outputs": [
@@ -95,6 +96,25 @@
         "consumers": [
           "strut_metrics"
         ]
+      },
+      {
+        "role": "canonical_segmentation_mask",
+        "path": "analysis/<specimen_id>/segmentation/canonical_mask.npy",
+        "dtype": "uint8",
+        "shape_source": "specimen_manifest.inputs.ct_metadata.shape",
+        "array_axes": ["z", "y", "x"],
+        "retention": "committed",
+        "consumers": [
+          "strut_metrics",
+          "compute_strut_metrics"
+        ]
+      },
+      {
+        "role": "segmentation_mask_comparison",
+        "path": "analysis/<specimen_id>/segmentation/mask_comparison.json",
+        "consumers": [
+          "strut_metrics"
+        ]
       }
     ],
     "required_roles": [
@@ -103,7 +123,9 @@
       "ct_volume",
       "localized_graph",
       "registration_qa",
-      "otsu_report"
+      "otsu_report",
+      "canonical_segmentation_mask",
+      "segmentation_mask_comparison"
     ],
     "forbidden": [
       {
@@ -164,6 +186,7 @@
     "output_artifact_hashes_match",
     "corridor_radius_derived_from_empirical_bootstrap",
     "threshold_matches_stage_2_otsu_result",
+    "canonical_mask_path_role_dtype_shape_retention_and_hash_match_stage_2",
     "localized_graph_hash_matches_stage_2",
     "one_row_per_nominal_strut",
     "metric_row_count_matches_manifest_edge_count",
