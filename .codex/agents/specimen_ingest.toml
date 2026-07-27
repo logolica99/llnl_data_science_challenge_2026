@@ -1,6 +1,6 @@
 name = "specimen_ingest"
 description = "Associate and inspect one scientist-supplied CAD, nominal graph, and CT volume, then emit a deterministic provisional manifest and data-prep hand-off."
-model = "gpt-5.6"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 

@@ -63,6 +63,13 @@
         ]
       },
       {
+        "role": "scientist_intake_request",
+        "path": "analysis/<specimen_id>/config/runtime_request.json",
+        "consumers": [
+          "specimen_ingest"
+        ]
+      },
+      {
         "role": "cad_stl",
         "path": "<scientist-confirmed-cad-stl>",
         "consumers": [
@@ -111,6 +118,7 @@
     ],
     "required_roles": [
       "stage_handoff",
+      "scientist_intake_request",
       "cad_stl",
       "nominal_graph",
       "ct_volume",

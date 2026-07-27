@@ -1,4 +1,27 @@
-# Part 2 NDE Orchestration Demonstrator
+# Part 2 NDE Orchestration Proof
+
+## Real callable-runtime proof
+
+The default demonstration uses no synthetic specialist artifacts. A localhost
+Python backend starts the installed `codex app-server`, creates a real Codex
+thread with the checked-in orchestrator instructions, and streams structured
+runtime events to the browser and terminal. After the scientist explicitly
+confirms the displayed association, the turn asks the orchestrator to invoke
+the project `specimen_ingest` subagent for Stage 0 only.
+
+The backend does not accept browser-supplied filesystem paths, grant interactive
+approvals, fabricate receipts, or continue to Stage 1. Missing inputs, tools,
+agent dispatch, or receipt gates remain visible as real failures.
+
+```bash
+npm run demo
+```
+
+Open <http://localhost:3000/>. Confirm the displayed inputs, then select
+**Attempt real Stage 0**. Stop the backend with `Ctrl-C`. Each run stores its
+local transcript under `runtime-evidence/<run_id>/`.
+
+## Fixture walkthrough (not proof)
 
 This local web app lets a team watch the LLNL missing-strut Part 2 control
 plane advance through Stages 0–6. Production orchestration code runs live to
@@ -11,13 +34,17 @@ not invoke a live Codex model or execute CT, registration, ROI, classification,
 rendering, spatial-statistics, or evaluation algorithms, and it does not display
 real specimen findings.
 
-## Run it
+The richer Stage 0–6 walkthrough remains available only as a clearly separated
+UI fixture test. It must not be used as evidence that agents or scientific
+tools ran.
+
+## Run the fixture walkthrough
 
 From this directory:
 
 ```bash
 npm install
-npm run demo
+npm run demo:fixtures
 ```
 
 Open <http://localhost:3000>. The single command starts both the localhost-only

@@ -6,13 +6,15 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "demo": "concurrently --kill-others --names control,frontend --prefix-colors magenta,cyan \"npm run demo:api\" \"npm run dev\"",
+    "demo": "npm run proof",
+    "proof": "uv run --project ../.. python server/runtime_backend.py",
+    "demo:fixtures": "concurrently --kill-others --names control,frontend --prefix-colors magenta,cyan \"npm run demo:api\" \"npm run dev\"",
     "demo:api": "uv run --project ../.. python server/demo_server.py",
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
-    "test:server": "cd ../.. && uv run python -m unittest -v tests.test_part2_demo",
+    "test:server": "cd ../.. && uv run python -m unittest -v tests.test_part2_demo tests.test_part2_runtime_backend",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {
