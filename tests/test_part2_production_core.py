@@ -1,0 +1,428 @@
+"""Production Part 2 core tests: synthetic, gates, axes, sizes, determinism."""
+
+from __future__ import annotations
+
+import ast
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+import numpy as np
+from scipy.spatial.transform import Rotation
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
+
+from part2_core.evaluation import compute_detection_metrics  # noqa: E402
+from part2_core.evidence import render_strut_evidence  # noqa: E402
+from part2_core.lattice import load_lattice_json  # noqa: E402
+from part2_core.localization import localize_lattice_nodes  # noqa: E402
+from part2_core.qa import compute_registration_qa  # noqa: E402
+from part2_core.registration import (  # noqa: E402
+    SimilarityTransform,
+    register_lattice_to_ct,
+    run_synthetic_suite,
+    solve_similarity,
+)
+from part2_core.reports import get_strut_report  # noqa: E402
+from part2_core.sampling import sample_corridor  # noqa: E402
+from part2_core.struts import classify_struts, compute_strut_metrics  # noqa: E402
+
+
+class SyntheticFixture(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory(dir=REPOSITORY_ROOT)
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.nominal = self.root / "nominal.json"
+        self.aligned = self.root / "aligned.json"
+        topology = {
+            "struts": [
+                {"id": 101, "junction0": 10, "junction1": 20},
+                {"id": 303, "junction0": 20, "junction1": 30},
+                {"id": 707, "junction0": 30, "junction1": 40},
+            ],
+            "unit_cells": [{"id": 5, "indices": [0, 0, 0], "struts": [101, 303, 707]}],
+        }
+        self.nominal.write_text(
+            json.dumps(
+                {
+                    "junctions": [
+                        {"id": 10, "position": [0, 0, 0]},
+                        {"id": 20, "position": [1, 0, 0]},
+                        {"id": 30, "position": [1, 1, 0]},
+                        {"id": 40, "position": [1, 1, 1]},
+                    ],
+                    **topology,
+                }
+            ),
+            encoding="utf-8",
+        )
+        positions = np.asarray(
+            [[8, 8, 8], [28, 8, 8], [28, 28, 8], [28, 28, 28]],
+            dtype=float,
+        )
+        self.aligned.write_text(
+            json.dumps(
+                {
+                    "junctions": [
+                        {"id": identifier, "position": position.tolist()}
+                        for identifier, position in zip([10, 20, 30, 40], positions)
+                    ],
+                    **topology,
+                }
+            ),
+            encoding="utf-8",
+        )
+        zz, yy, xx = np.indices((40, 40, 40))
+        points = np.stack((xx, yy, zz), axis=-1).astype(float)
+        foreground = np.zeros((40, 40, 40), dtype=bool)
+        for position in positions:
+            foreground |= np.sum((points - position) ** 2, axis=-1) <= 3.5**2
+        endpoints = [
+            (positions[0], positions[1]),
+            (positions[1], positions[2]),
+            (positions[2], positions[3]),
+        ]
+        for edge_index, (start, end) in enumerate(endpoints):
+            direction = end - start
+            length_squared = float(np.dot(direction, direction))
+            t = np.clip(
+                np.sum((points - start) * direction, axis=-1) / length_squared,
+                0.0,
+                1.0,
+            )
+            closest = start + t[..., None] * direction
+            tube = np.sum((points - closest) ** 2, axis=-1) <= 2.25**2
+            if edge_index == 1:
+                tube &= ~((t > 0.40) & (t < 0.65))
+            foreground |= tube
+        self.volume = self.root / "ct.npy"
+        np.save(self.volume, np.where(foreground, 1_000, 0).astype(np.uint16))
+
+    def _register_and_localize(self) -> tuple[Path, Path]:
+        registered = self.root / "registered.json"
+        registration_report = self.root / "registration.json"
+        registration = register_lattice_to_ct(
+            self.nominal,
+            registered,
+            registration_report,
+            mode="challenge_aligned_json",
+            ct_path=self.volume,
+            aligned_graph_path=self.aligned,
+        )
+        self.assertEqual("pass", registration["gate"])
+        localized = self.root / "localized.json"
+        localization_report = self.root / "localization.json"
+        localization = localize_lattice_nodes(
+            self.volume,
+            registered,
+            localized,
+            localization_report,
+            threshold=500,
+            registration_mode="challenge_aligned_json",
+            registration_report_path=registration_report,
+            config={
+                "maximum_second_to_first_peak_ratio": 1.0,
+                "minimum_accepted_fraction": 0.75,
+                "maximum_ambiguous_fraction": 1.0,
+            },
+        )
+        self.assertNotEqual("halt", localization["gate"])
+        self.assertTrue(localization["localization"]["independent_positions_retained"])
+        self.assertFalse(localization["localization"]["global_refit_performed"])
+        return localized, localization_report
+
+
+class ProductionPipelineTests(SyntheticFixture):
+    def test_challenge_metrics_classification_evidence_lookup_and_scoring(self) -> None:
+        localized, localization_report = self._register_and_localize()
+        qa_path = self.root / "qa.json"
+        qa = compute_registration_qa(
+            self.volume,
+            localized,
+            qa_path,
+            threshold=500,
+            registration_mode="challenge_aligned_json",
+            local_search_radius_voxels=8.0,
+            registration_uncertainty_voxels=3.0,
+            localization_report_path=localization_report,
+            config={
+                "minimum_mean_junction_foreground_fraction": 0.1,
+                "minimum_median_corridor_foreground_fraction": 0.01,
+                "maximum_spatial_bin_median_range": 1.0,
+                "minimum_roi_in_bounds_fraction": 0.5,
+                "spatial_bins_per_axis": 2,
+            },
+        )
+        self.assertEqual("manual_review", qa["gate"])
+        self.assertTrue(qa["coarse_capture"]["overall_pass"])
+        self.assertFalse(qa["metrology"]["overall_pass"])
+
+        metrics_path = self.root / "metrics.csv"
+        profiles_path = self.root / "profiles.json"
+        metrics_report = self.root / "metrics-report.json"
+        metrics = compute_strut_metrics(
+            self.volume,
+            localized,
+            metrics_path,
+            profiles_path,
+            metrics_report,
+            threshold=500,
+            registration_mode="challenge_aligned_json",
+            registration_qa_path=qa_path,
+            config={
+                "corridor_radius_voxels": 4.0,
+                "axial_samples": 31,
+                "minimum_valid_roi_fraction": 1.0,
+            },
+        )
+        self.assertEqual(3, metrics["counts"]["metric_rows"])
+        self.assertEqual("pass", metrics["gate"])
+
+        classifications_path = self.root / "classifications.json"
+        thresholds_path = self.root / "thresholds.json"
+        classified = classify_struts(
+            metrics_path,
+            {
+                "missing_occupancy_max": 0.8,
+                "missing_gap_fraction_min": 0.1,
+                "broken_gap_fraction_min": 0.9,
+                "broken_largest_component_fraction_max": 0.05,
+                "thin_radius_max": 0.1,
+                "bent_curvature_min": 10.0,
+            },
+            classifications_path,
+            thresholds_path,
+        )
+        labels = {
+            row["strut_id"]: row["class"] for row in classified["classifications"]
+        }
+        self.assertEqual("missing", labels[303])
+        self.assertEqual(3, classified["counts"]["total"])
+
+        report = get_strut_report(
+            303,
+            metrics_path,
+            classifications_path,
+            thresholds_path,
+            evidence_manifest_path=render_strut_evidence(
+                self.volume,
+                localized,
+                profiles_path,
+                self.root / "evidence",
+                strut_id=303,
+                threshold=500,
+            )["artifacts"]["manifest"]["path"],
+        )
+        self.assertEqual("missing", report["class"])
+        self.assertFalse(report["provenance"]["metrics_recomputed"])
+        self.assertIn("axial", report["evidence"])
+
+        sealed = self.root / "sealed.json"
+        sealed.write_text(json.dumps({"strut_ids": [303]}), encoding="utf-8")
+        detection = compute_detection_metrics(
+            classifications_path,
+            sealed,
+            self.root / "detection.json",
+        )
+        self.assertEqual(1.0, detection["strict_recall"]["value"])
+        self.assertNotIn("precision", detection)
+        self.assertTrue(detection["provenance"]["sealed_labels_read"])
+
+    def test_empty_ct_localization_halts_with_structured_gate(self) -> None:
+        empty = self.root / "empty.npy"
+        np.save(empty, np.zeros((40, 40, 40), dtype=np.uint16))
+        report = localize_lattice_nodes(
+            empty,
+            self.aligned,
+            self.root / "fallback.json",
+            self.root / "fallback-report.json",
+            threshold=500,
+            registration_mode="challenge_aligned_json",
+        )
+        self.assertEqual("halt", report["gate"])
+        self.assertEqual(0, report["counts"]["accepted_nodes"])
+        self.assertEqual(4, report["counts"]["fallback_nodes"])
+
+
+class AxisAndDeterminismTests(SyntheticFixture):
+    def test_corridor_sampler_pins_xyz_to_zyx(self) -> None:
+        sentinel = np.zeros((5, 6, 7), dtype=np.uint16)
+        sentinel[4, 2, 6] = 999
+        sampled = sample_corridor(
+            sentinel,
+            np.asarray([6.0, 2.0, 4.0]),
+            np.asarray([5.0, 2.0, 4.0]),
+            threshold=900,
+            axial_samples=3,
+            radius_voxels=0.1,
+            angular_samples=4,
+        )
+        self.assertTrue(sampled["foreground"][0, 0])
+
+    def test_registration_and_synthetic_suite_are_deterministic(self) -> None:
+        first = register_lattice_to_ct(
+            self.nominal,
+            self.root / "first.json",
+            self.root / "first-report.json",
+            mode="challenge_aligned_json",
+            ct_path=self.volume,
+            aligned_graph_path=self.aligned,
+        )
+        second = register_lattice_to_ct(
+            self.nominal,
+            self.root / "second.json",
+            self.root / "second-report.json",
+            mode="challenge_aligned_json",
+            ct_path=self.volume,
+            aligned_graph_path=self.aligned,
+        )
+        self.assertEqual(
+            first["hashes"]["registered_graph_sha256"],
+            second["hashes"]["registered_graph_sha256"],
+        )
+        x, y, z = np.meshgrid(
+            np.linspace(0.0, 18.0, 5),
+            np.linspace(0.0, 18.0, 5),
+            np.linspace(0.0, 18.0, 5),
+            indexing="ij",
+        )
+        source = np.column_stack((x.ravel(), y.ravel(), z.ravel()))
+        config = {
+            "synthetic": {
+                "case_count": 2,
+                "minimum_pass_fraction": 0.5,
+            }
+        }
+        self.assertEqual(
+            run_synthetic_suite(source, config),
+            run_synthetic_suite(source, config),
+        )
+
+    def test_exact_similarity_synthetic_recovery(self) -> None:
+        rng = np.random.default_rng(7)
+        source = rng.normal(size=(100, 3))
+        expected = SimilarityTransform(
+            12.5,
+            Rotation.from_euler("z", 1.0, degrees=True).as_matrix(),
+            np.asarray([4.0, 5.0, 6.0]),
+        )
+        fitted = solve_similarity(source, expected.apply(source))
+        self.assertAlmostEqual(12.5, fitted.scale, places=8)
+        self.assertLess(np.linalg.norm(fitted.translation - expected.translation), 1e-8)
+
+    def test_autonomous_v2_recovers_seeded_ct_node_grid(self) -> None:
+        design_points = np.asarray(
+            [[x, y, z] for x in range(4) for y in range(4) for z in range(4)],
+            dtype=float,
+        )
+        node_ids = [100 + index * 3 for index in range(len(design_points))]
+        autonomous_graph = self.root / "autonomous-nominal.json"
+        autonomous_graph.write_text(
+            json.dumps(
+                {
+                    "junctions": [
+                        {"id": identifier, "position": point.tolist()}
+                        for identifier, point in zip(node_ids, design_points)
+                    ],
+                    "struts": [
+                        {
+                            "id": 9001,
+                            "junction0": node_ids[0],
+                            "junction1": node_ids[1],
+                        }
+                    ],
+                    "unit_cells": [
+                        {
+                            "id": 77,
+                            "indices": [0, 0, 0],
+                            "struts": [9001],
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        target_points = 6.0 * design_points + 4.0
+        zz, yy, xx = np.indices((25, 25, 25))
+        points = np.stack((xx, yy, zz), axis=-1)
+        mask = np.zeros((25, 25, 25), dtype=bool)
+        for point in target_points:
+            mask |= np.sum((points - point) ** 2, axis=-1) <= 2.0**2
+        autonomous_ct = self.root / "autonomous.npy"
+        np.save(autonomous_ct, np.where(mask, 1000, 0).astype(np.uint16))
+        result = register_lattice_to_ct(
+            autonomous_graph,
+            self.root / "autonomous-registered.json",
+            self.root / "autonomous-report.json",
+            mode="autonomous_v2",
+            ct_path=autonomous_ct,
+            threshold=500,
+            config={
+                "detection": {
+                    "downsample_factor": 1,
+                    "central_z_margin_fraction": 0.0,
+                    "edt_peak_threshold_downsampled_voxels": 1.5,
+                    "minimum_component_voxels": 1,
+                    "maximum_component_voxels": 999,
+                    "candidate_holdout_fraction": 0.2,
+                },
+                "gates": {
+                    "maximum_holdout_median_distance_voxels": 1.0,
+                    "minimum_candidate_to_unique_node_ratio": 0.9,
+                },
+            },
+        )
+        self.assertEqual("pass", result["gate"], result)
+        self.assertFalse(result["provenance"]["aligned_graph_used_for_fit"])
+        self.assertAlmostEqual(6.0, result["transform"]["scale"], places=6)
+
+
+class GraphSizeAndWrapperBoundaryTests(unittest.TestCase):
+    def test_8x8x8_and_9x9x9_graphs_are_input_derived(self) -> None:
+        graph8 = load_lattice_json(
+            REPOSITORY_ROOT / "data/octet_truss_8x8x8/octet_truss_8x8x8.json"
+        )
+        graph9 = load_lattice_json(
+            REPOSITORY_ROOT / "data/missing_struts/octet_truss_9x9x9.json"
+        )
+        self.assertEqual({"nodes": 7_168, "edges": 13_056, "cells": 512}, graph8.counts)
+        self.assertEqual(
+            {"nodes": 10_206, "edges": 18_468, "cells": 729}, graph9.counts
+        )
+
+    def test_new_mcp_wrappers_contain_no_numpy_numerical_calls(self) -> None:
+        source = (REPOSITORY_ROOT / "src/mcp_server.py").read_text(encoding="utf-8")
+        module = ast.parse(source)
+        names = {
+            "register_lattice_to_ct",
+            "localize_lattice_nodes",
+            "compute_registration_qa",
+            "compute_strut_metrics",
+            "classify_struts",
+            "render_strut_evidence",
+            "compute_detection_metrics",
+            "get_strut_report",
+        }
+        wrappers = [
+            node
+            for node in module.body
+            if isinstance(node, ast.FunctionDef) and node.name in names
+        ]
+        self.assertEqual(names, {node.name for node in wrappers})
+        for wrapper in wrappers:
+            numpy_calls = [
+                node
+                for node in ast.walk(wrapper)
+                if isinstance(node, ast.Attribute)
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "np"
+            ]
+            self.assertEqual([], numpy_calls, wrapper.name)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -10,9 +10,17 @@ from fastmcp import FastMCP
 
 try:
     from .part2_core import (
+        classify_struts as _classify_struts,
+        compute_detection_metrics as _compute_detection_metrics,
+        compute_registration_qa as _compute_registration_qa,
+        compute_strut_metrics as _compute_strut_metrics,
         error_response as _error_response,
+        get_strut_report as _get_strut_report,
         load_volume as _load_volume,
+        localize_lattice_nodes as _localize_lattice_nodes,
         normalize_lattice_graph as _normalize_lattice_graph,
+        register_lattice_to_ct as _register_lattice_to_ct,
+        render_strut_evidence as _render_strut_evidence,
         replay_exact_otsu as _replay_exact_otsu,
         success_response as _success_response,
         volume_metadata as _volume_metadata,
@@ -27,9 +35,17 @@ try:
     from .volume_metadata import inspect_volume_envelope
 except ImportError:
     from part2_core import (
+        classify_struts as _classify_struts,
+        compute_detection_metrics as _compute_detection_metrics,
+        compute_registration_qa as _compute_registration_qa,
+        compute_strut_metrics as _compute_strut_metrics,
         error_response as _error_response,
+        get_strut_report as _get_strut_report,
         load_volume as _load_volume,
+        localize_lattice_nodes as _localize_lattice_nodes,
         normalize_lattice_graph as _normalize_lattice_graph,
+        register_lattice_to_ct as _register_lattice_to_ct,
+        render_strut_evidence as _render_strut_evidence,
         replay_exact_otsu as _replay_exact_otsu,
         success_response as _success_response,
         volume_metadata as _volume_metadata,
@@ -109,9 +125,7 @@ def _repository_path(
         raise FileNotFoundError(f"Input file does not exist: {relative.as_posix()}")
     if expected_suffixes and resolved.suffix.lower() not in expected_suffixes:
         choices = ", ".join(sorted(expected_suffixes))
-        raise ValueError(
-            f"Expected one of [{choices}], found {relative.as_posix()}"
-        )
+        raise ValueError(f"Expected one of [{choices}], found {relative.as_posix()}")
     return resolved, relative.as_posix()
 
 
@@ -166,6 +180,46 @@ def _run_structured_tool(
         return operation()
     except Exception as exc:
         return _structured_failure(tool, exc)
+
+
+def _relative_artifacts(artifacts: dict[str, Any]) -> dict[str, Any]:
+    """Convert core artifact paths to repository-relative MCP paths."""
+
+    result: dict[str, Any] = {}
+    for name, metadata in artifacts.items():
+        if not isinstance(metadata, dict):
+            result[name] = metadata
+            continue
+        item = dict(metadata)
+        if "path" in item:
+            item["path"] = (
+                Path(item["path"]).resolve().relative_to(REPOSITORY_ROOT).as_posix()
+            )
+        result[name] = item
+    return result
+
+
+def _core_response(
+    tool: str,
+    summary: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Expose a deterministic core result without adding computation."""
+
+    result = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"artifacts", "hashes", "warnings"}
+    }
+    return _success_response(
+        tool=tool,
+        gate=payload["gate"],
+        summary=summary,
+        result=result,
+        artifacts=_relative_artifacts(payload.get("artifacts", {})),
+        hashes=dict(payload.get("hashes", {})),
+        warnings=list(payload.get("warnings", [])),
+    )
 
 
 def _output_path(filepath: str, expected_suffix: str | None = None) -> Path:
@@ -334,15 +388,11 @@ def replay_exact_otsu(
         )
         for artifact in artifacts.values():
             artifact_path = Path(artifact["path"])
-            artifact["path"] = artifact_path.relative_to(
-                REPOSITORY_ROOT
-            ).as_posix()
+            artifact["path"] = artifact_path.relative_to(REPOSITORY_ROOT).as_posix()
         failed_gates = sorted(
             name for name, passed in result["gates"].items() if not passed
         )
-        gate: Literal["pass", "halt"] = (
-            "pass" if result["overall_pass"] else "halt"
-        )
+        gate: Literal["pass", "halt"] = "pass" if result["overall_pass"] else "halt"
         warnings = (
             []
             if not failed_gates
@@ -353,8 +403,7 @@ def replay_exact_otsu(
             tool="replay_exact_otsu",
             gate=gate,
             summary=(
-                f"Replayed Otsu threshold {result['threshold']} for "
-                f"{source_relative}"
+                f"Replayed Otsu threshold {result['threshold']} for {source_relative}"
             ),
             result=result,
             artifacts=artifacts,
@@ -371,15 +420,450 @@ def replay_exact_otsu(
 
 
 @mcp.tool()
+def register_lattice_to_ct(
+    nominal_graph_filepath: str,
+    output_graph_filepath: str,
+    output_report_filepath: str,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    ct_filepath: str | None = None,
+    aligned_graph_filepath: str | None = None,
+    threshold: float | None = None,
+    config: dict[str, Any] | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Register through challenge aligned-JSON or isolated autonomous-v2 mode."""
+
+    def operation() -> dict[str, Any]:
+        nominal, _ = _repository_path(
+            nominal_graph_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        output_graph, _ = _repository_path(
+            output_graph_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        output_report, _ = _repository_path(
+            output_report_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        ct = (
+            _repository_path(
+                ct_filepath,
+                must_exist=True,
+                expected_suffixes={".npy", ".tif", ".tiff"},
+            )[0]
+            if ct_filepath
+            else None
+        )
+        aligned = (
+            _repository_path(
+                aligned_graph_filepath,
+                must_exist=True,
+                expected_suffixes={".json"},
+            )[0]
+            if aligned_graph_filepath
+            else None
+        )
+        payload = _register_lattice_to_ct(
+            nominal,
+            output_graph,
+            output_report,
+            mode=registration_mode,
+            ct_path=ct,
+            aligned_graph_path=aligned,
+            threshold=threshold,
+            config=config,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "register_lattice_to_ct",
+            f"Completed {registration_mode} registration with gate {payload['gate']}",
+            payload,
+        )
+
+    return _run_structured_tool("register_lattice_to_ct", operation)
+
+
+@mcp.tool()
+def localize_lattice_nodes(
+    ct_filepath: str,
+    registered_graph_filepath: str,
+    output_graph_filepath: str,
+    output_report_filepath: str,
+    threshold: float,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    registration_report_filepath: str | None = None,
+    config: dict[str, Any] | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Independently recenter registered nodes inside bounded CT windows."""
+
+    def operation() -> dict[str, Any]:
+        ct, _ = _repository_path(
+            ct_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
+        )
+        graph, _ = _repository_path(
+            registered_graph_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        output_graph, _ = _repository_path(
+            output_graph_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        output_report, _ = _repository_path(
+            output_report_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        registration_report = (
+            _repository_path(
+                registration_report_filepath,
+                must_exist=True,
+                expected_suffixes={".json"},
+            )[0]
+            if registration_report_filepath
+            else None
+        )
+        payload = _localize_lattice_nodes(
+            ct,
+            graph,
+            output_graph,
+            output_report,
+            threshold=threshold,
+            registration_mode=registration_mode,
+            config=config,
+            registration_report_path=registration_report,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "localize_lattice_nodes",
+            (
+                f"Localized {payload['counts']['accepted_nodes']} of "
+                f"{payload['counts']['nodes']} nodes"
+            ),
+            payload,
+        )
+
+    return _run_structured_tool("localize_lattice_nodes", operation)
+
+
+@mcp.tool()
+def compute_registration_qa(
+    ct_filepath: str,
+    localized_graph_filepath: str,
+    output_report_filepath: str,
+    threshold: float,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    local_search_radius_voxels: float,
+    registration_uncertainty_voxels: float,
+    localization_report_filepath: str | None = None,
+    config: dict[str, Any] | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Compute image, padded-ROI capture, and stricter metrology QA gates."""
+
+    def operation() -> dict[str, Any]:
+        ct, _ = _repository_path(
+            ct_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
+        )
+        graph, _ = _repository_path(
+            localized_graph_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        output, _ = _repository_path(
+            output_report_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        localization_report = (
+            _repository_path(
+                localization_report_filepath,
+                must_exist=True,
+                expected_suffixes={".json"},
+            )[0]
+            if localization_report_filepath
+            else None
+        )
+        payload = _compute_registration_qa(
+            ct,
+            graph,
+            output,
+            threshold=threshold,
+            registration_mode=registration_mode,
+            local_search_radius_voxels=local_search_radius_voxels,
+            registration_uncertainty_voxels=registration_uncertainty_voxels,
+            localization_report_path=localization_report,
+            config=config,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "compute_registration_qa",
+            f"Registration QA completed with gate {payload['gate']}",
+            payload,
+        )
+
+    return _run_structured_tool("compute_registration_qa", operation)
+
+
+@mcp.tool()
+def compute_strut_metrics(
+    ct_filepath: str,
+    localized_graph_filepath: str,
+    output_metrics_filepath: str,
+    output_profiles_filepath: str,
+    output_report_filepath: str,
+    threshold: float,
+    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    registration_qa_filepath: str | None = None,
+    config: dict[str, Any] | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Write per-ID padded-ROI occupancy, gap, connectivity, radius, and curvature."""
+
+    def operation() -> dict[str, Any]:
+        ct, _ = _repository_path(
+            ct_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
+        )
+        graph, _ = _repository_path(
+            localized_graph_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        metrics, _ = _repository_path(
+            output_metrics_filepath, must_exist=False, expected_suffixes={".csv"}
+        )
+        profiles, _ = _repository_path(
+            output_profiles_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        report, _ = _repository_path(
+            output_report_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        qa = (
+            _repository_path(
+                registration_qa_filepath,
+                must_exist=True,
+                expected_suffixes={".json"},
+            )[0]
+            if registration_qa_filepath
+            else None
+        )
+        payload = _compute_strut_metrics(
+            ct,
+            graph,
+            metrics,
+            profiles,
+            report,
+            threshold=threshold,
+            registration_mode=registration_mode,
+            config=config,
+            registration_qa_path=qa,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "compute_strut_metrics",
+            f"Wrote metrics for {payload['counts']['metric_rows']} struts",
+            payload,
+        )
+
+    return _run_structured_tool("compute_strut_metrics", operation)
+
+
+@mcp.tool()
+def classify_struts(
+    metrics_filepath: str,
+    output_classifications_filepath: str,
+    output_thresholds_filepath: str,
+    thresholds: dict[str, Any] | None = None,
+    thresholds_filepath: str | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Apply frozen cutoffs with missing > broken > thin > present precedence."""
+
+    def operation() -> dict[str, Any]:
+        metrics, _ = _repository_path(
+            metrics_filepath, must_exist=True, expected_suffixes={".csv"}
+        )
+        classifications, _ = _repository_path(
+            output_classifications_filepath,
+            must_exist=False,
+            expected_suffixes={".json"},
+        )
+        output_thresholds, _ = _repository_path(
+            output_thresholds_filepath,
+            must_exist=False,
+            expected_suffixes={".json"},
+        )
+        if (thresholds is None) == (thresholds_filepath is None):
+            raise ValueError("Provide exactly one of thresholds or thresholds_filepath")
+        policy: dict[str, Any] | Path
+        if thresholds_filepath:
+            policy = _repository_path(
+                thresholds_filepath,
+                must_exist=True,
+                expected_suffixes={".json"},
+            )[0]
+        else:
+            policy = thresholds or {}
+        payload = _classify_struts(
+            metrics,
+            policy,
+            classifications,
+            output_thresholds,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "classify_struts",
+            f"Classified {payload['counts']['total']} struts",
+            payload,
+        )
+
+    return _run_structured_tool("classify_struts", operation)
+
+
+@mcp.tool()
+def render_strut_evidence(
+    ct_filepath: str,
+    localized_graph_filepath: str,
+    profiles_filepath: str,
+    output_directory: str,
+    strut_id: int,
+    threshold: float,
+    crop_margin_voxels: int = 8,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Render three orthogonal CT crops and an occupancy profile for one strut."""
+
+    def operation() -> dict[str, Any]:
+        ct, _ = _repository_path(
+            ct_filepath,
+            must_exist=True,
+            expected_suffixes={".npy", ".tif", ".tiff"},
+        )
+        graph, _ = _repository_path(
+            localized_graph_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        profiles, _ = _repository_path(
+            profiles_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        output, _ = _repository_output_directory(output_directory)
+        payload = _render_strut_evidence(
+            ct,
+            graph,
+            profiles,
+            output,
+            strut_id=strut_id,
+            threshold=threshold,
+            crop_margin_voxels=crop_margin_voxels,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "render_strut_evidence",
+            f"Rendered evidence packet for strut {strut_id}",
+            payload,
+        )
+
+    return _run_structured_tool("render_strut_evidence", operation)
+
+
+@mcp.tool()
+def compute_detection_metrics(
+    classifications_filepath: str,
+    sealed_labels_filepath: str,
+    output_filepath: str,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Eval-side strict/lenient recall, Wilson intervals, and confusion matrix."""
+
+    def operation() -> dict[str, Any]:
+        classifications, _ = _repository_path(
+            classifications_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        labels, _ = _repository_path(
+            sealed_labels_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        output, _ = _repository_path(
+            output_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        payload = _compute_detection_metrics(
+            classifications, labels, output, overwrite=overwrite
+        )
+        return _core_response(
+            "compute_detection_metrics",
+            (
+                f"Scored {payload['sealed_strut_count']} sealed struts; "
+                f"lenient recall {payload['lenient_recall']['value']:.3f}"
+            ),
+            payload,
+        )
+
+    return _run_structured_tool("compute_detection_metrics", operation)
+
+
+@mcp.tool()
+def get_strut_report(
+    strut_id: int,
+    metrics_filepath: str,
+    classifications_filepath: str,
+    thresholds_filepath: str,
+    evidence_manifest_filepath: str | None = None,
+) -> dict[str, Any]:
+    """Return one compact artifact-backed strut record without recomputation."""
+
+    def operation() -> dict[str, Any]:
+        metrics, _ = _repository_path(
+            metrics_filepath, must_exist=True, expected_suffixes={".csv"}
+        )
+        classifications, _ = _repository_path(
+            classifications_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        thresholds_path, _ = _repository_path(
+            thresholds_filepath,
+            must_exist=True,
+            expected_suffixes={".json"},
+        )
+        evidence = (
+            _repository_path(
+                evidence_manifest_filepath,
+                must_exist=True,
+                expected_suffixes={".json"},
+            )[0]
+            if evidence_manifest_filepath
+            else None
+        )
+        payload = _get_strut_report(
+            strut_id,
+            metrics,
+            classifications,
+            thresholds_path,
+            evidence_manifest_path=evidence,
+        )
+        return _core_response(
+            "get_strut_report",
+            f"Loaded artifact-backed report for strut {strut_id}",
+            payload,
+        )
+
+    return _run_structured_tool("get_strut_report", operation)
+
+
+@mcp.tool()
 def segment_ct_dataset(input_filepath: str, output_filepath: str, threshold: float) -> str:
     """
     Segments a 3D CT dataset based on a given density threshold value.
-    
+
     Args:
         input_filepath: Path to the input .npy file containing the 3D CT scan data.
         output_filepath: Path indicating where the segmented .npy file should be saved.
         threshold: The density value to use as a threshold. Voxels >= threshold will be set to 1, others to 0.
-    
+
     Returns:
         A status message indicating success and the save location, or an error message.
     """
@@ -406,13 +890,13 @@ def segment_ct_dataset(input_filepath: str, output_filepath: str, threshold: flo
 def visualize_slice(input_filepath: str, output_filepath: str, slice_index: int, axis: int = 0) -> str:
     """
     Loads a 3D CT dataset from a .npy file and saves a visualization of a specific slice to an image file.
-    
+
     Args:
         input_filepath: Path to the input .npy file containing the 3D CT data.
         output_filepath: Path indicating where the output image should be saved (e.g., .png).
         slice_index: The index of the slice to visualize.
         axis: The axis along which to take the slice (0, 1, or 2). Default is 0.
-        
+
     Returns:
         A status message indicating success and the save location, or an error message.
     """
@@ -518,11 +1002,11 @@ def render_volume_3d(
 def skeletonize(input_filepath: str, output_filepath: str) -> str:
     """
     Creates a skeleton from a 3D segmentation mask.
-    
+
     Args:
         input_filepath: Path to the .npy file containing the 3D mask.
         output_filepath: Path to save the extracted skeleton (.npy).
-        
+
     Returns:
         A status message indicating success and the save location, or an error message.
     """
