@@ -108,6 +108,7 @@ class DemoRun:
         base_directory: Path,
         scenario: str,
         registration_mode: str,
+        emit_terminal_stdout: bool = False,
     ) -> None:
         self.run_id = run_id
         self.scenario = scenario
@@ -126,6 +127,8 @@ class DemoRun:
             registration_mode,
         )
         self.events: list[dict[str, Any]] = []
+        self.terminal_lines: list[dict[str, Any]] = []
+        self.emit_terminal_stdout = emit_terminal_stdout
         self.verification_block: dict[str, Any] | None = None
         self.review_triggered = False
         self._add_event(
@@ -157,18 +160,34 @@ class DemoRun:
         detail: str,
         proof: str | None = None,
     ) -> None:
-        self.events.append(
+        sequence = len(self.events) + 1
+        event = {
+            "sequence": sequence,
+            "source": source,
+            "kind": kind,
+            "stage": stage,
+            "tone": tone,
+            "title": title,
+            "detail": detail,
+            "proof": proof,
+        }
+        self.events.append(event)
+
+        stage_text = "pipeline" if stage is None else f"stage={stage}"
+        proof_text = f" sha256={proof[:12]}…" if proof else ""
+        rendered = (
+            f"[part2-run] {sequence:04d} {source.upper()} {stage_text} {kind}"
+            f" :: {title}{proof_text}"
+        )
+        self.terminal_lines.append(
             {
-                "sequence": len(self.events) + 1,
+                "sequence": sequence,
                 "source": source,
-                "kind": kind,
-                "stage": stage,
-                "tone": tone,
-                "title": title,
-                "detail": detail,
-                "proof": proof,
+                "line": rendered,
             }
         )
+        if self.emit_terminal_stdout:
+            print(rendered, flush=True)
 
     def _status(self) -> dict[str, Any]:
         return pipeline_status(
@@ -497,6 +516,7 @@ class DemoRun:
                 },
                 "stages": stages,
                 "events": list(self.events),
+                "terminalLines": list(self.terminal_lines),
             }
 
     def close(self, base_directory: Path) -> None:
@@ -524,7 +544,12 @@ class DemoRun:
 class DemoRunStore:
     """Own demo sessions and their temporary filesystem roots."""
 
-    def __init__(self, base_directory: Path | None = None) -> None:
+    def __init__(
+        self,
+        base_directory: Path | None = None,
+        *,
+        emit_terminal_stdout: bool = False,
+    ) -> None:
         if base_directory is None:
             self.base_directory = Path(
                 tempfile.mkdtemp(prefix="llnl-part2-orchestrator-demo-")
@@ -536,6 +561,7 @@ class DemoRunStore:
             self._owns_base = False
         self.lock = threading.RLock()
         self.runs: dict[str, DemoRun] = {}
+        self.emit_terminal_stdout = emit_terminal_stdout
 
     def create(self, *, scenario: str, registration_mode: str) -> DemoRun:
         if scenario not in SCENARIOS:
@@ -551,6 +577,7 @@ class DemoRunStore:
                 base_directory=self.base_directory,
                 scenario=scenario,
                 registration_mode=registration_mode,
+                emit_terminal_stdout=self.emit_terminal_stdout,
             )
             self.runs[run_id] = run
             return run
@@ -582,7 +609,7 @@ class DemoRunStore:
                 pass
 
 
-STORE = DemoRunStore()
+STORE = DemoRunStore(emit_terminal_stdout=True)
 atexit.register(STORE.close)
 
 
@@ -590,7 +617,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
     server_version = "Part2OrchestratorDemo/1.0"
 
     def log_message(self, format_string: str, *args: object) -> None:
-        print(f"[demo-api] {self.address_string()} {format_string % args}")
+        print(
+            f"[demo-api] {self.address_string()} {format_string % args}",
+            flush=True,
+        )
 
     def _origin_allowed(self) -> bool:
         origin = self.headers.get("Origin")
@@ -777,8 +807,11 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
 def main() -> int:
     server = ThreadingHTTPServer((HOST, PORT), DemoRequestHandler)
-    print(f"Part 2 demo API listening on http://{HOST}:{PORT}")
-    print("Real control plane; deterministic fixture specialists; no CT algorithms.")
+    print(f"Part 2 demo API listening on http://{HOST}:{PORT}", flush=True)
+    print(
+        "Real control plane; deterministic fixture specialists; no CT algorithms.",
+        flush=True,
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -23,6 +23,12 @@ npm run demo
 Open <http://localhost:3000>. The single command starts both the localhost-only
 Python control-plane adapter and the frontend. Stop both with `Ctrl-C`.
 
+The **One check** control sends one mutation request and performs one legal
+control-plane transition: a `ready` stage starts, or a `running` stage completes
+or stops. The page's live terminal shows the same redacted event lines that the
+Python process flushes to stdout, so the UI can be compared directly with the
+launching terminal without exposing raw label paths or payloads.
+
 ## Demonstration scenarios
 
 - **Verified walkthrough:** real Stage 0–6 state transitions using fixture
