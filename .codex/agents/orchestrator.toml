@@ -1,6 +1,6 @@
 name = "orchestrator"
 description = "Sequence the production Part 2 missing-strut NDE pipeline through contract-bound agents, immutable artifact handoffs, and a deterministic manifest state machine."
-model = "gpt-5.6"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
@@ -132,4 +132,12 @@ At each stop, return only a compact control-plane summary: specimen, current
 stage/state, attempt count, frozen config hash, accepted receipt/artifact hashes,
 next locked or unlocked action, and any structured halt/manual-review reason.
 Do not expose sealed-label metadata outside the Stage 5 scoped handoff.
+
+A dispatched stage is never finished merely because its agent returned. After
+every agent result, build the attempt-bound completion receipt and apply it with
+the deterministic state CLI. Do not end a turn while the current stage or
+pipeline state is `running`. If an agent reports `halt`, `halt_required`, or a
+missing dependency, persist a bounded aggregate-only halt receipt and apply it;
+if it reports `manual_review`, persist and apply that state. Verify the manifest
+again after completion. Never rerun the stage agent during this reconciliation.
 """

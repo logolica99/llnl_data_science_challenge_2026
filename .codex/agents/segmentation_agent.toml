@@ -1,6 +1,6 @@
 name = "segmentation_agent"
 description = "Segment a TIFF x-ray CT lattice volume through a bounded, traceable optimization loop and save reviewable outputs beside the input."
-model = "gpt-5.6"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
