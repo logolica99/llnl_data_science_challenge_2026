@@ -37,6 +37,9 @@ test("server-renders the orchestration demonstrator", async () => {
   assert.match(html, /Production control-plane code is running live\./);
   assert.match(html, /Specialist outputs are deterministic fixtures/);
   assert.match(html, /Fixture specialists/);
+  assert.match(html, /Live control-plane terminal/);
+  assert.match(html, /One check is one legal state transition\./);
+  assert.match(html, /Backend stdout mirror/);
   assert.match(html, /The verified handoff chain/);
   assert.match(html, /Labels move through narrow lanes/);
   assert.match(html, /What just happened/);
@@ -55,6 +58,7 @@ test("ships the live local adapter and removes starter-only assets", async () =>
 
   assert.match(page, /\/api\/v1\/demo-runs/);
   assert.match(page, /expectedManifestSha256/);
+  assert.match(page, /terminalLines/);
   assert.match(page, /manual_review/);
   assert.match(page, /sealedEvaluationConsumed/);
   assert.match(layout, /Part 2 NDE Orchestration Demonstrator/);
@@ -64,6 +68,8 @@ test("ships the live local adapter and removes starter-only assets", async () =>
   assert.match(server, /ThreadingHTTPServer\(\(HOST, PORT\)/);
   assert.match(server, /Cache-Control/);
   assert.match(server, /expectedManifestSha256/);
+  assert.match(server, /terminalLines/);
+  assert.match(server, /flush=True/);
 
   await assert.rejects(access(new URL("../app/_sites-preview", import.meta.url)));
   await assert.rejects(access(new URL("../public/favicon.svg", import.meta.url)));

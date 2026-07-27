@@ -14,6 +14,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -114,6 +115,50 @@ class Part2DemoTests(unittest.TestCase):
             run.runner.manifest_path.resolve().is_relative_to(self.base.resolve())
         )
         self.assertEqual(analysis_before, _tree_hashes(REPOSITORY_ROOT / "analysis"))
+
+    def test_one_check_records_and_flushes_real_control_plane_terminal_lines(self) -> None:
+        run = self.store.create(
+            scenario="verified_walkthrough",
+            registration_mode="autonomous_v2",
+        )
+        initial = run.projection()
+        self.assertEqual("ready", initial["stages"][0]["state"])
+        self.assertEqual(1, len(initial["terminalLines"]))
+        self.assertTrue(initial["terminalLines"][0]["line"].startswith("[part2-run]"))
+        self.assertIn("pipeline_created", initial["terminalLines"][0]["line"])
+
+        run.emit_terminal_stdout = True
+        with patch("builtins.print") as stdout:
+            started = run.advance(str(initial["manifestSha256"]))
+
+        self.assertEqual("running", started["stages"][0]["state"])
+        self.assertGreater(len(started["terminalLines"]), len(initial["terminalLines"]))
+        self.assertTrue(
+            any("stage_started" in item["line"] for item in started["terminalLines"])
+        )
+        self.assertTrue(
+            any(
+                call.kwargs == {"flush": True}
+                and call.args
+                and "[part2-run]" in str(call.args[0])
+                and "stage_started" in str(call.args[0])
+                for call in stdout.call_args_list
+            )
+        )
+
+        serialized = json.dumps(started["terminalLines"], sort_keys=True)
+        self.assertNotIn(str(self.base.resolve()), serialized)
+        self.assertNotIn("evals/labels", serialized)
+        self.assertNotIn("development_labels", serialized)
+        self.assertNotIn("sealed_labels", serialized)
+
+        run.emit_terminal_stdout = False
+        completed = run.advance(str(started["manifestSha256"]))
+        self.assertEqual("pass", completed["stages"][0]["state"])
+        self.assertEqual("ready", completed["stages"][1]["state"])
+        self.assertTrue(
+            any("stage_completed" in item["line"] for item in completed["terminalLines"])
+        )
 
     def test_challenge_walkthrough_uses_declared_branch_without_freeze(self) -> None:
         run = self.store.create(

@@ -45,6 +45,12 @@ type DemoEvent = {
   proof: string | null;
 };
 
+type TerminalLine = {
+  sequence: number;
+  source: "manifest" | "demo_adapter";
+  line: string;
+};
+
 type DemoState = {
   schemaVersion: string;
   runId: string;
@@ -68,6 +74,7 @@ type DemoState = {
   } | null;
   stages: DemoStage[];
   events: DemoEvent[];
+  terminalLines?: TerminalLine[];
 };
 
 const SESSION_KEY = "llnl-part2-demo-run";
@@ -235,6 +242,7 @@ export default function Home() {
   const initialized = useRef(false);
   const followActiveStage = useRef(true);
   const terminalPanel = useRef<HTMLElement | null>(null);
+  const terminalLog = useRef<HTMLDivElement | null>(null);
 
   const setFollowMode = useCallback((value: boolean) => {
     followActiveStage.current = value;
@@ -355,6 +363,11 @@ export default function Home() {
       terminalPanel.current?.focus();
     }
   }, [demo]);
+
+  useEffect(() => {
+    if (!terminalLog.current || !demo?.terminalLines?.length) return;
+    terminalLog.current.scrollTop = terminalLog.current.scrollHeight;
+  }, [demo?.terminalLines?.length]);
 
   const stages = demo?.stages;
   const selected = stages?.[selectedStage] ?? null;
@@ -624,6 +637,45 @@ export default function Home() {
               <button type="button" className="button button-follow" onClick={followLiveStage} disabled={busy}>
                 Follow Stage {demo.currentStage}
               </button>
+            )}
+          </div>
+        </section>
+
+        <section className="control-terminal" aria-labelledby="control-terminal-title">
+          <div className="terminal-heading">
+            <div>
+              <p className="terminal-kicker">
+                <span className={`live-indicator ${apiConnected ? "connected" : ""}`} aria-hidden="true" />
+                Backend stdout mirror
+              </p>
+              <h2 id="control-terminal-title">Live control-plane terminal</h2>
+            </div>
+            <code>POST /api/v1/demo-runs/:id/steps</code>
+          </div>
+          <p className="terminal-explainer">
+            <strong>One check is one legal state transition.</strong>{" "}
+            A ready stage starts; a running stage completes or stops. These are the
+            same redacted lines flushed by the Python process—never raw label paths
+            or scientific payloads.
+          </p>
+          <div
+            ref={terminalLog}
+            className="terminal-window"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+            aria-label="Redacted backend control-plane output"
+          >
+            <ol>
+              {(demo?.terminalLines ?? []).map((entry) => (
+                <li className={`terminal-line terminal-${entry.source}`} key={entry.sequence}>
+                  <span aria-hidden="true">{entry.source === "manifest" ? "$" : "#"}</span>
+                  <code>{entry.line}</code>
+                </li>
+              ))}
+            </ol>
+            {!demo?.terminalLines?.length && (
+              <p className="terminal-empty">Waiting for the local control plane…</p>
             )}
           </div>
         </section>
