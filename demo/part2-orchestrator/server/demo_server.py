@@ -36,7 +36,7 @@ MAX_BODY_BYTES = 4096
 MAX_ACTIVE_RUNS = 32
 SESSION_MARKER = ".part2-demo-session"
 SESSION_MARKER_SCHEMA = "part2-demo-session/1.0.0"
-REGISTRATION_MODES = {"autonomous_v2", "challenge_aligned_json"}
+REGISTRATION_MODES = {"autonomous_v2"}
 SCENARIOS = {
     "verified_walkthrough",
     "manual_review",
@@ -56,16 +56,10 @@ STAGE_COPY = (
         "activity": "Checking the specimen association, metadata receipt, and immutable intake handoff.",
     },
     {
-        "title": "Derive design labels",
-        "shortTitle": "Design labels",
-        "description": "Create intentional-deletion labels and freeze development and sealed splits from design inputs only.",
-        "activity": "Routing design-only inputs while keeping CT and prior labels outside the stage.",
-    },
-    {
         "title": "Register & validate",
-        "shortTitle": "Registration",
-        "description": "Select registration mode, run exact Otsu and local refinement, then verify registration QA.",
-        "activity": "Enforcing the registration-mode boundary and verifying the frozen registration evidence.",
+        "shortTitle": "Data prep",
+        "description": "Run exact Otsu, autonomous graph-to-CT registration, localization, and registration QA.",
+        "activity": "Verifying the frozen autonomous registration evidence and analysis-ready manifest.",
     },
     {
         "title": "Measure each strut",
@@ -76,14 +70,8 @@ STAGE_COPY = (
     {
         "title": "Classify & verify",
         "shortTitle": "Classification",
-        "description": "Merge missing, broken, and thin findings, then require an independent classifier verifier.",
-        "activity": "Keeping development labels scoped to the missing specialist and binding independent verification.",
-    },
-    {
-        "title": "Score sealed split once",
-        "shortTitle": "Sealed scoring",
-        "description": "Reserve and report the sealed evaluation exactly once without tuning upstream decisions.",
-        "activity": "Disclosing the sealed split only to the evaluation agent and recording one-shot attribution.",
+        "description": "Merge missing, broken, and thin findings without labels, then require an independent classifier verifier.",
+        "activity": "Binding label-free specialist findings and independent verification.",
     },
     {
         "title": "Assemble NDE report",
@@ -138,7 +126,7 @@ class DemoRun:
             tone="info",
             title="Frozen run created",
             detail=(
-                "The real control plane hashed the configuration and Stage 0-6 "
+                "The real control plane hashed the configuration and Stage 0-4 "
                 "contracts. Stage 0 is the only unlocked stage."
             ),
         )
@@ -262,30 +250,6 @@ class DemoRun:
                             "opaque fixture files; no scientific algorithm is running."
                         ),
                     )
-                    if stage_number == 4:
-                        self._add_event(
-                            source="manifest",
-                            kind="scoped_handoff",
-                            stage=stage_number,
-                            tone="sealed",
-                            title="Development labels isolated",
-                            detail=(
-                                "A separate restricted handoff was created for the "
-                                "missing-strut specialist. Its contents stay withheld."
-                            ),
-                        )
-                    if stage_number == 5:
-                        self._add_event(
-                            source="manifest",
-                            kind="sealed_reserved",
-                            stage=stage_number,
-                            tone="sealed",
-                            title="Sealed evaluation consumed",
-                            detail=(
-                                "The one-shot marker was reserved before sealed input "
-                                "disclosure. This exact run cannot score it twice."
-                            ),
-                        )
                 return self.projection()
 
             if stage["state"] != "running":
@@ -293,7 +257,7 @@ class DemoRun:
 
             if (
                 self.scenario == "manual_review"
-                and stage_number == 2
+                and stage_number == 1
                 and not self.review_triggered
             ):
                 self.runner.complete_manual_review(stage_number)
@@ -309,7 +273,7 @@ class DemoRun:
                     tone="review",
                     title="Automation paused for scientist review",
                     detail=(
-                        "Attempt 1 evidence and its receipt are preserved. Stage 3 "
+                        "Attempt 1 evidence and its receipt are preserved. Stage 2 "
                         "remains locked until an explicit hashed resolution is recorded."
                     ),
                     proof=receipt_hash,
@@ -367,21 +331,9 @@ class DemoRun:
                     tone="sealed",
                     title="CT-only registration frozen",
                     detail=(
-                        "Registration artifacts were hashed before the optional aligned "
-                        "reference was authorized for validation."
+                        "Registration artifacts were hashed before Stage 1 completion."
                     ),
                     proof=result["freeze"]["freeze"]["canonical_sha256"],
-                )
-                self._add_event(
-                    source="manifest",
-                    kind="aligned_reference_authorized",
-                    stage=stage_number,
-                    tone="info",
-                    title="Post-freeze reference authorized",
-                    detail=(
-                        "The aligned reference may validate the frozen fit but cannot "
-                        "change its recorded artifact hashes."
-                    ),
                 )
             receipt_hash = result["receipt"]["receipt"][
                 "canonical_receipt_sha256"
@@ -429,7 +381,7 @@ class DemoRun:
             status = self._status()
             manifest = self.runner.manifest()
             stages: list[dict[str, Any]] = []
-            for stage_number in range(7):
+            for stage_number in range(5):
                 raw = manifest["stages"][str(stage_number)]
                 attempt = raw["attempts"][-1] if raw["attempts"] else None
                 handoff_hash = None
@@ -475,7 +427,7 @@ class DemoRun:
             active_stage = (
                 int(status["current_stage"])
                 if status["current_stage"] is not None
-                else 6
+                else 4
             )
             return {
                 "schemaVersion": "part2-orchestrator-demo/1.0.0",
@@ -490,9 +442,6 @@ class DemoRun:
                 "configSha256": status["config_sha256"],
                 "predecessorReceiptSha256": manifest[
                     "predecessor_receipt_sha256"
-                ],
-                "sealedEvaluationConsumed": status[
-                    "sealed_evaluation_consumed"
                 ],
                 "allowedAction": allowed_action,
                 "verificationState": (

@@ -63,7 +63,6 @@ type DemoState = {
   manifestSha256: string;
   configSha256: string;
   predecessorReceiptSha256: string | null;
-  sealedEvaluationConsumed: boolean;
   allowedAction: "advance" | "resume" | null;
   blockedReason: string | null;
   verificationState: "clear" | "blocked";
@@ -81,11 +80,9 @@ const SESSION_KEY = "llnl-part2-demo-run";
 
 const STAGE_FALLBACKS = [
   ["Confirm specimen", "Intake", "specimen_ingest"],
-  ["Derive design labels", "Design labels", "design_diff"],
-  ["Register & validate", "Registration", "data_prep"],
+  ["Register & validate", "Data prep", "data_prep"],
   ["Measure each strut", "ROI metrics", "strut_metrics"],
   ["Classify & verify", "Classification", "defect_lead"],
-  ["Score sealed split once", "Sealed scoring", "eval_agent"],
   ["Assemble NDE report", "Report", "report_agent"],
 ] as const;
 
@@ -93,12 +90,12 @@ const SCENARIOS = [
   {
     value: "verified_walkthrough",
     label: "Verified walkthrough",
-    detail: "All seven control-plane stages pass with fixture outputs.",
+    detail: "All five control-plane stages pass with fixture outputs.",
   },
   {
     value: "manual_review",
     label: "Manual review",
-    detail: "Stage 2 pauses until a scientist records a resolution.",
+    detail: "Stage 1 pauses until a scientist records a resolution.",
   },
   {
     value: "tampered_receipt",
@@ -121,13 +118,11 @@ const GATE_LABELS = [
 ];
 
 const SPECIAL_NOTES = [
-  "The scientist—not the orchestrator—confirms which scan, graph, and specimen belong together.",
-  "This stage sees design geometry only. CT data and all earlier defect labels are forbidden.",
-  "Autonomous v2 fits from CT plus the nominal graph, freezes those hashes, and only then permits optional aligned-reference validation.",
-  "Per-strut measurement is blind: no development labels, sealed labels, or classifications can enter this handoff.",
-  "Only the missing specialist receives development labels. Merge precedence is missing > broken > thin > present; bent stays separate.",
-  "Starting this stage consumes the sealed split once. Recall is reported honestly and never used to retune Stage 4.",
-  "The final report cites verified artifact values. It cannot recompute spatial, rendering, or evaluation results in prose.",
+  "The scientist—not the orchestrator—confirms which nominal graph, CT scan, and specimen belong together.",
+  "Autonomous v2 fits from CT plus the normalized nominal graph, then freezes registration evidence.",
+  "Per-strut measurement is label-free: no training, evaluation, prior-defect, or ground-truth artifact can enter this handoff.",
+  "All specialists remain label-free. Merge precedence is missing > broken > thin > present; bent stays separate.",
+  "The final report cites verified artifact values and cannot recompute scientific results in prose.",
 ];
 
 function shortHash(value: string | null | undefined) {
@@ -375,7 +370,6 @@ export default function Home() {
   const configurationChanged =
     !!demo &&
     (demo.scenario !== scenario || demo.registrationMode !== registrationMode);
-  const stageFive = stages?.[5];
   const verificationBlocked = demo?.verificationState === "blocked";
   const displayedPipelineState = verificationBlocked
     ? "verification_blocked"
@@ -440,7 +434,7 @@ export default function Home() {
 
         <div className="hero-content">
           <div className="hero-copy">
-            <p className="eyebrow">Production control plane · Stages 0–6</p>
+            <p className="eyebrow">Production control plane · Stages 0–4</p>
             <h1>Every stage earns access to the next.</h1>
             <p className="hero-lede">
               The live production control plane coordinates bounded specialist
@@ -500,7 +494,6 @@ export default function Home() {
                 disabled={busy}
               >
                 <option value="autonomous_v2">Autonomous v2 · CT-only freeze</option>
-                <option value="challenge_aligned_json">Challenge · authorized aligned JSON</option>
               </select>
             </label>
             <div className="control-row">
@@ -580,10 +573,8 @@ export default function Home() {
           <code>{shortHash(demo?.manifestSha256)}</code>
         </div>
         <div>
-          <span>Sealed evaluation</span>
-          <strong className={demo?.sealedEvaluationConsumed ? "sealed-text" : "muted-text"}>
-            {demo?.sealedEvaluationConsumed ? "Consumed once" : "Still locked"}
-          </strong>
+          <span>Input boundary</span>
+          <strong>Nominal graph + CT</strong>
         </div>
       </section>
 
@@ -856,7 +847,7 @@ export default function Home() {
                 {verificationBlocked
                   ? "Receipt rejected; manifest unchanged."
                   : demo.pipelineState === "pass"
-                  ? "All seven receipts passed."
+                  ? "All five receipts passed."
                   : demo.pipelineState === "manual_review"
                     ? "Paused—not failed."
                     : "Run halted safely."}
@@ -887,50 +878,36 @@ export default function Home() {
           <div className="section-heading">
             <div>
               <p className="eyebrow dark">Information boundaries</p>
-              <h2 id="isolation-title">Labels move through narrow lanes</h2>
+              <h2 id="isolation-title">Production remains label-free</h2>
             </div>
-            <p>The orchestrator enforces who may see sensitive truth—and when.</p>
+            <p>The orchestrator rejects training, evaluation, and prior-defect truth at every production stage.</p>
           </div>
 
           <div className="isolation-grid">
             <article className="blind-zone">
-              <span className="zone-label">Stages 2 + 3</span>
+              <span className="zone-label">Stages 0–4</span>
               <strong>No defect labels</strong>
-              <p>Registration and blind per-strut measurement receive CT-derived evidence only.</p>
+              <p>Registration, measurement, classification, and reporting receive nominal and CT-derived evidence only.</p>
               <div className="blind-route">
                 <span>CT + graph</span><i aria-hidden="true">→</i><span>metrics</span>
               </div>
             </article>
-            <article className={`vault-card ${stageFive && ["running", "pass"].includes(stages?.[4]?.state ?? "") ? "vault-open" : ""}`}>
-              <span className="vault-status">Restricted</span>
-              <span className="vault-icon" aria-hidden="true">DEV</span>
-              <h3>Development split</h3>
-              <p>Stage 4 · <strong>missing_strut_agent only</strong></p>
-              <small>Thin, broken, lead, and verifier stay label-blind.</small>
-            </article>
-            <article className={`vault-card sealed-vault ${demo?.sealedEvaluationConsumed ? "vault-open" : ""}`}>
-              <span className="vault-status">{demo?.sealedEvaluationConsumed ? "Consumed once" : "Locked"}</span>
-              <span className="vault-icon" aria-hidden="true">SEALED</span>
-              <h3>Sealed split</h3>
-              <p>Stage 5 · <strong>eval_agent only</strong></p>
-              <small>One-shot reporting; never an optimization loop.</small>
-            </article>
             <article className="derived-card">
-              <span className="zone-label">Stage 6</span>
+              <span className="zone-label">Stage 4</span>
               <strong>Derived evidence only</strong>
-              <p>Attribution and aggregate scores may be cited. Raw label splits remain inaccessible.</p>
+              <p>The report cites committed classifications, evidence, and provenance without label access.</p>
               <span className="precedence">missing &gt; broken &gt; thin &gt; present</span>
             </article>
           </div>
 
-          <div className="classifier-flow" aria-label="Stage 4 classification flow">
-            <div><span>Missing specialist</span><small>dev access</small></div>
-            <div><span>Thin specialist</span><small>blind</small></div>
-            <div><span>Broken specialist</span><small>blind</small></div>
+          <div className="classifier-flow" aria-label="Stage 3 classification flow">
+            <div><span>Missing specialist</span><small>label-free</small></div>
+            <div><span>Thin specialist</span><small>label-free</small></div>
+            <div><span>Broken specialist</span><small>label-free</small></div>
             <b aria-hidden="true">→</b>
             <div className="merge-node"><span>Defect lead merge</span><small>fixed precedence</small></div>
             <b aria-hidden="true">→</b>
-            <div className="verify-node"><span>Independent verifier</span><small>dev + sealed blind</small></div>
+            <div className="verify-node"><span>Independent verifier</span><small>all labels forbidden</small></div>
           </div>
         </section>
 

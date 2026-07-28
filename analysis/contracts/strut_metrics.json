@@ -1,6 +1,6 @@
 {
   "schema_version": "agent-stage-contract/1.0.0",
-  "stage_number": 3,
+  "stage_number": 2,
   "stage": "strut_metrics",
   "owner": "strut_metrics",
   "invoked_by": "orchestrator",
@@ -23,11 +23,11 @@
     ]
   },
   "required_inputs": [
-    "verified_stage_2_receipt_hash_in_control_metadata",
+    "verified_stage_1_receipt_hash_in_control_metadata",
     "analysis_ready_specimen_manifest",
     "data_prep_completion_receipt",
     "requested_analysis_scope_and_authorized_outputs",
-    "attempt_scoped_stage_3_handoff",
+    "attempt_scoped_stage_2_handoff",
     "frozen_analysis_config",
     "ct_volume",
     "independently_localized_graph",
@@ -57,7 +57,7 @@
     "allowed": [
       {
         "role": "stage_handoff",
-        "path": "analysis/<specimen_id>/handoffs/stage_3_strut_metrics_attempt_<attempt>.json",
+        "path": "analysis/<specimen_id>/handoffs/stage_2_strut_metrics_attempt_<attempt>.json",
         "consumers": [
           "strut_metrics"
         ]
@@ -169,7 +169,7 @@
     "allowed": [
       {
         "role": "manual_review_evidence",
-        "path": "analysis/<specimen_id>/reviews/stage_3_attempt_<attempt>/**",
+        "path": "analysis/<specimen_id>/reviews/stage_2_attempt_<attempt>/**",
         "allow_multiple": true
       },
       {
@@ -198,18 +198,18 @@
   },
   "required_receipt_assertions": [
     "contract_version_matches",
-    "stage_2_receipt_hash_matches",
+    "stage_1_receipt_hash_matches",
     "frozen_config_hash_matches",
-    "specimen_design_scope_and_stage_2_artifact_bindings_match",
-    "requested_output_is_present_in_stage_2_authorized_outputs",
+    "specimen_design_scope_and_stage_1_artifact_bindings_match",
+    "requested_output_is_present_in_stage_1_authorized_outputs",
     "roi_screening_outputs_are_not_reported_as_absolute_or_direct_dimensional_metrology",
     "stage_handoff_excludes_all_label_roles_paths_and_hashes",
     "input_artifact_hashes_match",
     "output_artifact_hashes_match",
     "corridor_radius_derived_from_empirical_bootstrap",
-    "threshold_matches_stage_2_otsu_result",
-    "canonical_mask_path_role_dtype_shape_retention_and_hash_match_stage_2",
-    "localized_graph_hash_matches_stage_2",
+    "threshold_matches_stage_1_otsu_result",
+    "canonical_mask_path_role_dtype_shape_retention_and_hash_match_stage_1",
+    "localized_graph_hash_matches_stage_1",
     "one_row_per_nominal_strut",
     "metric_row_count_matches_manifest_edge_count",
     "strut_ids_unique_and_exhaustive",

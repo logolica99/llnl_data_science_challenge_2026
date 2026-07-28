@@ -7,5 +7,5 @@ dependencies:
   tools:
     - type: "mcp"
       value: "segmentation-tools"
-      description: "Required versioned Part 2 artifact, registration, measurement, evaluation, and rendering tools"
+      description: "Required versioned Part 2 artifact, registration, measurement, classification, and reporting tools"
       transport: "stdio"

@@ -503,7 +503,7 @@ return until the manifest is no longer `running`; keep Stages 1-6 locked.
         source = json.loads(SOURCE_CONFIG.read_text(encoding="utf-8"))
         assert self.run_id is not None
         request_base = {
-            "schema_version": "part2-scientist-intake-request/1.0.0",
+            "schema_version": "part2-scientist-intake-request/2.0.0",
             "created_at": self.started_at,
             "specimen_id": self.run_id,
             "design_id": source["design_id"],
@@ -511,28 +511,16 @@ return until the manifest is no longer `running`; keep Stages 1-6 locked.
                 "requested_analysis_scope"
             ],
             "association_confirmed": True,
-            "registration_mode": "challenge_aligned_json",
-            "aligned_graph_authorized": True,
-            "declarations": {
-                "cad_units": "unknown",
-                "cad_units_provenance": "committed LLNL challenge specimen input",
-                "graph_axes": source["analysis_parameters"]["coordinates"][
-                    "graph_axes"
-                ],
-                "array_axes": source["analysis_parameters"]["coordinates"][
-                    "array_axes"
-                ],
-                "aligned_graph_units": source["analysis_parameters"][
-                    "coordinates"
-                ]["aligned_graph_units"],
-                "retention": "committed",
-            },
+            "registration_mode": "autonomous_v2",
+            "graph_axes": source["analysis_parameters"]["coordinates"][
+                "graph_axes"
+            ],
+            "array_axes": source["analysis_parameters"]["coordinates"][
+                "array_axes"
+            ],
             "inputs": {
-                "cad": source["inputs"]["cad"],
                 "nominal_graph": source["inputs"]["design_graph"],
                 "ct": source["inputs"]["ct"],
-                "aligned_graph": source["inputs"]["aligned_graph"],
-                "design_transform_declaration": None,
             },
         }
         request = {
@@ -556,10 +544,10 @@ return until the manifest is no longer `running`; keep Stages 1-6 locked.
         request_path = f"analysis/{self.run_id}/config/runtime_request.json"
         return f"""Run one real Stage 0 orchestration attempt only.
 
-The scientist confirmed the exact association recorded at `{request_path}` by
-pressing the runtime demonstrator's confirmation control. The aligned graph is
-explicitly authorized for challenge mode. CAD units remain `unknown`; preserve
-that uncertainty and do not invent it.
+The scientist confirmed the exact nominal-graph/CT association recorded at
+`{request_path}` by pressing the runtime demonstrator's confirmation control.
+Production registration mode is autonomous v2; no CAD, aligned graph, design
+variant, or label artifact is authorized.
 
 Use the production runbook and deterministic state CLI. Initialize the pipeline
 for specimen `{self.run_id}` with `{request_path}` as the frozen control config.
@@ -568,7 +556,7 @@ thread. Then invoke the project custom agent named `specimen_ingest` through
 the Codex subagent runtime and give it only the Stage 0 contract-scoped handoff.
 Include `{request_path}` in that handoff as the required
 `scientist_intake_request`; it contains the scientist-confirmed identity,
-coordinate, units, provenance, registration-mode, and authorization fields.
+coordinate conventions, input hashes, and registration mode.
 Do not perform specimen intake yourself. Do not continue to Stage 1 even if
 Stage 0 passes. If any dependency, input, contract, dispatch, receipt, or gate
 fails, record the required structured halt or manual-review state without a
@@ -634,15 +622,11 @@ def association_projection() -> dict[str, Any]:
     source = json.loads(SOURCE_CONFIG.read_text(encoding="utf-8"))
     return {
         "sourceSpecimenId": source["specimen_id"],
-        "registrationMode": "challenge_aligned_json",
-        "cad": source["inputs"]["cad"]["path"],
+        "registrationMode": "autonomous_v2",
         "nominalGraph": source["inputs"]["design_graph"]["path"],
         "ct": source["inputs"]["ct"]["path"],
-        "alignedGraph": source["inputs"]["aligned_graph"]["path"],
-        "cadUnits": "unknown",
         "graphAxes": source["analysis_parameters"]["coordinates"]["graph_axes"],
         "ctAxes": source["analysis_parameters"]["coordinates"]["array_axes"],
-        "alignedGraphUnits": source["analysis_parameters"]["coordinates"]["aligned_graph_units"],
     }
 
 

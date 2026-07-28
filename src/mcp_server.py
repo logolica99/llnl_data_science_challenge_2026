@@ -1,9 +1,7 @@
-from contextlib import redirect_stdout
 import hashlib
 import json
 import math
 from pathlib import Path
-import sys
 from typing import Any, Callable, Literal
 
 import numpy as np
@@ -14,32 +12,25 @@ try:
     from .part2_core import (
         classify_struts as _classify_struts,
         compare_segmentation_masks as _compare_masks_core,
-        compute_detection_metrics as _compute_detection_metrics,
         compute_registration_qa as _compute_registration_qa,
+        compute_spatial_stats as _compute_spatial_stats,
         compute_strut_metrics as _compute_strut_metrics,
         error_response as _error_response,
         get_strut_report as _get_strut_report,
-        label_deleted_edges as _label_deleted_edges,
-        load_production_stage1_policy as _load_production_stage1_policy,
         load_volume as _load_volume,
         localize_lattice_nodes as _localize_lattice_nodes,
         normalize_lattice_graph as _normalize_lattice_graph,
         register_lattice_to_ct as _register_lattice_to_ct,
         render_strut_evidence as _render_strut_evidence,
+        render_lattice_3d as _render_lattice_3d,
         replay_exact_otsu as _replay_exact_otsu,
-        resolve_cad_graph_orientation as _resolve_cad_graph_orientation,
         success_response as _success_response,
         segment_ct_dataset as _segment_ct_dataset_core,
         volume_metadata as _volume_metadata,
         visualize_slice as _visualize_slice_core,
         write_otsu_artifacts as _write_otsu_artifacts,
     )
-    from .skeletonization import skeletonize_mask
     from .part2_core.artifacts import sha256_json, write_json_atomic
-    from .volume_artifacts import (
-        render_volume_3d as _render_volume_3d,
-        summarize_nde_artifacts as _summarize_nde_artifacts,
-    )
     from .volume_metadata import inspect_volume_envelope
     from .specimen_manifest import (
         canonical_json_sha256 as _canonical_json_sha256,
@@ -50,32 +41,25 @@ except ImportError:
     from part2_core import (
         classify_struts as _classify_struts,
         compare_segmentation_masks as _compare_masks_core,
-        compute_detection_metrics as _compute_detection_metrics,
         compute_registration_qa as _compute_registration_qa,
+        compute_spatial_stats as _compute_spatial_stats,
         compute_strut_metrics as _compute_strut_metrics,
         error_response as _error_response,
         get_strut_report as _get_strut_report,
-        label_deleted_edges as _label_deleted_edges,
-        load_production_stage1_policy as _load_production_stage1_policy,
         load_volume as _load_volume,
         localize_lattice_nodes as _localize_lattice_nodes,
         normalize_lattice_graph as _normalize_lattice_graph,
         register_lattice_to_ct as _register_lattice_to_ct,
         render_strut_evidence as _render_strut_evidence,
+        render_lattice_3d as _render_lattice_3d,
         replay_exact_otsu as _replay_exact_otsu,
-        resolve_cad_graph_orientation as _resolve_cad_graph_orientation,
         success_response as _success_response,
         segment_ct_dataset as _segment_ct_dataset_core,
         volume_metadata as _volume_metadata,
         visualize_slice as _visualize_slice_core,
         write_otsu_artifacts as _write_otsu_artifacts,
     )
-    from skeletonization import skeletonize_mask
     from part2_core.artifacts import sha256_json, write_json_atomic
-    from volume_artifacts import (
-        render_volume_3d as _render_volume_3d,
-        summarize_nde_artifacts as _summarize_nde_artifacts,
-    )
     from volume_metadata import inspect_volume_envelope
     from specimen_manifest import (
         canonical_json_sha256 as _canonical_json_sha256,
@@ -560,16 +544,6 @@ def inspect_volume_metadata(
         )
 
 
-def _input_npy_path(filepath: str) -> Path:
-    """Resolve and validate an input NumPy volume path."""
-    path = Path(filepath).expanduser().resolve()
-    if path.suffix.lower() != ".npy":
-        raise ValueError(f"Input file must use the .npy extension: {path}")
-    if not path.is_file():
-        raise FileNotFoundError(f"Input file does not exist: {path}")
-    return path
-
-
 def _repository_path(
     filepath: str,
     *,
@@ -703,24 +677,11 @@ def _core_response(
     )
 
 
-def _output_path(filepath: str, expected_suffix: str | None = None) -> Path:
-    """Resolve an output path and create its parent directory."""
-    path = Path(filepath).expanduser().resolve()
-    if expected_suffix and path.suffix.lower() != expected_suffix:
-        raise ValueError(
-            f"Output file must use the {expected_suffix} extension: {path}"
-        )
-    if path.exists() and path.is_dir():
-        raise IsADirectoryError(f"Output path is a directory: {path}")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
-
-
 @mcp.tool()
 def volume_info(
     input_filepath: str,
     include_sha256: bool = True,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    registration_mode: Literal["autonomous_v2"] = "autonomous_v2",
 ) -> MCPResponseEnvelope:
     """Return compact shared-loader metadata for a TIFF or NPY CT volume."""
 
@@ -825,145 +786,6 @@ def load_lattice_graph(
 
 
 @mcp.tool()
-def resolve_cad_graph_orientation(
-    nominal_graph_filepath: str,
-    full_design_stl_filepath: str,
-    output_filepath: str,
-    specimen_id: str,
-    design_id: str,
-    declared_transform_filepath: str | None = None,
-    declared_transform_sha256: str | None = None,
-    overwrite: bool = False,
-) -> MCPResponseEnvelope:
-    """Resolve CAD/graph orientation from design geometry without CT access."""
-
-    def operation() -> dict[str, Any]:
-        graph, _ = _repository_path(
-            nominal_graph_filepath, must_exist=True, expected_suffixes={".json"}
-        )
-        stl, _ = _repository_path(
-            full_design_stl_filepath, must_exist=True, expected_suffixes={".stl"}
-        )
-        output, _ = _repository_path(
-            output_filepath, must_exist=False, expected_suffixes={".json"}
-        )
-        declaration = (
-            _repository_path(
-                declared_transform_filepath,
-                must_exist=True,
-                expected_suffixes={".json"},
-            )[0]
-            if declared_transform_filepath
-            else None
-        )
-        stage1_policy = _load_production_stage1_policy()
-        payload = _resolve_cad_graph_orientation(
-            graph,
-            stl,
-            output,
-            stage1_policy_path=stage1_policy["artifact_path"],
-            stage1_policy_sha256=stage1_policy["artifact_sha256"],
-            declared_transform_path=declaration,
-            declared_transform_sha256=declared_transform_sha256,
-            specimen_id=specimen_id,
-            design_id=design_id,
-            overwrite=overwrite,
-        )
-        artifact = dict(payload["artifact"])
-        artifact["path"] = Path(artifact["path"]).relative_to(REPOSITORY_ROOT).as_posix()
-        result = {
-            key: value
-            for key, value in payload.items()
-            if key not in {"artifact", "hashes", "warnings"}
-        }
-        return _success_response(
-            tool="resolve_cad_graph_orientation",
-            gate=payload["gate"],
-            summary={
-                "pass": "Resolved and independently verified one CAD/graph orientation",
-                "manual_review": "CAD/graph orientation requires bounded review",
-                "halt": "CAD/graph orientation failed a hard verification gate",
-            }[payload["gate"]],
-            result=result,
-            artifacts={"cad_graph_orientation": artifact},
-            hashes={
-                **payload["hashes"],
-                "orientation_artifact_sha256": artifact["sha256"],
-            },
-            warnings=list(payload.get("warnings", [])),
-        )
-
-    return _run_structured_tool("resolve_cad_graph_orientation", operation)
-
-
-@mcp.tool()
-def label_deleted_edges(
-    nominal_graph_filepath: str,
-    baseline_stl_filepath: str,
-    variant_stl_filepaths: dict[str, str],
-    orientation_filepath: str,
-    output_directory: str,
-    specimen_id: str,
-    design_id: str,
-    development_split_filepath: str | None = None,
-    sealed_split_filepath: str | None = None,
-    label_report_filepath: str | None = None,
-    overwrite: bool = False,
-) -> MCPResponseEnvelope:
-    """Label all nominal edges by memory-aware, tube-emptiness CAD analysis."""
-
-    def operation() -> dict[str, Any]:
-        graph, _ = _repository_path(
-            nominal_graph_filepath, must_exist=True, expected_suffixes={".json"}
-        )
-        baseline, _ = _repository_path(
-            baseline_stl_filepath, must_exist=True, expected_suffixes={".stl"}
-        )
-        orientation, _ = _repository_path(
-            orientation_filepath, must_exist=True, expected_suffixes={".json"}
-        )
-        variants = {
-            name: _repository_path(path, must_exist=True, expected_suffixes={".stl"})[0]
-            for name, path in variant_stl_filepaths.items()
-        }
-        output, _ = _repository_output_directory(output_directory)
-
-        def optional_output(
-            path: str | None, suffixes: set[str] | None = None
-        ) -> Path | None:
-            return (
-                _repository_path(
-                    path,
-                    must_exist=False,
-                    expected_suffixes=suffixes or {".json"},
-                )[0]
-                if path
-                else None
-            )
-
-        payload = _label_deleted_edges(
-            graph,
-            baseline,
-            variants,
-            orientation,
-            output,
-            development_split_path=optional_output(development_split_filepath),
-            sealed_split_path=optional_output(sealed_split_filepath),
-            label_report_path=optional_output(label_report_filepath, {".md", ".json"}),
-            specimen_id=specimen_id,
-            design_id=design_id,
-            overwrite=overwrite,
-        )
-        return _core_response(
-            "label_deleted_edges",
-            f"Labeled every nominal edge with gate {payload['gate']}",
-            payload,
-        )
-
-    return _run_structured_tool("label_deleted_edges", operation)
-
-
-@mcp.tool()
 def replay_exact_otsu(
     input_filepath: str,
     output_directory: str,
@@ -980,7 +802,7 @@ def replay_exact_otsu(
     maximum_foreground_fraction: float = 0.35,
     minimum_otsu_separability: float = 0.45,
     minimum_class_mean_separation_sigma: float = 0.75,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    registration_mode: Literal["autonomous_v2"] = "autonomous_v2",
     enforce_reference_replay: bool = False,
     reference_threshold: int = 40054,
     reference_foreground_voxels: int = 58653410,
@@ -1091,7 +913,7 @@ def register_lattice_to_ct(
     nominal_graph_filepath: str,
     output_graph_filepath: str,
     output_report_filepath: str,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    registration_mode: Literal["autonomous_v2"],
     ct_filepath: str | None = None,
     aligned_graph_filepath: str | None = None,
     threshold: float | None = None,
@@ -1173,7 +995,7 @@ def localize_lattice_nodes(
     output_graph_filepath: str,
     output_report_filepath: str,
     threshold: float,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    registration_mode: Literal["autonomous_v2"],
     analysis_policy_artifact_filepath: str,
     registration_report_filepath: str | None = None,
     config: dict[str, Any] | None = None,
@@ -1249,7 +1071,7 @@ def compute_registration_qa(
     localized_graph_filepath: str,
     output_report_filepath: str,
     threshold: float,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    registration_mode: Literal["autonomous_v2"],
     localization_report_filepath: str,
     analysis_scope_artifact_filepath: str,
     slice_output_filepath: str | None = None,
@@ -1333,7 +1155,7 @@ def compute_strut_metrics(
     output_profiles_filepath: str,
     output_report_filepath: str,
     threshold: float,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    registration_mode: Literal["autonomous_v2"],
     registration_qa_filepath: str | None = None,
     config: dict[str, Any] | None = None,
     overwrite: bool = False,
@@ -1490,44 +1312,6 @@ def render_strut_evidence(
 
 
 @mcp.tool()
-def compute_detection_metrics(
-    classifications_filepath: str,
-    sealed_labels_filepath: str,
-    output_filepath: str,
-    overwrite: bool = False,
-) -> MCPResponseEnvelope:
-    """Eval-side strict/lenient recall, Wilson intervals, and confusion matrix."""
-
-    def operation() -> dict[str, Any]:
-        classifications, _ = _repository_path(
-            classifications_filepath,
-            must_exist=True,
-            expected_suffixes={".json"},
-        )
-        labels, _ = _repository_path(
-            sealed_labels_filepath,
-            must_exist=True,
-            expected_suffixes={".json"},
-        )
-        output, _ = _repository_path(
-            output_filepath, must_exist=False, expected_suffixes={".json"}
-        )
-        payload = _compute_detection_metrics(
-            classifications, labels, output, overwrite=overwrite
-        )
-        return _core_response(
-            "compute_detection_metrics",
-            (
-                f"Scored {payload['sealed_strut_count']} sealed struts; "
-                f"lenient recall {payload['lenient_recall']['value']:.3f}"
-            ),
-            payload,
-        )
-
-    return _run_structured_tool("compute_detection_metrics", operation)
-
-
-@mcp.tool()
 def get_strut_report(
     strut_id: int,
     metrics_filepath: str,
@@ -1577,11 +1361,97 @@ def get_strut_report(
 
 
 @mcp.tool()
+def compute_spatial_stats(
+    localized_graph_filepath: str,
+    classifications_filepath: str,
+    metrics_filepath: str,
+    output_statistics_filepath: str,
+    output_figure_filepath: str,
+    overwrite: bool = False,
+) -> MCPResponseEnvelope:
+    """Write graph-aware spatial statistics and a compact figure for Stage 4."""
+
+    def operation() -> dict[str, Any]:
+        graph, _ = _repository_path(
+            localized_graph_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        classifications, _ = _repository_path(
+            classifications_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        metrics, _ = _repository_path(
+            metrics_filepath, must_exist=True, expected_suffixes={".csv"}
+        )
+        statistics, _ = _repository_path(
+            output_statistics_filepath, must_exist=False, expected_suffixes={".json"}
+        )
+        figure, _ = _repository_path(
+            output_figure_filepath, must_exist=False, expected_suffixes={".png"}
+        )
+        payload = _compute_spatial_stats(
+            graph,
+            classifications,
+            metrics,
+            statistics,
+            figure,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "compute_spatial_stats",
+            f"Summarized {payload['counts']['struts']} classified struts",
+            payload,
+        )
+
+    return _run_structured_tool("compute_spatial_stats", operation)
+
+
+@mcp.tool()
+def render_lattice_3d(
+    localized_graph_filepath: str,
+    classifications_filepath: str,
+    output_filepath: str,
+    elevation: float = 24.0,
+    azimuth: float = 38.0,
+    line_width: float = 0.8,
+    node_size: float = 1.5,
+    overwrite: bool = False,
+) -> MCPResponseEnvelope:
+    """Render every nominal strut from frozen graph-aware classifications."""
+
+    def operation() -> dict[str, Any]:
+        graph, _ = _repository_path(
+            localized_graph_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        classifications, _ = _repository_path(
+            classifications_filepath, must_exist=True, expected_suffixes={".json"}
+        )
+        output, _ = _repository_path(
+            output_filepath, must_exist=False, expected_suffixes={".png"}
+        )
+        payload = _render_lattice_3d(
+            graph,
+            classifications,
+            output,
+            elevation=elevation,
+            azimuth=azimuth,
+            line_width=line_width,
+            node_size=node_size,
+            overwrite=overwrite,
+        )
+        return _core_response(
+            "render_lattice_3d",
+            f"Rendered {payload['counts']['total']} classified graph struts",
+            payload,
+        )
+
+    return _run_structured_tool("render_lattice_3d", operation)
+
+
+@mcp.tool()
 def segment_ct_dataset(
     input_filepath: str,
     output_filepath: str,
     threshold: float,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    registration_mode: Literal["autonomous_v2"] = "autonomous_v2",
     retention: Literal["committed", "regenerable"] = "committed",
     chunk_depth: int = 16,
     overwrite: bool = False,
@@ -1622,7 +1492,7 @@ def visualize_slice(
     output_filepath: str,
     slice_index: int,
     axis: int = 0,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    registration_mode: Literal["autonomous_v2"] = "autonomous_v2",
     overwrite: bool = False,
 ) -> MCPResponseEnvelope:
     """Render one TIFF/NPY slice and return only compact artifact metadata."""
@@ -1659,7 +1529,7 @@ def compare_segmentation_masks(
     mask_filepaths: list[str],
     thresholds: list[float],
     output_report_filepath: str | None = None,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"] = "autonomous_v2",
+    registration_mode: Literal["autonomous_v2"] = "autonomous_v2",
     overwrite: bool = False,
 ) -> MCPResponseEnvelope:
     """Compare threshold masks without returning voxel arrays.
@@ -1713,7 +1583,7 @@ def verify_canonical_segmentation(
     canonical_mask_filepath: str,
     mask_comparison_report_filepath: str,
     output_filepath: str,
-    registration_mode: Literal["challenge_aligned_json", "autonomous_v2"],
+    registration_mode: Literal["autonomous_v2"],
     overwrite: bool = False,
 ) -> MCPResponseEnvelope:
     """Persist closed evidence that the canonical mask uses the exact Otsu result.
@@ -2228,92 +2098,6 @@ def verify_canonical_segmentation(
         )
 
     return _run_structured_tool("verify_canonical_segmentation", operation)
-
-
-@mcp.tool()
-def summarize_nde_artifacts(
-    raw_filepath: str,
-    mask_filepath: str,
-    skeleton_filepath: str | None = None,
-) -> dict[str, Any]:
-    """Summarize aligned raw, mask, and optional skeleton NPY artifacts.
-
-    The tool returns report-ready scalar metrics and never returns voxel arrays.
-    Skeleton endpoints and branch points use a 26-connected neighborhood.
-    """
-    return _summarize_nde_artifacts(
-        raw_filepath,
-        mask_filepath,
-        skeleton_filepath,
-    )
-
-
-@mcp.tool()
-def render_volume_3d(
-    input_filepath: str,
-    output_filepath: str,
-    surface_level: float = 0.5,
-    downsample_factor: int = 2,
-    elevation: float = 30.0,
-    azimuth: float = 45.0,
-    skeleton_filepath: str | None = None,
-    overwrite: bool = False,
-) -> dict[str, Any]:
-    """Render a volume isosurface and optional skeleton overlay to PNG.
-
-    surface_level is normalized to the downsampled volume range and must be
-    strictly between zero and one. The tool writes the image and returns only
-    compact render metadata.
-    """
-    return _render_volume_3d(
-        input_filepath=input_filepath,
-        output_filepath=output_filepath,
-        surface_level=surface_level,
-        downsample_factor=downsample_factor,
-        elevation=elevation,
-        azimuth=azimuth,
-        skeleton_filepath=skeleton_filepath,
-        overwrite=overwrite,
-    )
-
-
-@mcp.tool()
-def skeletonize(input_filepath: str, output_filepath: str) -> str:
-    """
-    Creates a skeleton from a 3D segmentation mask.
-
-    Args:
-        input_filepath: Path to the .npy file containing the 3D mask.
-        output_filepath: Path to save the extracted skeleton (.npy).
-
-    Returns:
-        A status message indicating success and the save location, or an error message.
-    """
-    try:
-        input_path = _input_npy_path(input_filepath)
-        mask = np.load(input_path, mmap_mode="r", allow_pickle=False)
-        if mask.ndim != 3:
-            raise ValueError(
-                f"Expected a 3D mask, but {input_path} has shape {mask.shape}."
-            )
-
-        output_path = _output_path(output_filepath, ".npy")
-
-        # skeletonize_mask reports progress with print(). Redirect that output to
-        # stderr so it cannot interfere with MCP's JSON-RPC messages on stdout.
-        with redirect_stdout(sys.stderr):
-            skeleton = skeletonize_mask(str(input_path), str(output_path))
-
-        if skeleton is None or not output_path.is_file():
-            raise RuntimeError("Skeletonization did not produce an output file.")
-
-        skeleton_voxels = int(np.count_nonzero(skeleton))
-        return (
-            f"Skeletonized {input_path}. Saved {skeleton_voxels} skeleton "
-            f"voxels to {output_path}."
-        )
-    except Exception as exc:
-        return f"Error skeletonizing segmentation mask: {exc}"
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 from fastmcp import Client
+from fastmcp.exceptions import ToolError
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
@@ -37,8 +38,18 @@ class ProductionMCPTests(unittest.IsolatedAsyncioTestCase):
         self.volume = self.root / "volume.npy"
         np.save(self.volume, np.zeros((16, 16, 16), dtype=np.uint16))
 
-    async def test_tools_registered_and_challenge_wrapper_is_structured(self) -> None:
-        tools = {tool.name for tool in await mcp.list_tools()}
+    async def test_tools_registered_with_autonomous_only_schema(self) -> None:
+        tools = {tool.name: tool for tool in await mcp.list_tools()}
+        contract_tools: set[str] = set()
+        for contract_path in (REPOSITORY_ROOT / "analysis" / "contracts").glob(
+            "*.json"
+        ):
+            contract = json.loads(contract_path.read_text(encoding="utf-8"))
+            contract_tools.update(
+                item["name"]
+                for item in contract["required_dependencies"]["mcp_tools"]
+            )
+        self.assertEqual(contract_tools, set(tools))
         expected = {
             "register_lattice_to_ct",
             "localize_lattice_nodes",
@@ -46,52 +57,36 @@ class ProductionMCPTests(unittest.IsolatedAsyncioTestCase):
             "compute_strut_metrics",
             "classify_struts",
             "render_strut_evidence",
-            "compute_detection_metrics",
             "get_strut_report",
+            "compute_spatial_stats",
+            "render_lattice_3d",
         }
-        self.assertTrue(expected.issubset(tools))
+        self.assertTrue(expected.issubset(set(tools)))
+        for research_only in (
+            "compute_detection_metrics",
+            "summarize_nde_artifacts",
+            "render_volume_3d",
+            "skeletonize",
+            "explore_ct_thresholds",
+        ):
+            self.assertNotIn(research_only, tools)
+        registration_mode = tools["register_lattice_to_ct"].parameters[
+            "properties"
+        ]["registration_mode"]
+        self.assertEqual("autonomous_v2", registration_mode["const"])
         async with Client(mcp) as client:
-            call = await client.call_tool(
-                "register_lattice_to_ct",
-                {
-                    "nominal_graph_filepath": str(self.nominal),
-                    "output_graph_filepath": str(self.root / "registered.json"),
-                    "output_report_filepath": str(self.root / "report.json"),
-                    "registration_mode": "challenge_aligned_json",
-                    "ct_filepath": str(self.volume),
-                    "aligned_graph_filepath": str(self.aligned),
-                },
-            )
-            replay = await client.call_tool(
-                "register_lattice_to_ct",
-                {
-                    "nominal_graph_filepath": str(self.nominal),
-                    "output_graph_filepath": str(self.root / "registered.json"),
-                    "output_report_filepath": str(self.root / "report.json"),
-                    "registration_mode": "challenge_aligned_json",
-                    "ct_filepath": str(self.volume),
-                    "aligned_graph_filepath": str(self.aligned),
-                },
-            )
-        self.assertFalse(call.is_error)
-        result = call.structured_content
-        self.assertEqual("ok", result["status"])
-        self.assertEqual("pass", result["gate"])
-        self.assertEqual(
-            "challenge_aligned_json",
-            result["result"]["provenance"]["registration_mode"],
-        )
-        self.assertFalse(
-            Path(result["artifacts"]["registered_graph"]["path"]).is_absolute()
-        )
-        self.assertEqual(64, len(result["hashes"]["registered_graph_sha256"]))
-        self.assertEqual("pass", replay.structured_content["gate"])
-        self.assertFalse(
-            replay.structured_content["artifacts"]["registered_graph"]["changed"]
-        )
-        self.assertFalse(
-            replay.structured_content["artifacts"]["registration_report"]["changed"]
-        )
+            with self.assertRaisesRegex(ToolError, "autonomous_v2"):
+                await client.call_tool(
+                    "register_lattice_to_ct",
+                    {
+                        "nominal_graph_filepath": str(self.nominal),
+                        "output_graph_filepath": str(self.root / "rejected.json"),
+                        "output_report_filepath": str(self.root / "rejected-report.json"),
+                        "registration_mode": "challenge_aligned_json",
+                        "ct_filepath": str(self.volume),
+                        "aligned_graph_filepath": str(self.aligned),
+                    },
+                )
 
     async def test_autonomous_mode_rejects_aligned_json_fail_closed(self) -> None:
         async with Client(mcp) as client:

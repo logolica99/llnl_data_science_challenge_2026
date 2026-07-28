@@ -139,7 +139,7 @@ def _closed_object(value: Any, keys: set[str], *, field: str) -> dict[str, Any]:
 
 
 def validate_data_prep_result_shape(result: Any) -> dict[str, Any]:
-    """Validate the closed, non-scientific control surface of a Stage 2 result."""
+    """Validate the closed, non-scientific control surface of a Stage 1 result."""
 
     result_object = _closed_object(
         result,
@@ -677,7 +677,9 @@ def _verify_intake_receipt(
         "ct_metadata_mcp_call_receipt_hash_bound",
         "ct_metadata_header_facts_bound_to_call_receipt",
         "cad_readable",
+        "cad_readable_or_not_supplied",
         "graph_id_reference_integrity",
+        "normalized_graph_hash_bound",
         "manifest_schema_valid",
         "segmentation_not_run",
         "registration_not_run",
@@ -773,7 +775,7 @@ def _build_data_prep_handoff(
             "ground-truth segmentation",
         ],
         "required_outputs": [
-            "aligned graph",
+            "registered and independently localized nominal graph",
             "exact-histogram Otsu result",
             "canonical uint8 ZYX mask contract",
             "bounded segmentation-mask comparison",
@@ -1049,7 +1051,7 @@ def _validate_data_prep_result(
         )
         if binding_relative != expected_relative:
             raise DataPrepHandoffError(
-                f"Artifact binding is outside the specimen-scoped Stage 2 path: {role}"
+                f"Artifact binding is outside the specimen-scoped Stage 1 path: {role}"
             )
         resolved_repository_root = repository_root.resolve()
         binding_path = (resolved_repository_root / binding_relative).resolve()
@@ -1127,7 +1129,7 @@ def _validate_data_prep_result(
     localization_hashes = localization_document.get("hashes", {})
     qa_hashes = qa_document.get("hashes", {})
     if not isinstance(localization_hashes, dict) or not isinstance(qa_hashes, dict):
-        raise DataPrepHandoffError("Stage 2 reports must expose closed hash bindings")
+        raise DataPrepHandoffError("Stage 1 reports must expose closed hash bindings")
     expected_localization_hash_keys = {
         "ct_sha256",
         "input_registered_graph_sha256",
@@ -1153,7 +1155,7 @@ def _validate_data_prep_result(
         set(localization_hashes) != expected_localization_hash_keys
         or set(qa_hashes) != expected_qa_hash_keys
     ):
-        raise DataPrepHandoffError("Stage 2 reports must use closed hash schemas")
+        raise DataPrepHandoffError("Stage 1 reports must use closed hash schemas")
     expected_localization_hashes = {
         "ct_sha256": expected_ct_sha256,
         "analysis_policy_artifact_sha256": expected_scope_artifact_sha256,
@@ -1255,7 +1257,7 @@ def _validate_data_prep_result(
     for name, expected_value in expected_qa_hashes.items():
         if qa_hashes.get(name) != expected_value:
             raise DataPrepHandoffError(
-                f"Registration QA {name} does not match its bound Stage 2 inputs"
+                f"Registration QA {name} does not match its bound Stage 1 inputs"
             )
     if (
         qa_document.get("registration_mode") != declared_mode
@@ -1381,7 +1383,7 @@ def _validate_data_prep_result(
         != registration_descriptor["sha256"]
     ):
         raise DataPrepHandoffError(
-            "Registration report hash is inconsistent across Stage 2 bindings"
+            "Registration report hash is inconsistent across Stage 1 bindings"
         )
     registration_document = load_json(
         Path(str(registration_descriptor["path"])).expanduser().resolve()
@@ -1439,7 +1441,7 @@ def _validate_data_prep_result(
     for field, expected_value in required_registration_values.items():
         if registration_values.get(field) != expected_value:
             raise DataPrepHandoffError(
-                f"derived.registration_result.{field} differs from the bound Stage 2 result"
+                f"derived.registration_result.{field} differs from the bound Stage 1 result"
             )
 
     aligned = result.get("aligned_graph")
@@ -1479,7 +1481,7 @@ def apply_data_prep_result(
     completion_receipt_path: Path | None = None,
     schema_path: Path = DEFAULT_SCHEMA,
 ) -> dict[str, Any]:
-    """Atomically advance a ready intake manifest after deterministic Stage 2."""
+    """Atomically advance a ready intake manifest after deterministic Stage 1."""
     validate_manifest(
         manifest_path,
         schema_path=schema_path,

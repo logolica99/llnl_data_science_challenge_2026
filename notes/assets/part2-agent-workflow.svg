@@ -1,47 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="430" viewBox="0 0 1600 430" role="img" aria-labelledby="diagram-title diagram-desc">
-  <title id="diagram-title">Part 2 Agent Workflow</title>
-  <desc id="diagram-desc">A simple left-to-right workflow from orchestrator through specimen ingest, design comparison, data preparation, strut metrics, defect analysis, evaluation, and reporting.</desc>
+  <title id="diagram-title">Production Lattice NDE Workflow</title>
+  <desc id="diagram-desc">A left-to-right workflow from orchestration through intake and graph validation, data preparation, strut metrics, defect analysis, and reporting.</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#845ef7"/>
-    </marker>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#845ef7"/></marker>
   </defs>
   <rect width="1600" height="430" fill="#ffffff"/>
-  <text x="800" y="58" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="34" text-anchor="middle">Part 2 Agent Workflow</text>
-  <text x="800" y="94" fill="#757575" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle">One orchestrated path from specimen to report</text>
-
+  <text x="800" y="58" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="34" text-anchor="middle">Production Lattice NDE Workflow</text>
+  <text x="800" y="94" fill="#757575" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle">Nominal graph JSON + specimen CT → verified report</text>
   <g stroke-width="2">
-    <rect x="45" y="155" width="160" height="95" rx="14" fill="#ffe8a1" stroke="#f59f00"/>
-    <rect x="235" y="155" width="160" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
-    <rect x="425" y="155" width="160" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
-    <rect x="615" y="155" width="160" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
-    <rect x="805" y="155" width="160" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
-    <rect x="995" y="155" width="160" height="95" rx="14" fill="#b197fc" stroke="#7048e8"/>
-    <rect x="1185" y="155" width="160" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
-    <rect x="1375" y="155" width="160" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
-
+    <rect x="55" y="155" width="190" height="95" rx="14" fill="#ffe8a1" stroke="#f59f00"/>
+    <rect x="315" y="155" width="190" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
+    <rect x="575" y="155" width="190" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
+    <rect x="835" y="155" width="190" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
+    <rect x="1095" y="155" width="190" height="95" rx="14" fill="#b197fc" stroke="#7048e8"/>
+    <rect x="1355" y="155" width="190" height="95" rx="14" fill="#d0bfff" stroke="#845ef7"/>
     <g fill="none" stroke="#845ef7" marker-end="url(#arrow)">
-      <path d="M 205 202.5 L 228 202.5"/>
-      <path d="M 395 202.5 L 418 202.5"/>
-      <path d="M 585 202.5 L 608 202.5"/>
-      <path d="M 775 202.5 L 798 202.5"/>
-      <path d="M 965 202.5 L 988 202.5"/>
-      <path d="M 1155 202.5 L 1178 202.5"/>
-      <path d="M 1345 202.5 L 1368 202.5"/>
+      <path d="M 245 202.5 L 308 202.5"/><path d="M 505 202.5 L 568 202.5"/><path d="M 765 202.5 L 828 202.5"/><path d="M 1025 202.5 L 1088 202.5"/><path d="M 1285 202.5 L 1348 202.5"/>
     </g>
   </g>
-
-  <g fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18" text-anchor="middle">
-    <text x="125" y="208">Orchestrator</text>
-    <text x="315" y="208">0  Ingest</text>
-    <text x="505" y="208">1  Design Diff</text>
-    <text x="695" y="208">2  Data Prep</text>
-    <text x="885" y="208">3  Strut Metrics</text>
-    <text x="1075" y="208">4  Defect Team</text>
-    <text x="1265" y="208">5  Evaluation</text>
-    <text x="1455" y="208">6  Report</text>
+  <g fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="17" text-anchor="middle">
+    <text x="150" y="208">Orchestrator</text>
+    <text x="410" y="195">0  Ingest +</text><text x="410" y="218">Graph Validation</text>
+    <text x="670" y="208">1  Data Prep</text>
+    <text x="930" y="208">2  Strut Metrics</text>
+    <text x="1190" y="208">3  Defect Team</text>
+    <text x="1450" y="208">4  Report</text>
   </g>
-
-  <rect x="455" y="310" width="670" height="56" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2"/>
-  <text x="790" y="345" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle">Skills set policy  •  MCP performs compute  •  Files carry handoffs</text>
+  <rect x="420" y="310" width="760" height="56" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-width="2"/>
+  <text x="800" y="345" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="16" text-anchor="middle">Skills set policy  •  MCP performs compute  •  Hash-bound files carry handoffs</text>
 </svg>

@@ -15,10 +15,7 @@ from skimage import measure
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-try:
-    from .part2_core.volume import load_volume
-except ImportError:
-    from part2_core.volume import load_volume
+from part2_core.volume import load_volume
 
 
 SUMMARY_CHUNK_DEPTH = 16

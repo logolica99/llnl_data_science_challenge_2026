@@ -236,6 +236,52 @@ class SpecimenIngestTests(unittest.TestCase):
         self.assertNotIn("from volume_metadata import", source)
         self.assertNotIn("inspect_volume(", source)
 
+    def test_production_intake_accepts_nominal_graph_and_ct_without_cad(self) -> None:
+        metadata_path, metadata_sha256 = self._write_ct_metadata_response(
+            specimen_id="production_specimen",
+            array_axes=["z", "y", "x"],
+        )
+        call_path = metadata_path.with_name("ct_metadata_mcp_call_receipt.json")
+        normalized = (
+            self.root
+            / "analysis"
+            / "production_specimen"
+            / "design"
+            / "normalized_nominal_graph.npz"
+        )
+        normalized.parent.mkdir(parents=True)
+        np.savez(normalized, junction_ids=np.array([0, 1]), strut_ids=np.array([10]))
+        result = ingest_specimen(
+            repository_root=self.root,
+            specimen_id="production_specimen",
+            design_id="test_design",
+            requested_analysis_scope="roi_screening",
+            design_graph_path=self.graph,
+            ct_path=self.ct,
+            ct_metadata_response_path=metadata_path,
+            ct_metadata_response_sha256=metadata_sha256,
+            ct_metadata_call_receipt_path=call_path,
+            ct_metadata_call_receipt_sha256=sha256_file(call_path),
+            registration_mode="autonomous_v2",
+            association_confirmed=True,
+            graph_axes="xyz",
+            array_axes="zyx",
+            retention="external",
+            schema_path=DEFAULT_SCHEMA,
+            normalized_graph_path=normalized,
+            normalized_graph_sha256=sha256_file(normalized),
+        )
+        manifest = json.loads(
+            Path(result["paths"]["specimen_manifest"]).read_text(encoding="utf-8")
+        )
+        self.assertNotIn("cad", manifest["inputs"])
+        self.assertNotIn("cad_inspection", manifest["intake"])
+        self.assertEqual(
+            "normalized_nominal_graph",
+            manifest["inputs"]["normalized_nominal_graph"]["role"],
+        )
+        self._validate_bundle({**result, "requested_analysis_scope": "roi_screening"})
+
     def test_autonomous_intake_writes_ready_idempotent_artifacts(self) -> None:
         first = self._ingest()
         second = self._ingest()
@@ -270,24 +316,16 @@ class SpecimenIngestTests(unittest.TestCase):
             {"graph_summary"}, set(manifest["derived"])
         )
 
-    def test_challenge_mode_requires_and_hashes_aligned_graph(self) -> None:
-        result = self._ingest(
-            specimen_id="challenge_specimen",
-            registration_mode="challenge_aligned_json",
-            aligned_graph_path=self.aligned,
-        )
-
-        manifest = json.loads(
-            Path(result["paths"]["specimen_manifest"]).read_text(encoding="utf-8")
-        )
-        self.assertEqual("aligned_graph", manifest["inputs"]["aligned_graph"]["role"])
-        self.assertEqual(
-            manifest["derived"]["graph_summary"]["values"],
-            manifest["derived"]["graph_summary"]["aligned_values"],
-        )
+    def test_challenge_mode_is_not_a_production_intake_mode(self) -> None:
+        with self.assertRaisesRegex(SpecimenIngestError, "Unsupported registration mode"):
+            self._ingest(
+                specimen_id="challenge_specimen",
+                registration_mode="challenge_aligned_json",
+                aligned_graph_path=self.aligned,
+            )
 
     def test_challenge_mode_rejects_missing_aligned_graph(self) -> None:
-        with self.assertRaisesRegex(SpecimenIngestError, "requires.*aligned graph"):
+        with self.assertRaisesRegex(SpecimenIngestError, "Unsupported registration mode"):
             self._ingest(registration_mode="challenge_aligned_json")
 
     def test_malformed_graph_reference_is_rejected(self) -> None:
@@ -524,55 +562,13 @@ class SpecimenIngestTests(unittest.TestCase):
                 schema_path=DEFAULT_SCHEMA,
             )
 
-    def test_transform_declaration_is_identity_checked_and_hash_bound(self) -> None:
+    def test_transform_declaration_is_rejected_by_production_intake(self) -> None:
         declaration = self.data / "transform.json"
         self._write_declaration(declaration)
         metadata_path, metadata_sha256 = self._write_ct_metadata_response(
             specimen_id="test_specimen"
         )
-        result = ingest_specimen(
-            repository_root=self.root,
-            specimen_id="test_specimen",
-            design_id="test_design",
-            requested_analysis_scope="roi_screening",
-            cad_path=self.cad,
-            design_graph_path=self.graph,
-            ct_path=self.ct,
-            ct_metadata_response_path=metadata_path,
-            ct_metadata_response_sha256=metadata_sha256,
-            ct_metadata_call_receipt_path=metadata_path.with_name(
-                "ct_metadata_mcp_call_receipt.json"
-            ),
-            ct_metadata_call_receipt_sha256=sha256_file(
-                metadata_path.with_name("ct_metadata_mcp_call_receipt.json")
-            ),
-            design_transform_declaration_path=declaration,
-            registration_mode="autonomous_v2",
-            association_confirmed=True,
-            cad_units="millimeter",
-            cad_units_provenance="scientist declaration",
-            graph_axes="xyz",
-            array_axes="zyx",
-            aligned_graph_units="simulation_voxel",
-            retention="external",
-            schema_path=DEFAULT_SCHEMA,
-        )
-        manifest = json.loads(
-            Path(result["paths"]["specimen_manifest"]).read_text(encoding="utf-8")
-        )
-        artifact = manifest["inputs"]["design_transform_declaration"]
-        self.assertEqual("design_transform_declaration", artifact["role"])
-        self.assertEqual(64, len(artifact["sha256"]))
-        receipt = json.loads(
-            Path(result["paths"]["ingest_receipt"]).read_text(encoding="utf-8")
-        )
-        verification = receipt["design_transform_declaration_verification"]
-        self.assertTrue(verification["schema_valid"])
-        self.assertTrue(verification["semantic_validation_pass"])
-        self.assertEqual(artifact["sha256"], verification["artifact_sha256"])
-
-        self._write_declaration(declaration, specimen_id="other_specimen")
-        with self.assertRaisesRegex(SpecimenIngestError, "specimen_id"):
+        with self.assertRaisesRegex(SpecimenIngestError, "not supported"):
             ingest_specimen(
                 repository_root=self.root,
                 specimen_id="test_specimen",
@@ -608,7 +604,7 @@ class SpecimenIngestTests(unittest.TestCase):
             specimen_id="test_specimen"
         )
         with self.assertRaisesRegex(
-            SpecimenIngestError, "self-hash|closed schema, hash"
+            SpecimenIngestError, "not supported"
         ):
             ingest_specimen(
                 repository_root=self.root,

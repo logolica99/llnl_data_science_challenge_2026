@@ -90,10 +90,11 @@ The standardized way to let an LLM call our Python functions. Before MCP, every 
 ### 5.2 Skills
 MCP's weakness: many tools up front **bloats the context window** and hurts **tool selection** reliability. A **skill** is a focused, on-demand instruction package (a `SKILL.md` + optional scripts) for a specific workflow — loaded only when relevant. My one-liner from the talk holds: *"skills package domain instructions so the agent writes like a materials scientist."*
 
-The provided `nde_report_expert` skill (`.agents/skills/nde_report_expert/`) demonstrates all three capabilities a skill can have:
-1. Runs a local script (`scripts/3d_visualize.py`, called twice at elev/azim 30°/45° and 60°/45°),
-2. Autonomously invokes our MCP tools (`segment_ct_dataset`, `skeletonize`) if intermediate files don't exist,
-3. Carries system instructions for report structure (summary metrics table, visual gallery, analysis section) and hygiene rules (check array shapes, clean up temp scripts).
+The original `nde_report_expert` exercise demonstrated scripts, MCP calls, and
+report instructions. That historical voxel/skeleton workflow now lives on the
+disabled research MCP surface. Production uses
+`.agents/skills/nde-report-generator/`, which calls graph-aware Stage 4 MCP
+tools and never bundles scientific scripts.
 
 Skills only load if Codex CLI is **started from the repo root** (it looks for `.agents/skills/`), and — same as MCP — **restart after adding/editing a skill**.
 
@@ -114,9 +115,11 @@ DATA_SCIENCE_CHALLENGE_2026.pdf   ← full challenge instructions (same content 
 README.md                          ← merged instructions (read this, it's canonical)
 requirements.txt                   ← numpy, matplotlib, fastmcp, scikit-image, tifffile
 src/
-  mcp_server.py                    ← FastMCP server, 3 tool stubs to implement (Tasks 1–3)
-  skeletonization.py               ← provided, working skeletonize_mask() (wrap it, don't rewrite)
-.agents/skills/nde_report_expert/  ← provided skill (Task 4) + 3d_visualize.py script
+  mcp_server.py                    ← production Stage 0–4 FastMCP server
+.agents/skills/nde-report-generator/ ← production Stage 4 reporting skill
+research/
+  mcp_server.py                    ← disabled legacy/evaluation/research surface
+  skeletonization.py               ← historical skeletonization implementation
 images/                            ← slice.png, segmentation.png, skeleton.png examples
 presentation/                      ← intro slides PDF
 data/
@@ -177,8 +180,8 @@ Helpful extra software: **Napari** (interactive 3D/slice viewer — great for sa
 |---|---|---|---|
 | 1 | Tool calling with MCP | Implement `segment_ct_dataset(input, output, threshold)` in `src/mcp_server.py`; register server in `~/.codex/config.toml` | `/mcp` shows the server; the archived Part 1 input is `DEPRECATED/part1/data/unitcell/unitcell.npy` |
 | 2 | Multiple tools | Add `visualize_slice(input, output, slice_index, axis=0)` | Agent chains segment → visualize in one conversation |
-| 3 | MCP as API wrapper | Add `skeletonize(input, output)` that **calls the provided `skeletonize_mask` internally** — the lesson is wrapping existing software, not rewriting it | Agent runs segment → visualize → skeletonize end-to-end |
-| 4 | Skills | Use provided `nde_report_expert` | "Please create an NDE report from the files in ./data" produces the MD report with metrics table + two 3D views |
+| 3 | MCP as API wrapper | Historical `skeletonize` exercise, now isolated on `segmentation-tools-research` | Research agent runs segment → visualize → skeletonize without altering production |
+| 4 | Skills | Historical report exercise; production replacement is `nde-report-generator` | Stage 4 produces graph-aware, hash-bound report artifacts |
 | 5 | Custom skill | Our own `.agents/skills/<name>/SKILL.md` (ideas: metadata extractor; threshold optimizer sweeping 0.3/0.5/0.7) | Skill triggers and runs after CLI restart |
 | 6 | Subagent | `.codex/agents/*.toml` **Segmentation Subagent** | Segments a `.tif`; closed-loop optimization with visual feedback; saves script + mask (`.tif`) + slice-380 PNG + MD report w/ fg/bg voxel counts, all into `segmentation/` subfolder next to the input; terminates at 10 iterations / 3 failed attempts |
 | 7 | LLM evals | `DEPRECATED/part1/evals/rubric_segmentation_1.md` | `codex -i <gt.png> -i <result.png> "...apply rubric..."` returns JSON `{reasoning, score}` |

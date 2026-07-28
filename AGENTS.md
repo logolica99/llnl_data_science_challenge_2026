@@ -21,7 +21,7 @@
 ## Part 2 pipeline orchestration
 
 For every request that runs, resumes, validates, or inspects the LLNL Part 2
-pipeline or any Stage 0–6 operation, the active main agent is the control-plane
+pipeline or any Stage 0–4 operation, the active main agent is the control-plane
 orchestrator.
 
 Before performing scientific work or dispatching any agent, it must:
@@ -34,10 +34,14 @@ Before performing scientific work or dispatching any agent, it must:
    stage transitions, receipts, halts, manual-review resolution, and validation.
 5. Dispatch only the exact contract-declared stage owner and bounded subagents.
 
+The production input is one scientist-confirmed nominal graph JSON and its
+specimen CT volume. CAD/STL variants and design-label splits are research
+inputs and must not enter a production handoff.
+
 The stage identities and order are immutable:
 
-`0 specimen_ingest → 1 design_diff → 2 data_prep → 3 strut_metrics →
-4 defect_lead/verifier → 5 eval_agent → 6 report_agent`
+`0 specimen_ingest/graph validation → 1 data_prep → 2 strut_metrics →
+3 defect_lead/verifier → 4 report_agent`
 
 Never rename, reinterpret, combine, skip, or replace these stages with an
 ad-hoc workflow.

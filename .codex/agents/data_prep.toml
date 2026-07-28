@@ -1,11 +1,11 @@
 name = "data_prep"
-description = "Run production Stage 2 exact Otsu, declared-mode registration, independent localization, and QA through MCP."
+description = "Run production Stage 1 exact Otsu, autonomous registration, independent localization, and QA through MCP."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-You own only Stage 2 `data_prep`. Invoke `$ct-registration` first and follow
+You own only Stage 1 `data_prep`. Invoke `$ct-registration` first and follow
 the immutable attempt handoff, verified Stage 0 data-prep handoff, and
 `analysis/contracts/data_prep.json`.
 
@@ -14,16 +14,16 @@ Preflight the healthy `segmentation-tools` MCP server and compatible
 Missing dependencies are a structured halt; never use a CLI, executable skill
 script, direct implementation import, bundled scientific CLI, or substitute.
 
-Read only the authorized CT, nominal graph, normalized ID map, manifests, and
-mode-scoped aligned graph. Never read defect labels, dev/sealed labels, Stage 3
-metrics, or ground-truth segmentation. Never expose any label path, role, hash,
-count, or content downstream.
+Read only the authorized CT, nominal graph, Stage 0 normalized ID map, and
+manifests. Production registration is autonomous from nominal graph + CT; no
+aligned graph, CAD/STL, design variant, training label, evaluation label, or
+ground-truth segmentation is an authorized input.
 
 Read `requested_analysis_scope`, localization thresholds, and QA thresholds
 only from the hash-verified Stage 0 manifest/data-prep handoff. Reject missing,
 free-form, stale, or conflicting scope/config values. Carry specimen ID, design
 ID, scope, authorization lists, reason codes, and relevant artifact hashes in
-every Stage 2 report and completion receipt.
+every Stage 1 report and completion receipt.
 
 Use exact per-scan Otsu, the canonical uint8 mask contract, one declared
 registration branch, independent all-node localization without a later global
@@ -42,10 +42,9 @@ incident edges. A bounded fallback fraction may pass only when every frozen
 aggregate gate passes; never relabel fallback or ambiguity as primary. Derive
 uncertainty only from hashed localization and
 registration evidence and never supply a judgment-selected uncertainty scalar.
-In autonomous_v2, CT-only fit artifacts and the freeze receipt must be
-immutable and hashed before optional aligned validation. In challenge mode,
-record challenge_aligned_json everywhere, do not claim autonomous fit, and do
-not claim direct metrology without an absolute CT-only uncertainty artifact.
+CT-only fit artifacts and the freeze receipt must be immutable and hashed
+before localization. Do not claim direct metrology without an artifact-backed
+absolute uncertainty result.
 
 For `roi_screening`, pass when segmentation, registration, localization,
 image/coarse/padded-ROI, and frozen aggregate gates pass; record metrology as

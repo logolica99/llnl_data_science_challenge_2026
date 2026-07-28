@@ -33,7 +33,10 @@ class RuntimeBackendTests(unittest.TestCase):
         association = self.module.association_projection()
         self.assertEqual("brian_tran_9x9x9_0point5dash1", association["sourceSpecimenId"])
         self.assertTrue(association["ct"].endswith("Slices.tif"))
-        self.assertEqual("unknown", association["cadUnits"])
+        self.assertTrue(association["nominalGraph"].endswith("octet_truss_9x9x9.json"))
+        self.assertEqual("autonomous_v2", association["registrationMode"])
+        self.assertNotIn("cad", association)
+        self.assertNotIn("alignedGraph", association)
 
     def test_installed_app_server_accepts_initialize(self) -> None:
         if shutil.which("codex") is None:

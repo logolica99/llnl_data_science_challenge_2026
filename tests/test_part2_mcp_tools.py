@@ -56,8 +56,8 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("volume_info", tools)
         self.assertIn("load_lattice_graph", tools)
         self.assertIn("replay_exact_otsu", tools)
-        self.assertIn("resolve_cad_graph_orientation", tools)
-        self.assertIn("label_deleted_edges", tools)
+        self.assertNotIn("resolve_cad_graph_orientation", tools)
+        self.assertNotIn("label_deleted_edges", tools)
         self.assertIn("verify_canonical_segmentation", tools)
         self.assertIn("localize_lattice_nodes", tools)
         self.assertIn("compute_registration_qa", tools)
@@ -71,15 +71,6 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
             ["auto", "native_uint16", "full_volume_affine_uint16"],
             otsu_properties["histogram_encoding"]["enum"],
         )
-        orientation_schema = tools["resolve_cad_graph_orientation"].parameters
-        self.assertIn("specimen_id", orientation_schema["required"])
-        self.assertIn("design_id", orientation_schema["required"])
-        self.assertIn(
-            "declared_transform_filepath", orientation_schema["properties"]
-        )
-        label_schema = tools["label_deleted_edges"].parameters
-        self.assertIn("specimen_id", label_schema["required"])
-        self.assertIn("design_id", label_schema["required"])
         localization_schema = tools["localize_lattice_nodes"].parameters
         self.assertIn(
             "analysis_policy_artifact_filepath", localization_schema["required"]
@@ -108,8 +99,6 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
         for name in (
             "volume_info",
             "load_lattice_graph",
-            "resolve_cad_graph_orientation",
-            "label_deleted_edges",
             "replay_exact_otsu",
             "verify_canonical_segmentation",
             "register_lattice_to_ct",
@@ -134,21 +123,6 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
                 set(output_schema["properties"]),
                 name,
             )
-        free_orientation_fields = {
-            "allow_reflection",
-            "sample_count",
-            "scale_candidates",
-            "ambiguity_absolute_mm",
-            "ambiguity_relative_fraction",
-            "config_sha256",
-            "stage1_policy_filepath",
-            "stage1_policy_sha256",
-        }
-        self.assertTrue(
-            free_orientation_fields.isdisjoint(
-                orientation_schema["properties"]
-            )
-        )
 
     async def test_volume_info_returns_hash_and_axis_mapping_through_mcp(self) -> None:
         async with Client(mcp) as client:

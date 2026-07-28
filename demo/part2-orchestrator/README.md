@@ -24,7 +24,7 @@ local transcript under `runtime-evidence/<run_id>/`.
 ## Fixture walkthrough (not proof)
 
 This local web app lets a team watch the LLNL missing-strut Part 2 control
-plane advance through Stages 0–6. Production orchestration code runs live to
+plane advance through Stages 0–4. Production orchestration code runs live to
 create and validate the manifest, handoffs, receipts, hashes, access boundaries,
 retry state, and terminal transitions.
 
@@ -34,7 +34,7 @@ not invoke a live Codex model or execute CT, registration, ROI, classification,
 rendering, spatial-statistics, or evaluation algorithms, and it does not display
 real specimen findings.
 
-The richer Stage 0–6 walkthrough remains available only as a clearly separated
+The richer Stage 0–4 walkthrough remains available only as a clearly separated
 UI fixture test. It must not be used as evidence that agents or scientific
 tools ran.
 
@@ -58,18 +58,18 @@ launching terminal without exposing raw label paths or payloads.
 
 ## Demonstration scenarios
 
-- **Verified walkthrough:** real Stage 0–6 state transitions using fixture
+- **Verified walkthrough:** real Stage 0–4 state transitions using fixture
   specialist artifacts.
-- **Manual review:** Stage 2 pauses, preserves evidence, and resumes only after
+- **Manual review:** Stage 1 pauses, preserves evidence, and resumes only after
   a hashed scientist resolution.
 - **Tampered receipt:** a changed receipt self-hash is rejected while all
   downstream stages remain locked.
 - **Missing dependency:** preflight records a structured `halt`, uses no
   fallback, and consumes no attempt.
 
-Both `autonomous_v2` and `challenge_aligned_json` registration branches are
-available. Autonomous mode visibly freezes CT-only registration artifacts
-before permitting optional aligned-reference validation.
+Production uses `autonomous_v2` only and visibly freezes CT-only registration
+artifacts. The fixture does not authorize CAD, aligned-reference, design-variant,
+or label artifacts.
 
 ## Safety boundary
 

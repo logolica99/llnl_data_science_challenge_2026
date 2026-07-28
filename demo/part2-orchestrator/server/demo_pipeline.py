@@ -25,7 +25,6 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
 from part2_orchestration import (  # noqa: E402
     artifact_record,
-    authorize_post_freeze_aligned_input,
     build_stage_receipt,
     canonical_json_sha256,
     complete_stage,
@@ -36,13 +35,15 @@ from part2_orchestration import (  # noqa: E402
     start_stage,
     validate_pipeline_manifest,
 )
+from specimen_ingest import ingest_specimen  # noqa: E402
+from data_prep_handoff import create_data_prep_handoff  # noqa: E402
 
 
 SPECIMEN_ID = "demo_missing_strut_specimen"
 
 
 class SyntheticFixtureStageRunner:
-    """Drive one isolated Stage 0-6 run with transparent fixture outputs."""
+    """Drive one isolated five-stage run with transparent fixture outputs."""
 
     def __init__(self, root: Path, registration_mode: str) -> None:
         self.root = root.resolve()
@@ -103,8 +104,8 @@ class SyntheticFixtureStageRunner:
             if "stage_number" in value:
                 self._validate_contract_paths(value)
                 contracts[int(value["stage_number"])] = value
-        if set(contracts) != set(range(7)):
-            raise RuntimeError("The demo requires Stage 0-6 contracts")
+        if set(contracts) != set(range(5)):
+            raise RuntimeError("The demo requires contiguous Stage 0-4 contracts")
         return contracts
 
     @staticmethod
@@ -337,69 +338,8 @@ endsolid fixture
                 continue
             rule = self._rule_for(contract, "input", str(role))
             result.append(self._record_for_rule(rule, str(role)))
-        if self.registration_mode == "challenge_aligned_json" and stage_number in {
-            0,
-            2,
-        }:
-            rule = self._rule_for(contract, "input", "challenge_aligned_graph")
-            result.append(
-                self._record_for_rule(
-                    rule,
-                    "challenge_aligned_graph",
-                    phase="challenge_aligned_json",
-                )
-            )
-        if stage_number == 1:
-            rule = self._rule_for(
-                contract, "input", "design_transform_declaration"
-            )
-            result.append(
-                self._record_for_rule(rule, "design_transform_declaration")
-            )
         if stage_number == 0:
             by_role = {str(record["role"]): record for record in result}
-            declaration_rule = self._rule_for(
-                contract, "input", "design_transform_declaration"
-            )
-            declaration_base = {
-                "schema_version": "part2-graph-to-stl-transform-declaration/1.0.0",
-                "declaration_id": "demo-fixture-declaration",
-                "source_id": "demo-fixture-scientist",
-                "provenance_id": "demo-fixture-intake",
-                "specimen_id": self.specimen_id,
-                "design_id": self.design_id,
-                "nominal_graph_sha256": by_role["nominal_graph"]["sha256"],
-                "full_design_stl_sha256": by_role["cad_stl"]["sha256"],
-                "transform": {
-                    "convention": "stl_mm = scale * ((design_xyz - design_center) @ rotation.T) + translation_mm",
-                    "design_center": [0.5, 0.5, 0.5],
-                    "scale_mm_per_design_unit": 2.28,
-                    "rotation_matrix": [
-                        [1.0, 0.0, 0.0],
-                        [0.0, 1.0, 0.0],
-                        [0.0, 0.0, 1.0],
-                    ],
-                    "translation_mm": [0.0, 0.0, 0.0],
-                    "reflection_permitted": False,
-                },
-            }
-            declaration = {
-                **declaration_base,
-                "canonical_declaration_sha256": canonical_json_sha256(
-                    declaration_base
-                ),
-            }
-            declaration_path = self._materialize_path(
-                str(declaration_rule["path"]),
-                "design_transform_declaration",
-            )
-            self._write_json(declaration_path, declaration)
-            declaration_record = self._record_for_rule(
-                declaration_rule, "design_transform_declaration"
-            )
-            result.append(declaration_record)
-            by_role["design_transform_declaration"] = declaration_record
-
             def binding(role: str, document_role: str) -> dict[str, str]:
                 record = by_role[role]
                 return {
@@ -410,41 +350,18 @@ endsolid fixture
                 }
 
             request_base = {
-                "schema_version": "part2-scientist-intake-request/1.0.0",
+                "schema_version": "part2-scientist-intake-request/2.0.0",
                 "created_at": "2026-07-27T00:00:00Z",
                 "specimen_id": self.specimen_id,
                 "design_id": self.design_id,
                 "requested_analysis_scope": self.requested_analysis_scope,
                 "registration_mode": self.registration_mode,
                 "association_confirmed": True,
-                "aligned_graph_authorized": (
-                    self.registration_mode == "challenge_aligned_json"
-                ),
-                "declarations": {
-                    "cad_units": "millimeter",
-                    "cad_units_provenance": "synthetic fixture declaration",
-                    "graph_axes": ["x", "y", "z"],
-                    "array_axes": ["z", "y", "x"],
-                    "aligned_graph_units": (
-                        "voxel"
-                        if self.registration_mode == "challenge_aligned_json"
-                        else "simulation_voxel"
-                    ),
-                    "retention": "committed",
-                },
+                "graph_axes": ["x", "y", "z"],
+                "array_axes": ["z", "y", "x"],
                 "inputs": {
-                    "cad": binding("cad_stl", "cad"),
                     "nominal_graph": binding("nominal_graph", "design_graph"),
                     "ct": binding("ct_volume", "ct_volume"),
-                    "aligned_graph": (
-                        binding("challenge_aligned_graph", "aligned_graph")
-                        if self.registration_mode == "challenge_aligned_json"
-                        else None
-                    ),
-                    "design_transform_declaration": binding(
-                        "design_transform_declaration",
-                        "design_transform_declaration",
-                    ),
                 },
             }
             request = {
@@ -471,19 +388,274 @@ endsolid fixture
         contract = self.contracts[stage_number]
         roles = [str(role) for role in contract["output_artifacts"]["required_roles"]]
         if stage_number == 0:
-            return self._stage0_outputs(roles)
-        if stage_number in {1, 2}:
+            return self._production_stage0_outputs(roles)
+        if stage_number == 1:
             return self._bound_stage_outputs(stage_number, roles)
-        if stage_number == 4:
-            return self._stage4_outputs(roles)
+        if stage_number == 3:
+            return self._production_stage3_outputs(roles)
 
         records: list[dict[str, Any]] = []
         for role in roles:
             rule = self._rule_for(contract, "output", role)
             payload = None
-            if stage_number == 5 and role == "sealed_evaluation_result":
-                payload = self._stage5_evaluation_payload()
             records.append(self._record_for_rule(rule, role, payload=payload))
+        return records
+
+    def _production_stage0_outputs(self, roles: list[str]) -> list[dict[str, Any]]:
+        """Run the real intake validator over tiny graph/CT fixture inputs."""
+
+        attempt = self.manifest(verify_artifacts=False)["stages"]["0"][
+            "attempts"
+        ][-1]
+        sources = {
+            str(record["role"]): record for record in attempt["input_artifacts"]
+        }
+        ct_record = sources["ct_volume"]
+        graph_record = sources["nominal_graph"]
+        config_relative = Path("analysis") / self.specimen_id / "config"
+        metadata_relative = config_relative / "ct_metadata_response.json"
+        call_relative = config_relative / "ct_metadata_mcp_call_receipt.json"
+        normalized_relative = (
+            Path("analysis")
+            / self.specimen_id
+            / "design"
+            / "normalized_nominal_graph.npz"
+        )
+        normalized_path = self._write_fixture(
+            normalized_relative.as_posix(), b"fixture-normalized-graph\n"
+        )
+        ct_path = self.root / str(ct_record["path"])
+        spacing = {
+            axis: {
+                "value": "unknown",
+                "unit": "unknown",
+                "provenance": {
+                    "source": "unknown",
+                    "field": "unknown",
+                    "raw_value": "unknown",
+                },
+            }
+            for axis in ("z", "y", "x")
+        }
+        request_binding = {
+            "input_filepath": ct_record["path"],
+            "output_filepath": metadata_relative.as_posix(),
+            "call_receipt_filepath": call_relative.as_posix(),
+            "header_only": True,
+            "include_sha256": True,
+            "retention": "committed",
+        }
+        header_facts = {
+            "file_bytes": ct_path.stat().st_size,
+            "format": "npy",
+            "shape": [2, 3, 4],
+            "ndim": 3,
+            "dtype": "uint8",
+            "dtype_string": "|u1",
+            "byte_order": "not_applicable",
+            "axes": "unknown",
+            "voxel_count": 24,
+            "array_bytes": 24,
+        }
+        metadata_result = {
+            "status": "ok",
+            "authoritative": True,
+            "inspection_mode": "header_only",
+            "method": "volume_metadata",
+            "method_version": "1.0.0",
+            "output_schema_version": "volume-metadata/1.0.0",
+            "path": ct_record["path"],
+            "sha256": ct_record["sha256"],
+            **header_facts,
+            "voxel_spacing": spacing,
+            "statistics": {
+                "status": "not_computed",
+                "minimum": "unknown",
+                "maximum": "unknown",
+                "mean": "unknown",
+                "finite_count": "unknown",
+                "nonfinite_count": "unknown",
+            },
+            "manifest_fragment": {
+                "ct_volume": {
+                    "path": ct_record["path"],
+                    "sha256": ct_record["sha256"],
+                    "role": "ct_volume",
+                    "retention": "committed",
+                },
+                "ct_metadata": {
+                    "format": "npy",
+                    "shape": [2, 3, 4],
+                    "dtype": "uint8",
+                    "byte_order": "not_applicable",
+                    "array_axes": "unknown",
+                    "voxel_spacing": spacing,
+                },
+            },
+        }
+        summary = "Persisted authoritative header-only CT metadata response"
+        metadata_evidence = {
+            "schema_version": "volume-metadata-mcp-evidence/1.1.0",
+            "response_schema_version": "part2-mcp-response/1.0.0",
+            "tool": "inspect_volume_metadata",
+            "status": "ok",
+            "gate": "pass",
+            "summary": summary,
+            "request": request_binding,
+            "result": metadata_result,
+            "warnings": [],
+            "error": None,
+        }
+        self._write_json(metadata_relative, metadata_evidence)
+        metadata_sha256 = sha256_file(self.root / metadata_relative)
+        call_base = {
+            "schema_version": "volume-metadata-mcp-call-receipt/1.0.0",
+            "response_schema_version": "part2-mcp-response/1.0.0",
+            "tool": "inspect_volume_metadata",
+            "status": "ok",
+            "gate": "pass",
+            "summary": summary,
+            "request": request_binding,
+            "header_facts": header_facts,
+            "artifacts": {
+                "metadata_response": {
+                    "path": metadata_relative.as_posix(),
+                    "sha256": metadata_sha256,
+                    "role": "ct_metadata_mcp_response",
+                    "retention": "committed",
+                }
+            },
+            "hashes": {
+                "input_sha256": ct_record["sha256"],
+                "request_sha256": canonical_json_sha256(request_binding),
+                "result_sha256": canonical_json_sha256(metadata_result),
+                "header_facts_sha256": canonical_json_sha256(header_facts),
+                "metadata_response_sha256": metadata_sha256,
+            },
+            "warnings": [],
+            "error": None,
+        }
+        call_receipt = {
+            **call_base,
+            "canonical_call_receipt_sha256": canonical_json_sha256(call_base),
+        }
+        self._write_json(call_relative, call_receipt)
+        call_sha256 = sha256_file(self.root / call_relative)
+        ingest_specimen(
+            repository_root=self.root,
+            specimen_id=self.specimen_id,
+            design_id=self.design_id,
+            requested_analysis_scope=self.requested_analysis_scope,
+            design_graph_path=self.root / str(graph_record["path"]),
+            ct_path=ct_path,
+            ct_metadata_response_path=self.root / metadata_relative,
+            ct_metadata_response_sha256=metadata_sha256,
+            ct_metadata_call_receipt_path=self.root / call_relative,
+            ct_metadata_call_receipt_sha256=call_sha256,
+            registration_mode="autonomous_v2",
+            association_confirmed=True,
+            allowed_data_roots=[self.root],
+            graph_axes="xyz",
+            array_axes="zyx",
+            retention="committed",
+            schema_path=self.root / "analysis/schema/specimen_manifest.schema.json",
+            normalized_graph_path=normalized_path,
+            normalized_graph_sha256=sha256_file(normalized_path),
+        )
+        create_data_prep_handoff(
+            self.root / config_relative / "specimen_manifest.json",
+            self.root / config_relative / "ingest_receipt.json",
+            repository_root=self.root,
+            output_path=self.root / config_relative / "data_prep_handoff.json",
+            schema_path=self.root / "analysis/schema/specimen_manifest.schema.json",
+        )
+        return [self._output_record(0, role) for role in roles]
+
+    def _production_stage3_outputs(
+        self, roles: list[str]
+    ) -> list[dict[str, Any]]:
+        """Create label-free classifier outputs with a bound verifier report."""
+
+        contract = self.contracts[3]
+        records = [
+            self._output_record(3, role)
+            for role in roles
+            if role != "classifier_verifier_report"
+        ]
+        by_role = {str(record["role"]): record for record in records}
+        manifest = self.manifest()
+        attempt = manifest["stages"]["3"]["attempts"][-1]
+        metrics_hash = next(
+            item["sha256"]
+            for item in attempt["input_artifacts"]
+            if item["role"] == "per_strut_metrics"
+        )
+        evidence = sorted(
+            (
+                {"path": item["path"], "sha256": item["sha256"]}
+                for item in records
+                if item["role"] == "evidence_packets"
+            ),
+            key=lambda item: (item["path"], item["sha256"]),
+        )
+        verifier = {
+            "schema_version": "classifier-verifier-report/1.0.0",
+            "owner": "classifier_verifier",
+            "gate": "pass",
+            "specimen_id": manifest["specimen_id"],
+            "stage_number": 3,
+            "attempt": attempt["attempt"],
+            "run_token": attempt["run_token"],
+            "config_sha256": manifest["config"]["sha256"],
+            "contract_sha256": manifest["stages"]["3"]["contract"]["sha256"],
+            "predecessor_receipt_sha256": attempt[
+                "predecessor_receipt_sha256"
+            ],
+            "input_handoff_sha256": attempt["handoff"]["canonical_sha256"],
+            "participated_in_classification": False,
+            "label_access": {
+                "development_split_read": False,
+                "sealed_split_read": False,
+            },
+            "bindings": {
+                "classified_struts_sha256": by_role["classified_struts"]["sha256"],
+                "thresholds_sha256": by_role["classification_thresholds"]["sha256"],
+                "decision_log_sha256": by_role[
+                    "classification_decision_log"
+                ]["sha256"],
+                "evidence_set_sha256": canonical_json_sha256(evidence),
+                "per_strut_metrics_sha256": metrics_hash,
+                "specialist_findings_sha256": {
+                    role: by_role[role]["sha256"]
+                    for role in (
+                        "findings_missing",
+                        "findings_thin",
+                        "findings_bent",
+                        "findings_broken",
+                    )
+                },
+            },
+            "self_verification": {
+                "every_strut_labeled_once": True,
+                "fixed_precedence_respected": True,
+                "bent_kept_separate": True,
+                "every_adjudication_logged": True,
+                "evidence_support_checked": True,
+                "cutoffs_audited": True,
+                "decision_log_matches_execution": True,
+                "development_split_not_accessed": True,
+                "sealed_split_not_accessed": True,
+            },
+        }
+        rule = self._rule_for(contract, "output", "classifier_verifier_report")
+        records.append(
+            self._record_for_rule(
+                rule,
+                "classifier_verifier_report",
+                payload=(json.dumps(verifier, sort_keys=True) + "\n").encode(),
+                overwrite=True,
+            )
+        )
         return records
 
     def _stage0_outputs(self, roles: list[str]) -> list[dict[str, Any]]:
@@ -641,7 +813,7 @@ endsolid fixture
             "numpy_index_expression": "volume[round(z), round(y), round(x)]",
             "aligned_graph_units": (
                 "voxel"
-                if self.registration_mode == "challenge_aligned_json"
+                if False
                 else "simulation_voxel"
             ),
         }
@@ -777,7 +949,7 @@ endsolid fixture
             )
         )
         stage1_policy_path = (
-            self.root / "analysis/contracts/stage1_design_diff_policy.json"
+            self.root / "analysis/contracts/removed_research_policy.json"
         )
         stage1_policy = json.loads(stage1_policy_path.read_text(encoding="utf-8"))
         declaration_verification = {
@@ -1177,8 +1349,8 @@ endsolid fixture
         attempt = manifest["stages"][str(stage_number)]["attempts"][-1]
         inputs = {item["role"]: item for item in attempt["input_artifacts"]}
         if stage_number == 1:
-            return self._stage1_outputs(contract, roles, inputs, manifest)
-        return self._stage2_outputs(contract, roles, inputs, manifest)
+            return self._stage2_outputs(contract, roles, inputs, manifest)
+        raise RuntimeError("Only Stage 1 uses bound data-preparation fixtures")
 
     def _json_output(
         self,
@@ -1308,7 +1480,7 @@ endsolid fixture
         by_role["label_report"] = self._record_for_rule(
             label_report_rule,
             "label_report",
-            payload=b"# Synthetic design-diff label report\n\nGate: `pass`\n",
+            payload=b"# Removed research-only label fixture\n\nGate: `halt`\n",
             overwrite=True,
         )
         return [by_role[role] for role in roles]
@@ -1324,11 +1496,6 @@ endsolid fixture
             / "analysis/brian_tran_9x9x9_0point5dash1/config/specimen_manifest.json"
         )
         document = json.loads(template_path.read_text(encoding="utf-8"))
-        stage_zero = self.manifest(verify_artifacts=False)["stages"]["0"][
-            "attempts"
-        ][0]["input_artifacts"]
-        intake = {item["role"]: item for item in stage_zero}
-
         def artifact(source: dict[str, object], role: str) -> dict[str, object]:
             return {
                 "path": source["path"],
@@ -1337,12 +1504,8 @@ endsolid fixture
                 "retention": "committed",
             }
 
-        if self.registration_mode == "challenge_aligned_json":
-            aligned = artifact(inputs["challenge_aligned_graph"], "aligned_graph")
-            aligned_state = "input"
-        else:
-            aligned = artifact(by_role["localized_graph"], "derived_aligned_graph")
-            aligned_state = "derived"
+        aligned = artifact(by_role["localized_graph"], "derived_aligned_graph")
+        aligned_state = "derived"
         canonical_mask = {
             **artifact(
                 by_role["canonical_segmentation_mask"],
@@ -1369,13 +1532,12 @@ endsolid fixture
                         "array_axes": ["z", "y", "x"],
                     },
                     "design_graph": artifact(inputs["nominal_graph"], "design_graph"),
-                    "design_transform_declaration": artifact(
-                        intake["design_transform_declaration"],
-                        "design_transform_declaration",
+                    "normalized_nominal_graph": artifact(
+                        inputs["normalized_nominal_graph"],
+                        "normalized_nominal_graph",
                     ),
                     "aligned_graph": aligned,
                     "canonical_mask": canonical_mask,
-                    "cad": artifact(intake["cad_stl"], "cad"),
                 },
             }
         )
@@ -1399,7 +1561,6 @@ endsolid fixture
             "voxel_spacing": sorted(
                 {
                     input_hashes["ct"],
-                    input_hashes["cad"],
                     input_hashes["aligned_graph"],
                 }
             ),
@@ -1484,7 +1645,7 @@ endsolid fixture
             "junction_overlay",
             "spatial_bias_figure",
         ):
-            by_role[role] = self._output_record(2, role)
+            by_role[role] = self._output_record(1, role)
         by_role["analysis_config"] = self._json_output(
             contract,
             "analysis_config",
@@ -1949,14 +2110,14 @@ endsolid fixture
 
     def analysis_ready_manifest_output(self) -> dict[str, object]:
         manifest = self.manifest(verify_artifacts=False)
-        attempt = manifest["stages"]["2"]["attempts"][-1]
+        attempt = manifest["stages"]["1"]["attempts"][-1]
         prior = next(
             item
             for item in attempt["input_artifacts"]
             if item["role"] == "specimen_manifest"
         )
         rule = self._rule_for(
-            self.contracts[2], "output", "analysis_ready_specimen_manifest"
+            self.contracts[1], "output", "analysis_ready_specimen_manifest"
         )
         inputs = {item["role"]: item for item in attempt["input_artifacts"]}
         by_role: dict[str, dict[str, object]] = {}
@@ -1965,7 +2126,7 @@ endsolid fixture
             "canonical_segmentation_mask",
             "localized_graph",
         ):
-            output_rule = self._rule_for(self.contracts[2], "output", role)
+            output_rule = self._rule_for(self.contracts[1], "output", role)
             path = self._materialize_path(str(output_rule["path"]), role)
             by_role[role] = artifact_record(self.root, path, role=role)
         replacement = self._analysis_ready_document(inputs=inputs, by_role=by_role)
@@ -2011,7 +2172,7 @@ endsolid fixture
         *,
         terminal_state: str = "pass",
     ) -> dict[str, object] | None:
-        if stage_number not in {1, 2}:
+        if stage_number != 1:
             return None
         manifest = self.manifest(verify_artifacts=False)
         attempt = manifest["stages"][str(stage_number)]["attempts"][-1]
@@ -2024,98 +2185,76 @@ endsolid fixture
             for item in outputs
             if item["role"] != "manual_review_evidence"
         }
-        if stage_number == 1:
-            authorized = sorted(output_hashes) if terminal_state == "pass" else []
-            unauthorized = sorted(
-                {
-                    "segmentation",
-                    "registration",
-                    "node_localization",
-                    "coarse_region_screening",
-                    "padded_roi_definition",
-                    "absolute_metrology",
-                    "direct_dimensional_measurement",
-                    "defect_classification",
-                    "sealed_evaluation",
-                }
-            )
-            roi = metrology = localization = None
-            reasons = [
-                "STAGE1_POLICY_PASS"
-                if terminal_state == "pass"
-                else "STAGE1_REVIEW_OR_HALT"
-            ]
-        else:
-            authorized, unauthorized = self._stage2_authorizations()
-            has_science = bool(
-                set(output_hashes)
-                - {
-                    "data_prep_result",
-                    "data_prep_completion_receipt",
-                    "analysis_ready_specimen_manifest",
-                }
-            )
-            gate = "pass" if terminal_state == "pass" or has_science else "not_run"
-            roi = {
-                name: gate
-                for name in (
-                    "segmentation",
-                    "registration",
-                    "localization",
-                    "image_qa",
-                    "coarse_region",
-                    "padded_roi",
-                )
+        authorized, unauthorized = self._stage2_authorizations()
+        has_science = bool(
+            set(output_hashes)
+            - {
+                "data_prep_result",
+                "data_prep_completion_receipt",
+                "analysis_ready_specimen_manifest",
             }
-            localization = (
-                {
-                    "gate": gate,
-                    "total_nodes": 10206,
-                    "primary_matches": 8714,
-                    "stable_coarse_matches": 1098,
-                    "fallback_matches": 394,
-                    "ambiguous_matches": 0,
-                    "rejected_or_low_confidence": 394,
-                    "boundary_limited": 0,
-                }
-                if gate != "not_run"
-                else None
+        )
+        gate = "pass" if terminal_state == "pass" or has_science else "not_run"
+        roi = {
+            name: gate
+            for name in (
+                "segmentation",
+                "registration",
+                "localization",
+                "image_qa",
+                "coarse_region",
+                "padded_roi",
             )
-            if self.requested_analysis_scope == "roi_screening":
-                metrology = {
-                    "status": "not_authorized",
-                    "absolute_uncertainty_available": False,
-                    "uncertainty_within_limit": None,
-                    "direct_metrology_authorized": False,
-                }
-                reasons = self._stage2_reason_codes()
-            elif terminal_state == "pass":
-                metrology = {
-                    "status": "pass",
-                    "absolute_uncertainty_available": True,
-                    "uncertainty_within_limit": True,
-                    "direct_metrology_authorized": True,
-                }
-                reasons = self._stage2_reason_codes()
-            else:
-                authorized = sorted(
-                    set(authorized)
-                    - {"absolute_metrology", "direct_dimensional_measurement"}
-                )
-                unauthorized = sorted(
-                    {"absolute_metrology", "direct_dimensional_measurement"}
-                )
-                metrology = {
-                    "status": "manual_review" if has_science else "not_run",
-                    "absolute_uncertainty_available": False,
-                    "uncertainty_within_limit": None,
-                    "direct_metrology_authorized": False,
-                }
-                reasons = sorted(
-                    ["METROLOGY_EVIDENCE_MISSING", "ROI_GATES_PASS"]
-                    if has_science
-                    else ["STAGE2_REVIEW_OR_HALT"]
-                )
+        }
+        localization = (
+            {
+                "gate": gate,
+                "total_nodes": 10206,
+                "primary_matches": 8714,
+                "stable_coarse_matches": 1098,
+                "fallback_matches": 394,
+                "ambiguous_matches": 0,
+                "rejected_or_low_confidence": 394,
+                "boundary_limited": 0,
+            }
+            if gate != "not_run"
+            else None
+        )
+        if self.requested_analysis_scope == "roi_screening":
+            metrology = {
+                "status": "not_authorized",
+                "absolute_uncertainty_available": False,
+                "uncertainty_within_limit": None,
+                "direct_metrology_authorized": False,
+            }
+            reasons = self._stage2_reason_codes()
+        elif terminal_state == "pass":
+            metrology = {
+                "status": "pass",
+                "absolute_uncertainty_available": True,
+                "uncertainty_within_limit": True,
+                "direct_metrology_authorized": True,
+            }
+            reasons = self._stage2_reason_codes()
+        else:
+            authorized = sorted(
+                set(authorized)
+                - {"absolute_metrology", "direct_dimensional_measurement"}
+            )
+            unauthorized = sorted(
+                {"absolute_metrology", "direct_dimensional_measurement"}
+            )
+            metrology = {
+                "status": "manual_review" if has_science else "not_run",
+                "absolute_uncertainty_available": False,
+                "uncertainty_within_limit": None,
+                "direct_metrology_authorized": False,
+            }
+            reasons = sorted(
+                ["METROLOGY_EVIDENCE_MISSING", "ROI_GATES_PASS"]
+                if has_science
+                else ["STAGE1_REVIEW_OR_HALT"]
+            )
         policy: dict[str, object] = {
             "schema_version": "part2-stage-policy/1.0.0",
             "stage_number": stage_number,
@@ -2161,18 +2300,6 @@ endsolid fixture
             source_records = {
                 str(item["role"]): item for item in attempt["input_artifacts"]
             }
-            stage1_assignments = {
-                "load_lattice_graph": ["normalized_nominal_graph"],
-                "resolve_cad_graph_orientation": ["cad_graph_orientation"],
-                "label_deleted_edges": [
-                    "intentional_deletions_0p1",
-                    "intentional_deletions_0p5",
-                    "intentional_deletions_1p0",
-                    "development_labels",
-                    "sealed_labels",
-                    "label_report",
-                ],
-            }
             stage2_assignments = {
                 "volume_info": [],
                 "replay_exact_otsu": ["exact_histogram", "otsu_report"],
@@ -2198,42 +2325,6 @@ endsolid fixture
             }
 
             def arguments_for(tool_name: str) -> dict[str, object]:
-                if stage_number == 1:
-                    if tool_name == "load_lattice_graph":
-                        return {
-                            "input_filepath": source_records["nominal_graph"]["path"],
-                            "output_filepath": output_records["normalized_nominal_graph"]["path"],
-                            "overwrite": False,
-                        }
-                    if tool_name == "resolve_cad_graph_orientation":
-                        declaration = source_records["design_transform_declaration"]
-                        return {
-                            "nominal_graph_filepath": source_records["nominal_graph"]["path"],
-                            "full_design_stl_filepath": source_records["full_design_stl"]["path"],
-                            "output_filepath": output_records["cad_graph_orientation"]["path"],
-                            "specimen_id": self.specimen_id,
-                            "design_id": self.design_id,
-                            "declared_transform_filepath": declaration["path"],
-                            "declared_transform_sha256": declaration["sha256"],
-                            "overwrite": False,
-                        }
-                    return {
-                        "nominal_graph_filepath": source_records["nominal_graph"]["path"],
-                        "baseline_stl_filepath": source_records["full_design_stl"]["path"],
-                        "variant_stl_filepaths": {
-                            "0p1": source_records["intentional_deletion_stl_0p1"]["path"],
-                            "0p5": source_records["intentional_deletion_stl_0p5"]["path"],
-                            "1p0": source_records["intentional_deletion_stl_1p0"]["path"],
-                        },
-                        "orientation_filepath": output_records["cad_graph_orientation"]["path"],
-                        "output_directory": f"analysis/{self.specimen_id}/labels",
-                        "specimen_id": self.specimen_id,
-                        "design_id": self.design_id,
-                        "development_split_filepath": output_records["development_labels"]["path"],
-                        "sealed_split_filepath": output_records["sealed_labels"]["path"],
-                        "label_report_filepath": output_records["label_report"]["path"],
-                        "overwrite": False,
-                    }
                 ct_path = source_records["ct_volume"]["path"]
                 if tool_name == "volume_info":
                     return {
@@ -2320,7 +2411,7 @@ endsolid fixture
                         "ct_filepath": ct_path,
                         "aligned_graph_filepath": (
                             source_records["challenge_aligned_graph"]["path"]
-                            if self.registration_mode == "challenge_aligned_json"
+                            if False
                             else None
                         ),
                         "threshold": 40054.0,
@@ -2353,9 +2444,7 @@ endsolid fixture
                     "overwrite": False,
                 }
 
-            assignments = (
-                stage1_assignments if stage_number == 1 else stage2_assignments
-            )
+            assignments = stage2_assignments
 
             def output_document(role: str) -> dict[str, object]:
                 return json.loads(
@@ -2365,8 +2454,6 @@ endsolid fixture
                 )
 
             def response_result_for(tool_name: str) -> dict[str, object]:
-                if stage_number == 1:
-                    return {"overall_pass": True}
                 if tool_name == "replay_exact_otsu":
                     return output_document("otsu_report")
                 if tool_name == "segment_ct_dataset":
@@ -2446,7 +2533,7 @@ endsolid fixture
                     f"{item['role']}_sha256": item["sha256"]
                     for item in bound
                 }
-                if stage_number == 2 and tool_name == "replay_exact_otsu":
+                if stage_number == 1 and tool_name == "replay_exact_otsu":
                     otsu_result = output_document("otsu_report")
                     response_hashes.update(
                         {
@@ -2461,7 +2548,7 @@ endsolid fixture
                         }
                     )
                 if (
-                    stage_number == 2
+                    stage_number == 1
                     and tool_name == "verify_canonical_segmentation"
                 ):
                     evidence = output_document(
@@ -2483,7 +2570,7 @@ endsolid fixture
                     for item in bound
                 }
                 if (
-                    stage_number == 2
+                    stage_number == 1
                     and tool_name == "verify_canonical_segmentation"
                 ):
                     response_artifacts = {
@@ -2566,7 +2653,7 @@ endsolid fixture
         outputs = self.outputs(stage_number)
         freeze = None
         authorization = None
-        if stage_number == 2 and self.registration_mode == "autonomous_v2":
+        if stage_number == 1 and self.registration_mode == "autonomous_v2":
             freeze = record_autonomous_registration_freeze(
                 self.manifest_path,
                 frozen_artifacts=[
@@ -2577,19 +2664,7 @@ endsolid fixture
                 repository_root=self.root,
                 timestamp=self.timestamp(),
             )
-            reference = self._record(
-                "inputs/authorized_aligned_graph.json",
-                role="autonomous_validation_reference",
-                consumer="data_prep",
-                phase="autonomous_v2_post_freeze_validation",
-            )
-            authorization = authorize_post_freeze_aligned_input(
-                self.manifest_path,
-                aligned_artifact=reference,
-                repository_root=self.root,
-                timestamp=self.timestamp(),
-            )
-        if stage_number == 2:
+        if stage_number == 1:
             outputs = [*outputs, self.analysis_ready_manifest_output()]
         stage_policy = self.stage_policy(stage_number, outputs)
         receipt = build_stage_receipt(

@@ -42,18 +42,16 @@ REGISTRATION_FREEZE_SCHEMA_VERSION = "part2-registration-freeze/1.0.0"
 POST_FREEZE_HANDOFF_SCHEMA_VERSION = "part2-post-freeze-handoff/1.0.0"
 CONTRACT_SCHEMA_VERSION = "agent-stage-contract/1.0.0"
 MCP_RESPONSE_SCHEMA_VERSION = "part2-mcp-response/1.0.0"
-SCIENTIST_INTAKE_REQUEST_SCHEMA_VERSION = "part2-scientist-intake-request/1.0.0"
-STAGE_NUMBERS = tuple(range(7))
+SCIENTIST_INTAKE_REQUEST_SCHEMA_VERSION = "part2-scientist-intake-request/2.0.0"
+STAGE_NUMBERS = tuple(range(5))
 STAGE_NAMES = (
     "specimen_ingest",
-    "design_diff",
     "data_prep",
     "strut_metrics",
     "defect_analysis",
-    "sealed_evaluation",
     "nde_report",
 )
-REGISTRATION_MODES = {"challenge_aligned_json", "autonomous_v2"}
+REGISTRATION_MODES = {"autonomous_v2"}
 TERMINAL_STATES = {"pass", "manual_review", "halt"}
 CONTROL_STATES = {"locked", "ready", "running", *TERMINAL_STATES}
 SENSITIVE_KINDS = {
@@ -143,33 +141,6 @@ MCP_RESPONSE_FIELDS = frozenset(
 MCP_TOOL_ARGUMENT_FIELDS = {
     "load_lattice_graph": frozenset(
         {"input_filepath", "output_filepath", "overwrite"}
-    ),
-    "resolve_cad_graph_orientation": frozenset(
-        {
-            "nominal_graph_filepath",
-            "full_design_stl_filepath",
-            "output_filepath",
-            "specimen_id",
-            "design_id",
-            "declared_transform_filepath",
-            "declared_transform_sha256",
-            "overwrite",
-        }
-    ),
-    "label_deleted_edges": frozenset(
-        {
-            "nominal_graph_filepath",
-            "baseline_stl_filepath",
-            "variant_stl_filepaths",
-            "orientation_filepath",
-            "output_directory",
-            "specimen_id",
-            "design_id",
-            "development_split_filepath",
-            "sealed_split_filepath",
-            "label_report_filepath",
-            "overwrite",
-        }
     ),
     "volume_info": frozenset(
         {"input_filepath", "include_sha256", "registration_mode"}
@@ -609,7 +580,7 @@ def _atomic_write_if_changed(path: Path, value: Any) -> bool:
 
 @contextmanager
 def _manifest_lock(path: Path) -> Iterator[None]:
-    """Serialize transitions, including the Stage 5 one-shot reservation."""
+    """Serialize pipeline transitions for one specimen manifest."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
     lock_path = path.parent / f".{path.name}.lock"
@@ -1032,7 +1003,7 @@ def _require_manifest_declared_source(
     role = str(artifact["role"])
     if role == "autonomous_validation_reference":
         # This source is introduced only by the dedicated post-freeze
-        # authorization function, never by a normal Stage 2 start.
+        # authorization function, never by a normal Stage 1 start.
         return
     source_role = {
         "challenge_aligned_json": "challenge_aligned_graph",
@@ -1224,39 +1195,17 @@ def _validate_contract_document(stage_number: int, contract: Mapping[str, Any]) 
                 f"Stage {stage_number} required {direction} roles lack allow rules: "
                 + ", ".join(missing_rules)
             )
-    if stage_number == 4:
+    if stage_number == 3:
         schemas = contract.get("output_document_schemas")
         if not isinstance(schemas, Mapping) or set(schemas) != {
-            "missing_calibration_attestation",
             "classifier_verifier_report",
         }:
             raise ManifestValidationError(
-                "Stage 4 must declare both closed output document schemas"
+                "Stage 3 must declare the closed classifier verifier schema"
             )
-        attestation = schemas["missing_calibration_attestation"]
         verifier = schemas["classifier_verifier_report"]
         if (
-            not isinstance(attestation, Mapping)
-            or attestation.get("schema_version")
-            != "missing-calibration-attestation/1.0.0"
-            or attestation.get("additional_properties") is not False
-            or set(attestation.get("required_fields", []))
-            != {
-                "schema_version",
-                "owner",
-                "gate",
-                "specimen_id",
-                "stage_number",
-                "attempt",
-                "run_token",
-                "scoped_handoff_sha256",
-                "per_strut_metrics_sha256",
-                "findings_missing_sha256",
-                "development_split_accessed",
-                "raw_development_labels_included",
-                "calibration_summary",
-            }
-            or not isinstance(verifier, Mapping)
+            not isinstance(verifier, Mapping)
             or verifier.get("schema_version")
             != "classifier-verifier-report/1.0.0"
             or verifier.get("additional_properties") is not False
@@ -1271,7 +1220,7 @@ def _validate_contract_document(stage_number: int, contract: Mapping[str, Any]) 
             }
         ):
             raise ManifestValidationError(
-                "Stage 4 output document schemas are incompatible"
+                "Stage 3 output document schema is incompatible"
             )
 
 
@@ -1409,7 +1358,7 @@ def create_pipeline_manifest(
     timestamp: str | None = None,
     clock: Clock | None = None,
 ) -> dict[str, Any]:
-    """Create an idempotent, self-hashed Stage 0→6 pipeline manifest."""
+    """Create an idempotent, self-hashed Stage 0→4 production manifest."""
 
     _validate_specimen_id(specimen_id)
     if registration_mode not in REGISTRATION_MODES:
@@ -1784,30 +1733,11 @@ def _validate_manifest_state_topology(manifest: Mapping[str, Any]) -> None:
     for event in events:
         _validate_timestamp_text(event.get("timestamp"))
 
-    stage_five = stages["5"]
     marker = manifest.get("sealed_evaluation", {})
-    if stage_five.get("attempt_count", 0) == 0:
-        if marker.get("consumed") is not False:
-            raise ManifestValidationError("Stage 5 is marked consumed before its first start")
-    else:
-        first_attempt = stage_five["attempts"][0]
-        by_role = {
-            artifact["role"]: artifact
-            for artifact in first_attempt.get("input_artifacts", [])
-        }
-        if (
-            marker.get("consumed") is not True
-            or _validate_timestamp_text(marker.get("consumed_at"))
-            != marker.get("consumed_at")
-            or marker.get("stage_attempt") != 1
-            or marker.get("run_token") != first_attempt.get("run_token")
-            or marker.get("config_sha256") != manifest["config"]["sha256"]
-            or marker.get("classified_struts_sha256")
-            != by_role.get("classified_struts", {}).get("sha256")
-            or marker.get("sealed_labels_sha256")
-            != by_role.get("sealed_labels", {}).get("sha256")
-        ):
-            raise ManifestValidationError("Stage 5 one-shot marker is inconsistent")
+    if marker.get("consumed") is not False:
+        raise ManifestValidationError(
+            "Production manifests cannot consume research evaluation labels"
+        )
 
     last_pass_receipt = None
     for number in STAGE_NUMBERS:
@@ -1948,10 +1878,10 @@ def _verify_attempt_control_bindings(
             Path("analysis")
             / manifest["specimen_id"]
             / "handoffs"
-            / f"stage_2_post_freeze_validation_attempt_{attempt['attempt']}.json"
+            / f"stage_1_post_freeze_validation_attempt_{attempt['attempt']}.json"
         ).as_posix()
         if (
-            stage_number != 2
+            stage_number != 1
             or len(supplemental_records) != 1
             or supplemental_records[0]["path"] != expected_supplemental_path
         ):
@@ -2097,7 +2027,7 @@ def _verify_attempt_evidence(
                 expected_supplemental = {
                     "schema_version": POST_FREEZE_HANDOFF_SCHEMA_VERSION,
                     "specimen_id": manifest["specimen_id"],
-                    "stage_number": 2,
+                    "stage_number": 1,
                     "attempt": attempt["attempt"],
                     "run_token": attempt["run_token"],
                     "config_sha256": manifest["config"]["sha256"],
@@ -2118,7 +2048,7 @@ def _verify_attempt_evidence(
                     for event in manifest.get("events", [])
                     if event.get("action")
                     == "post_freeze_aligned_input_authorized"
-                    and event.get("stage_number") == 2
+                    and event.get("stage_number") == 1
                     and event.get("timestamp")
                     == supplemental_payload["created_at"]
                     and event.get("details")
@@ -2149,18 +2079,18 @@ def _verify_attempt_evidence(
                     raise AccessPolicyError(
                         "Post-freeze handoff must contain exactly the authorized aligned reference"
                     )
-                stage_two_contract = _load_stage_contract(
-                    manifest, 2, repository_root
+                data_prep_contract = _load_stage_contract(
+                    manifest, 1, repository_root
                 )
                 _validate_artifact_allowlist(
                     manifest,
-                    stage_two_contract,
+                    data_prep_contract,
                     authorized,
                     direction="input",
                     require_all=False,
                     repository_root=repository_root,
                 )
-                _enforce_sensitive_access(manifest, 2, authorized)
+                _enforce_sensitive_access(manifest, 1, authorized)
             if attempt.get("registration_freeze") is not None:
                 freeze = _verify_registration_freeze(
                     manifest, attempt, repository_root
@@ -2253,14 +2183,14 @@ def _verify_attempt_evidence(
                     f"Stage {number} receipt outputs differ from attempt history"
                 )
             if number == 0:
-                # Stage 2 intentionally replaces the canonical specimen manifest.
+                # Stage 1 intentionally replaces the canonical specimen manifest.
                 # The complete Stage 0 bundle is revalidated until that accepted
                 # replacement; afterward the replacement chain and retained Stage 0
                 # artifacts are covered by the generic indexed-artifact checks.
-                stage_two_replaced_manifest = (
-                    manifest["stages"]["2"]["state"] == "pass"
+                data_prep_replaced_manifest = (
+                    manifest["stages"]["1"]["state"] == "pass"
                 )
-                if verify_artifact_contents and not stage_two_replaced_manifest:
+                if verify_artifact_contents and not data_prep_replaced_manifest:
                     _validate_stage0_output_documents(
                         terminal_state=receipt["terminal_state"],
                         outputs=outputs,
@@ -2268,7 +2198,7 @@ def _verify_attempt_evidence(
                         pipeline_manifest=manifest,
                         repository_root=repository_root,
                     )
-            elif number in {1, 2}:
+            elif number == 1:
                 policy = _validate_stage_policy(
                     receipt.get("stage_policy"),
                     manifest=manifest,
@@ -2287,30 +2217,18 @@ def _verify_attempt_evidence(
                         pipeline_manifest=manifest,
                         repository_root=repository_root,
                     )
-            if number == 2 and manifest["registration_mode"] == "autonomous_v2" and attempt.get("effective_terminal_state") == "pass":
+            if number == 1 and manifest["registration_mode"] == "autonomous_v2" and attempt.get("effective_terminal_state") == "pass":
                 _verify_registration_freeze(
                     manifest,
                     attempt,
                     repository_root,
                     completion_outputs=outputs,
                 )
-            if number == 4 and attempt.get("effective_terminal_state") == "pass":
-                _verify_missing_calibration_attestation(
+            if number == 3 and attempt.get("effective_terminal_state") == "pass":
+                _verify_stage3_verifier(
                     outputs,
                     repository_root,
                     manifest=manifest,
-                    attempt=attempt,
-                )
-                _verify_stage4_verifier(
-                    outputs,
-                    repository_root,
-                    manifest=manifest,
-                    attempt=attempt,
-                )
-            if number == 5 and attempt.get("effective_terminal_state") == "pass":
-                _verify_stage5_evaluation_result(
-                    outputs,
-                    repository_root,
                     attempt=attempt,
                 )
 
@@ -2774,7 +2692,6 @@ def _enforce_sensitive_access(
     for artifact in artifacts:
         digest = artifact["sha256"]
         role = str(artifact["role"])
-        consumer = artifact.get("consumer")
         phase = artifact.get("phase", "input")
         kinds = {
             kind
@@ -2798,28 +2715,18 @@ def _enforce_sensitive_access(
             "autonomous_validation_reference",
         }:
             kinds.add("aligned_graph")
-        if "development_labels" in kinds and not (
-            stage_number == 4 and consumer == "missing_strut_agent"
-        ):
+        if kinds.intersection(
+            {"development_labels", "sealed_labels", "defect_labels"}
+        ) and stage_number in STAGE_NUMBERS:
             raise AccessPolicyError(
-                "Development labels are readable only by missing_strut_agent in Stage 4"
-            )
-        if "sealed_labels" in kinds and not (
-            stage_number == 5 and consumer == "eval_agent"
-        ):
-            raise AccessPolicyError(
-                "The sealed split is readable only by eval_agent in Stage 5"
-            )
-        if "defect_labels" in kinds and stage_number in {0, 2, 3, 4, 6}:
-            raise AccessPolicyError(
-                f"Stage {stage_number} may not consume defect-label artifacts"
+                f"Production Stage {stage_number} may not consume label artifacts"
             )
         if "aligned_graph" in kinds and manifest["registration_mode"] == "autonomous_v2":
             if stage_number == 0:
                 raise AccessPolicyError(
                     "Autonomous-v2 intake must not receive an aligned JSON"
                 )
-            if stage_number == 2 and phase not in {
+            if stage_number == 1 and phase not in {
                 "post_freeze_validation",
                 "autonomous_v2_post_freeze_validation",
             }:
@@ -3074,13 +2981,6 @@ def start_stage(
             raise IllegalTransitionError(
                 f"Stage {stage_number} exhausted its attempt limit"
             )
-        if (
-            not is_running
-            and stage["one_shot"]
-            and manifest["sealed_evaluation"]["consumed"]
-        ):
-            raise IllegalTransitionError("Stage 5 sealed evaluation is already consumed")
-
         normalized_inputs = _normalize_artifacts(root, input_artifacts)
         _enforce_sensitive_access(manifest, stage_number, normalized_inputs)
         _validate_artifact_allowlist(
@@ -3101,20 +3001,20 @@ def start_stage(
         _record_sensitive_hashes(manifest, contract, normalized_inputs)
         if (
             manifest["registration_mode"] == "autonomous_v2"
-            and stage_number == 2
+            and stage_number == 1
             and any(
                 _sensitive_kind_for_artifact(contract, artifact) == "aligned_graph"
                 for artifact in normalized_inputs
             )
         ):
             raise AccessPolicyError(
-                "Autonomous-v2 Stage 2 start cannot consume aligned JSON before "
+                "Autonomous-v2 Stage 1 start cannot consume aligned JSON before "
                 "a frozen CT-only fit; use the post-freeze authorization handoff"
             )
         if is_running:
             if stage["one_shot"]:
                 raise IllegalTransitionError(
-                    "Stage 5 is already reserved; monitor the existing attempt instead of restarting it"
+                    f"Stage {stage_number} is already reserved; monitor the existing attempt instead of restarting it"
                 )
             attempt = stage["attempts"][-1]
             if attempt.get("input_artifacts") != normalized_inputs:
@@ -3375,11 +3275,11 @@ def _validate_manual_review_outputs(
             if not artifact["path"].startswith(prefix):
                 invalid.append(artifact["path"])
             continue
-        # Stage 2 may preserve deterministic segmentation, registration,
+        # Stage 1 may preserve deterministic segmentation, registration,
         # localization, and QA evidence when direct metrology needs a human
         # decision.  Completion envelopes and the analysis-ready manifest are
         # still forbidden until the stage actually passes.
-        if stage_number == 2 and role not in STAGE2_CONTROL_OUTPUT_ROLES:
+        if stage_number == 1 and role not in STAGE2_CONTROL_OUTPUT_ROLES:
             continue
         invalid.append(artifact["path"])
     if invalid:
@@ -3421,7 +3321,7 @@ def _closed_mapping(
 ) -> Mapping[str, Any]:
     if not isinstance(value, Mapping) or set(value) != fields:
         raise ReceiptValidationError(
-            f"Stage 2 {field} must be a closed object"
+            f"Stage 1 {field} must be a closed object"
         )
     return value
 
@@ -3619,7 +3519,7 @@ def _stage_identity_and_scope(
     *,
     attempt: Mapping[str, Any] | None = None,
 ) -> tuple[str, str]:
-    """Read immutable identity/scope from intake or the Stage 1 receipt."""
+    """Read immutable identity/scope from the Stage 0 intake manifest."""
 
     if stage_number == 1:
         recorded_policy = attempt.get("stage_policy") if attempt is not None else None
@@ -3630,49 +3530,30 @@ def _stage_identity_and_scope(
             candidates = [
                 artifact
                 for artifact in _active_artifact_records(manifest)
-                if artifact.get("role") == "specimen_manifest"
+                if artifact.get("role") == "ingest_receipt"
             ]
             if len(candidates) != 1:
                 raise ReceiptValidationError(
-                    "Stage 1 requires exactly one active specimen manifest"
+                    "Stage 1 requires exactly one active ingest receipt"
                 )
             artifact = candidates[0]
             resolved, _ = _relative_existing_file(
                 repository_root, artifact["path"], reject_alias=True
             )
             if sha256_file(resolved) != artifact.get("sha256"):
-                raise ReceiptValidationError("Stage 1 specimen manifest hash is stale")
+                raise ReceiptValidationError("Stage 1 ingest receipt hash is stale")
             try:
                 intake = _read_object(resolved)
             except ManifestValidationError as exc:
                 raise ReceiptValidationError(
-                    "Stage 1 specimen manifest is not valid JSON"
+                    "Stage 1 ingest receipt is not valid JSON"
                 ) from exc
             if intake.get("specimen_id") != manifest["specimen_id"]:
                 raise ReceiptValidationError("Stage 1 specimen identity is mismatched")
             design_id = intake.get("design_id")
-            parameters = intake.get("analysis_parameters")
-            scope = (
-                parameters.get("requested_analysis_scope")
-                if isinstance(parameters, Mapping)
-                else intake.get("requested_analysis_scope")
-            )
-    elif stage_number == 2:
-        record = manifest["stages"]["1"].get("completion_receipt")
-        if not isinstance(record, Mapping):
-            raise ReceiptValidationError("Stage 2 has no verified Stage 1 receipt")
-        predecessor = _verify_hashed_json_record(
-            record,
-            repository_root,
-            canonical_field="canonical_receipt_sha256",
-        )
-        prior_policy = predecessor.get("stage_policy")
-        if not isinstance(prior_policy, Mapping):
-            raise ReceiptValidationError("Stage 1 receipt has no policy binding")
-        design_id = prior_policy.get("design_id")
-        scope = prior_policy.get("requested_analysis_scope")
+            scope = intake.get("requested_analysis_scope")
     else:
-        raise ReceiptValidationError("Stage identity policy applies only to Stages 1 and 2")
+        raise ReceiptValidationError("Stage identity policy applies only to Stage 1")
     if (
         not isinstance(design_id, str)
         or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", design_id) is None
@@ -3692,7 +3573,7 @@ def _validate_stage_policy_shape(
 ) -> Mapping[str, Any]:
     if not isinstance(value, Mapping) or set(value) != STAGE_POLICY_FIELDS:
         raise ReceiptValidationError(
-            "Stage 1/2 receipt requires a closed stage_policy object"
+            "Stage 1 receipt requires a closed stage_policy object"
         )
     if value.get("schema_version") != STAGE_POLICY_SCHEMA_VERSION:
         raise ReceiptValidationError("Stage policy schema_version is invalid")
@@ -3897,124 +3778,8 @@ def _validate_stage_policy(
             "Stage policy MCP bindings do not cover every scientific output"
         )
 
-    if stage_number == 1 and terminal_state == "pass":
-        inputs_by_role = {
-            str(item["role"]): item for item in attempt["input_artifacts"]
-        }
-
-        def require_argument_path(
-            tool_name: str, argument_name: str, source_role: str
-        ) -> None:
-            binding = bindings_by_tool.get(tool_name)
-            source = inputs_by_role.get(source_role)
-            if (
-                binding is None
-                or source is None
-                or binding["request_arguments"].get(argument_name)
-                != source.get("path")
-            ):
-                raise ReceiptValidationError(
-                    f"Stage 1 {tool_name} request is not bound to {source_role}"
-                )
-
-        require_argument_path("load_lattice_graph", "input_filepath", "nominal_graph")
-        if bindings_by_tool["load_lattice_graph"]["request_arguments"].get(
-            "output_filepath"
-        ) != outputs_by_role["normalized_nominal_graph"]["path"]:
-            raise ReceiptValidationError(
-                "Stage 1 graph normalization request has a stale output path"
-            )
-        require_argument_path(
-            "resolve_cad_graph_orientation",
-            "nominal_graph_filepath",
-            "nominal_graph",
-        )
-        require_argument_path(
-            "resolve_cad_graph_orientation",
-            "full_design_stl_filepath",
-            "full_design_stl",
-        )
-        declaration = inputs_by_role.get("design_transform_declaration")
-        orientation_arguments = bindings_by_tool[
-            "resolve_cad_graph_orientation"
-        ]["request_arguments"]
-        if orientation_arguments.get("output_filepath") != outputs_by_role[
-            "cad_graph_orientation"
-        ]["path"]:
-            raise ReceiptValidationError(
-                "Stage 1 orientation request has a stale output path"
-            )
-        if declaration is not None:
-            if (
-                orientation_arguments.get("declared_transform_filepath")
-                != declaration.get("path")
-                or orientation_arguments.get("declared_transform_sha256")
-                != declaration.get("sha256")
-                or orientation_arguments.get("specimen_id")
-                != policy["specimen_id"]
-                or orientation_arguments.get("design_id") != policy["design_id"]
-            ):
-                raise ReceiptValidationError(
-                    "Stage 1 orientation request is not bound to the declared transform"
-                )
-        elif orientation_arguments.get("declared_transform_filepath") is not None:
-            raise ReceiptValidationError(
-                "Stage 1 orientation request claims an undeclared transform"
-            )
-        require_argument_path(
-            "label_deleted_edges", "nominal_graph_filepath", "nominal_graph"
-        )
-        require_argument_path(
-            "label_deleted_edges", "baseline_stl_filepath", "full_design_stl"
-        )
-        label_arguments = bindings_by_tool["label_deleted_edges"][
-            "request_arguments"
-        ]
-        variants = label_arguments.get("variant_stl_filepaths")
-        expected_variants = {
-            "0p1": str(inputs_by_role["intentional_deletion_stl_0p1"]["path"]),
-            "0p5": str(inputs_by_role["intentional_deletion_stl_0p5"]["path"]),
-            "1p0": str(inputs_by_role["intentional_deletion_stl_1p0"]["path"]),
-        }
-        if (
-            not isinstance(variants, Mapping)
-            or dict(variants) != expected_variants
-            or label_arguments.get("specimen_id") != policy["specimen_id"]
-            or label_arguments.get("design_id") != policy["design_id"]
-            or label_arguments.get("orientation_filepath")
-            != outputs_by_role["cad_graph_orientation"]["path"]
-            or label_arguments.get("development_split_filepath")
-            != outputs_by_role["development_labels"]["path"]
-            or label_arguments.get("sealed_split_filepath")
-            != outputs_by_role["sealed_labels"]["path"]
-            or label_arguments.get("label_report_filepath")
-            != outputs_by_role["label_report"]["path"]
-        ):
-            raise ReceiptValidationError(
-                "Stage 1 label request is not bound to every declared variant"
-            )
-
-    if stage_number == 1:
-        if any(
-            policy.get(field) is not None
-            for field in (
-                "roi_gate_summary",
-                "metrology_summary",
-                "localization_summary",
-            )
-        ):
-            raise ReceiptValidationError("Stage 1 policy may not claim Stage 2 gates")
-        if set(policy["unauthorized_outputs"]) != STAGE1_UNAUTHORIZED_OUTPUTS:
-            raise ReceiptValidationError(
-                "Stage 1 policy must forbid CT-derived and downstream outputs"
-            )
-        if terminal_state == "pass" and set(policy["authorized_outputs"]) != set(
-            policy["output_hashes"]
-        ):
-            raise ReceiptValidationError(
-                "Stage 1 pass policy must authorize exactly its published outputs"
-            )
-        return policy
+    if stage_number != 1:
+        raise ReceiptValidationError("Only Stage 1 data preparation carries stage policy")
 
     if terminal_state == "pass":
         inputs_by_role = {
@@ -4025,7 +3790,7 @@ def _validate_stage_policy(
             binding = bindings_by_tool.get(tool_name)
             if binding is None:
                 raise ReceiptValidationError(
-                    f"Stage 2 pass lacks MCP request arguments for {tool_name}"
+                    f"Stage 1 pass lacks MCP request arguments for {tool_name}"
                 )
             return binding["request_arguments"]
 
@@ -4033,7 +3798,7 @@ def _validate_stage_policy(
             output = outputs_by_role.get(role)
             if output is None:
                 raise ReceiptValidationError(
-                    f"Stage 2 pass lacks output {role!r}"
+                    f"Stage 1 pass lacks output {role!r}"
                 )
             return str(output["path"])
 
@@ -4136,7 +3901,7 @@ def _validate_stage_policy(
             for (tool_name, argument_name), expected_value in expected_argument_values.items()
         ):
             raise ReceiptValidationError(
-                "Stage 2 MCP request arguments are stale or misbound"
+                "Stage 1 MCP request arguments are stale or misbound"
             )
         if (
             arguments("compare_segmentation_masks").get("mask_filepaths")
@@ -4161,7 +3926,7 @@ def _validate_stage_policy(
             )
         ):
             raise ReceiptValidationError(
-                "Stage 2 MCP request mode or mask binding is stale"
+                "Stage 1 MCP request mode or mask binding is stale"
             )
         aligned_argument = arguments("register_lattice_to_ct").get(
             "aligned_graph_filepath"
@@ -4183,14 +3948,14 @@ def _validate_stage_policy(
         set(policy["authorized_outputs"]) - STAGE2_OUTPUT_CAPABILITIES
         or set(policy["unauthorized_outputs"]) - STAGE2_OUTPUT_CAPABILITIES
     ):
-        raise ReceiptValidationError("Stage 2 policy declares an unknown output capability")
+        raise ReceiptValidationError("Stage 1 policy declares an unknown output capability")
     roi = policy.get("roi_gate_summary")
     if (
         not isinstance(roi, Mapping)
         or set(roi) != STAGE2_ROI_GATE_FIELDS
         or any(value not in {"pass", "fail", "not_run"} for value in roi.values())
     ):
-        raise ReceiptValidationError("Stage 2 ROI gate summary is malformed")
+        raise ReceiptValidationError("Stage 1 ROI gate summary is malformed")
     metrology = policy.get("metrology_summary")
     if (
         not isinstance(metrology, Mapping)
@@ -4201,7 +3966,7 @@ def _validate_stage_policy(
         or metrology.get("uncertainty_within_limit") not in {True, False, None}
         or type(metrology.get("direct_metrology_authorized")) is not bool
     ):
-        raise ReceiptValidationError("Stage 2 metrology summary is malformed")
+        raise ReceiptValidationError("Stage 1 metrology summary is malformed")
     localization = policy.get("localization_summary")
     if localization is not None:
         if (
@@ -4221,16 +3986,16 @@ def _validate_stage_policy(
             > localization["total_nodes"]
             or localization["boundary_limited"] > localization["total_nodes"]
         ):
-            raise ReceiptValidationError("Stage 2 localization summary is malformed")
+            raise ReceiptValidationError("Stage 1 localization summary is malformed")
 
     all_roi_pass = all(value == "pass" for value in roi.values())
     authorized = set(policy["authorized_outputs"])
     unauthorized = set(policy["unauthorized_outputs"])
     if terminal_state == "pass":
         if not all_roi_pass or localization is None or localization["gate"] != "pass":
-            raise ReceiptValidationError("Stage 2 pass requires every ROI/localization gate")
+            raise ReceiptValidationError("Stage 1 pass requires every ROI/localization gate")
         if not STAGE2_BASE_OUTPUT_CAPABILITIES <= authorized:
-            raise ReceiptValidationError("Stage 2 pass omits a base output capability")
+            raise ReceiptValidationError("Stage 1 pass omits a base output capability")
         if requested_scope == "roi_screening":
             if (
                 metrology["status"] != "not_authorized"
@@ -4372,8 +4137,8 @@ def _validate_stage0_scientist_intake_request(
         "requested_analysis_scope",
         "registration_mode",
         "association_confirmed",
-        "aligned_graph_authorized",
-        "declarations",
+        "graph_axes",
+        "array_axes",
         "inputs",
         "canonical_request_sha256",
     }
@@ -4419,54 +4184,23 @@ def _validate_stage0_scientist_intake_request(
             "Stage 0 scientist intake request identity or scope is invalid"
         )
 
-    declarations = request.get("declarations")
-    declaration_fields = {
-        "cad_units",
-        "cad_units_provenance",
-        "graph_axes",
-        "array_axes",
-        "aligned_graph_units",
-        "retention",
-    }
     if (
-        not isinstance(declarations, Mapping)
-        or set(declarations) != declaration_fields
-        or not isinstance(declarations.get("cad_units"), str)
-        or not declarations["cad_units"]
-        or not isinstance(declarations.get("cad_units_provenance"), str)
-        or not declarations["cad_units_provenance"]
-        or declarations.get("graph_axes") not in (["x", "y", "z"], "unknown")
-        or declarations.get("array_axes") not in (["z", "y", "x"], "unknown")
-        or declarations.get("aligned_graph_units")
-        not in {"voxel", "simulation_voxel", "unknown"}
-        or declarations.get("retention")
-        not in {"committed", "external", "regenerable"}
+        request.get("graph_axes") not in (["x", "y", "z"], "unknown")
+        or request.get("array_axes") not in (["z", "y", "x"], "unknown")
     ):
         raise ReceiptValidationError(
-            "Stage 0 scientist intake declarations are invalid"
+            "Stage 0 scientist intake axis declarations are invalid"
         )
 
     inputs = request.get("inputs")
-    input_names = {
-        "cad",
-        "nominal_graph",
-        "ct",
-        "aligned_graph",
-        "design_transform_declaration",
-    }
+    input_names = {"nominal_graph", "ct"}
     if not isinstance(inputs, Mapping) or set(inputs) != input_names:
         raise ReceiptValidationError(
             "Stage 0 scientist intake input bindings are open or incomplete"
         )
     role_map = {
-        "cad": ("cad", "cad_stl"),
         "nominal_graph": ("design_graph", "nominal_graph"),
         "ct": ("ct_volume", "ct_volume"),
-        "aligned_graph": ("aligned_graph", "challenge_aligned_graph"),
-        "design_transform_declaration": (
-            "design_transform_declaration",
-            "design_transform_declaration",
-        ),
     }
     attempt_by_role: dict[str, list[Mapping[str, Any]]] = {}
     for artifact in attempt.get("input_artifacts", []):
@@ -4474,17 +4208,12 @@ def _validate_stage0_scientist_intake_request(
     for name, (document_role, attempt_role) in role_map.items():
         binding = inputs[name]
         matching_attempt = attempt_by_role.get(attempt_role, [])
-        if binding is None:
-            if matching_attempt:
-                raise ReceiptValidationError(
-                    f"Stage 0 scientist request omits authorized input {name}"
-                )
-            continue
         if (
             not isinstance(binding, Mapping)
             or set(binding) != {"path", "sha256", "role", "retention"}
             or binding.get("role") != document_role
-            or binding.get("retention") != declarations["retention"]
+            or binding.get("retention")
+            not in {"committed", "external", "regenerable"}
             or not isinstance(binding.get("path"), str)
             or Path(binding["path"]).is_absolute()
             or ".." in Path(binding["path"]).parts
@@ -4506,14 +4235,6 @@ def _validate_stage0_scientist_intake_request(
                 f"Stage 0 scientist request {name} differs from the attempt handoff"
             )
 
-    challenge_mode = request["registration_mode"] == "challenge_aligned_json"
-    if (
-        request.get("aligned_graph_authorized") is not challenge_mode
-        or (inputs["aligned_graph"] is not None) is not challenge_mode
-    ):
-        raise ReceiptValidationError(
-            "Stage 0 scientist request aligned-graph authorization is inconsistent"
-        )
     return dict(request)
 
 
@@ -4531,6 +4252,7 @@ def _validate_stage0_output_documents(
         return
     by_role = {str(artifact["role"]): artifact for artifact in outputs}
     required = {
+        "normalized_nominal_graph",
         "ingest_request",
         "ct_metadata_mcp_response",
         "ct_metadata_mcp_call_receipt",
@@ -4578,13 +4300,14 @@ def _validate_stage0_output_documents(
     request_inputs = scientist_request["inputs"]
     manifest_inputs = bundle["manifest"]["inputs"]
     expected_manifest_inputs = {
-        "cad": request_inputs["cad"],
         "design_graph": request_inputs["nominal_graph"],
         "ct": request_inputs["ct"],
-        "aligned_graph": request_inputs["aligned_graph"],
-        "design_transform_declaration": request_inputs[
-            "design_transform_declaration"
-        ],
+        "normalized_nominal_graph": {
+            "path": by_role["normalized_nominal_graph"]["path"],
+            "sha256": by_role["normalized_nominal_graph"]["sha256"],
+            "role": "normalized_nominal_graph",
+            "retention": request_inputs["nominal_graph"]["retention"],
+        },
     }
     stale_sources = sorted(
         name
@@ -4597,11 +4320,11 @@ def _validate_stage0_output_documents(
             + ", ".join(stale_sources)
         )
     output_declarations = bundle["request"]["declared"]
-    stale_declarations = sorted(
+    stale_declarations = [
         name
-        for name, expected in scientist_request["declarations"].items()
-        if output_declarations.get(name) != expected
-    )
+        for name in ("graph_axes", "array_axes")
+        if output_declarations.get(name) != scientist_request[name]
+    ]
     if stale_declarations:
         raise ReceiptValidationError(
             "Stage 0 outputs differ from the frozen scientist declarations: "
@@ -4618,20 +4341,11 @@ def _validate_stage_output_documents(
     pipeline_manifest: Mapping[str, Any],
     repository_root: Path,
 ) -> None:
-    schemas = (
-        STAGE1_JSON_OUTPUT_SCHEMAS
-        if stage_number == 1
-        else STAGE2_JSON_OUTPUT_SCHEMAS
-    )
+    schemas = STAGE2_JSON_OUTPUT_SCHEMAS
     expected_binding = _expected_output_binding(policy)
     bound_output_keys = _mcp_bound_output_keys(policy)
     by_role = {str(artifact["role"]): artifact for artifact in outputs}
     documents: dict[str, Mapping[str, Any]] = {}
-    expected_deletions = {
-        "intentional_deletions_0p1": 18,
-        "intentional_deletions_0p5": 93,
-        "intentional_deletions_1p0": 186,
-    }
     for artifact in outputs:
         role = artifact["role"]
         if (
@@ -4671,7 +4385,7 @@ def _validate_stage_output_documents(
                 validate_data_prep_result_shape(document)
             except DataPrepHandoffError as exc:
                 raise ReceiptValidationError(
-                    f"Stage 2 data-prep result is open or malformed: {exc}"
+                    f"Stage 1 data-prep result is open or malformed: {exc}"
                 ) from exc
         embedded_binding = document.get("orchestration_binding")
         if embedded_binding is not None and (
@@ -4724,7 +4438,7 @@ def _validate_stage_output_documents(
                 )
                 if not _is_sha256(binding.get("sha256")):
                     raise ReceiptValidationError(
-                        "Stage 2 segmentation verification binding hash is malformed"
+                        "Stage 1 segmentation verification binding hash is malformed"
                     )
             evidence_hashes = _closed_mapping(
                 evidence.get("hashes"),
@@ -4745,141 +4459,9 @@ def _validate_stage_output_documents(
                 or evidence.get("error") is not None
             ):
                 raise ReceiptValidationError(
-                    "Stage 2 segmentation verification evidence is malformed"
+                    "Stage 1 segmentation verification evidence is malformed"
                 )
 
-        if role == "cad_graph_orientation" and terminal_state == "pass":
-            hashes = document.get("hashes")
-            gates = document.get("gates")
-            provenance = document.get("provenance")
-            if (
-                document.get("gate") != "pass"
-                or document.get("overall_pass") is not True
-                or document.get("specimen_id") != policy["specimen_id"]
-                or document.get("design_id") != policy["design_id"]
-                or not isinstance(hashes, Mapping)
-                or not _is_sha256(hashes.get("config_sha256"))
-                or hashes.get("nominal_graph_sha256")
-                != policy["source_hashes"].get("nominal_graph")
-                or hashes.get("full_design_stl_sha256")
-                != policy["source_hashes"].get("full_design_stl")
-                or not isinstance(gates, Mapping)
-                or gates.get("orientation_resolved") is not True
-                or gates.get("scale_preserving_transform") is not True
-                or not isinstance(provenance, Mapping)
-                or provenance.get("design_space_only") is not True
-                or provenance.get("ct_accessed") is not False
-                or provenance.get("aligned_graph_accessed") is not False
-                or provenance.get("deleted_edge_labels_accessed") is not False
-            ):
-                raise ReceiptValidationError("Stage 1 orientation evidence did not pass")
-            declaration_hash = policy["source_hashes"].get(
-                "design_transform_declaration"
-            )
-            declaration = document.get("declared_transform")
-            if declaration_hash is not None:
-                declaration_path = declaration.get("artifact_path") if isinstance(
-                    declaration, Mapping
-                ) else None
-                try:
-                    normalized_declaration_path = (
-                        _normalize_mcp_artifact_path(
-                            declaration_path, repository_root
-                        )
-                        if isinstance(declaration_path, str)
-                        else None
-                    )
-                except ReceiptValidationError:
-                    normalized_declaration_path = None
-                source_record = next(
-                    (
-                        item
-                        for item in policy["source_hashes"]
-                        if item == "design_transform_declaration"
-                    ),
-                    None,
-                )
-                request_path = next(
-                    (
-                        binding["request_arguments"].get(
-                            "declared_transform_filepath"
-                        )
-                        for binding in policy["mcp_response_bindings"]
-                        if binding["tool_name"]
-                        == "resolve_cad_graph_orientation"
-                    ),
-                    None,
-                )
-                if (
-                    source_record is None
-                    or document.get("resolution_source") != "declared_transform"
-                    or not isinstance(declaration, Mapping)
-                    or declaration.get("present") is not True
-                    or declaration.get("artifact_sha256") != declaration_hash
-                    or declaration.get("expected_artifact_sha256")
-                    != declaration_hash
-                    or normalized_declaration_path != request_path
-                    or not isinstance(declaration.get("verification"), Mapping)
-                    or declaration["verification"].get("overall_pass") is not True
-                    or hashes.get("declared_transform_artifact_sha256")
-                    != declaration_hash
-                    or hashes.get("intake_declared_transform_artifact_sha256")
-                    != declaration_hash
-                    or gates.get("declared_transform_valid") is not True
-                    or gates.get("authoritative_transform_verified") is not True
-                ):
-                    raise ReceiptValidationError(
-                        "Stage 1 orientation declaration is stale or unverified"
-                    )
-            else:
-                ambiguity = document.get("ambiguity")
-                if (
-                    document.get("resolution_source") != "geometry_search"
-                    or not isinstance(ambiguity, Mapping)
-                    or ambiguity.get("equivalent_hypothesis_count") != 1
-                    or ambiguity.get("requires_scientist_review") is not False
-                    or gates.get("orientation_unambiguous") is not True
-                ):
-                    raise ReceiptValidationError(
-                        "Stage 1 orientation pass lacks an unambiguous source"
-                    )
-        if role in expected_deletions and terminal_state == "pass":
-            hashes = document.get("hashes")
-            deletion_provenance = document.get("provenance")
-            variant_role = {
-                "intentional_deletions_0p1": "intentional_deletion_stl_0p1",
-                "intentional_deletions_0p5": "intentional_deletion_stl_0p5",
-                "intentional_deletions_1p0": "intentional_deletion_stl_1p0",
-            }[role]
-            if (
-                document.get("deleted_count") != expected_deletions[role]
-                or document.get("specimen_id") != policy["specimen_id"]
-                or document.get("design_id") != policy["design_id"]
-                or not isinstance(hashes, Mapping)
-                or hashes.get("nominal_graph_sha256")
-                != policy["source_hashes"].get("nominal_graph")
-                or hashes.get("baseline_stl_sha256")
-                != policy["source_hashes"].get("full_design_stl")
-                or hashes.get("variant_stl_sha256")
-                != policy["source_hashes"].get(variant_role)
-                or hashes.get("orientation_sha256")
-                != policy["output_hashes"].get("cad_graph_orientation")
-                or not _is_sha256(hashes.get("config_sha256"))
-                or not isinstance(deletion_provenance, Mapping)
-                or deletion_provenance.get("design_space_only") is not True
-                or deletion_provenance.get("ct_accessed") is not False
-                or deletion_provenance.get("aligned_graph_accessed") is not False
-            ):
-                raise ReceiptValidationError(f"Stage 1 deletion evidence failed for {role}")
-        if role in {"development_labels", "sealed_labels"} and (
-            document.get("role") != role
-            or document.get("specimen_id") != policy["specimen_id"]
-            or document.get("design_id") != policy["design_id"]
-            or document.get("source_labels_sha256")
-            != policy["output_hashes"].get("intentional_deletions_0p5")
-            or not _is_sha256(document.get("config_sha256"))
-        ):
-            raise ReceiptValidationError(f"Stage 1 label split role is mismatched: {role}")
         if terminal_state == "pass" and role in {
             "otsu_report",
             "segmentation_mask_comparison",
@@ -4888,9 +4470,9 @@ def _validate_stage_output_documents(
             "registration_qa",
         }:
             if document.get("overall_pass") is not True:
-                raise ReceiptValidationError(f"Stage 2 evidence did not pass: {role}")
+                raise ReceiptValidationError(f"Stage 1 evidence did not pass: {role}")
             if role in {"registration_report", "localization_report", "registration_qa"} and document.get("gate") != "pass":
-                raise ReceiptValidationError(f"Stage 2 gate did not pass: {role}")
+                raise ReceiptValidationError(f"Stage 1 gate did not pass: {role}")
         if role in {"data_prep_result", "data_prep_completion_receipt"}:
             if (
                 document.get("specimen_id") != policy["specimen_id"]
@@ -4904,42 +4486,17 @@ def _validate_stage_output_documents(
                 or document.get("reason_codes") != policy["reason_codes"]
             ):
                 raise ReceiptValidationError(
-                    f"Stage 2 coordinator output is inconsistent with policy: {role}"
+                    f"Stage 1 coordinator output is inconsistent with policy: {role}"
                 )
 
-    if stage_number == 1 and terminal_state == "pass":
-        development = documents.get("development_labels")
-        sealed = documents.get("sealed_labels")
-        if development is None or sealed is None:
-            raise ReceiptValidationError("Stage 1 pass lacks both label split documents")
-        development_ids = development.get("strut_ids")
-        sealed_ids = sealed.get("strut_ids")
-        source_labels = documents.get("intentional_deletions_0p5")
-        source_ids = source_labels.get("deleted_strut_ids") if source_labels else None
-        label_config_hashes = {
-            documents[role]["hashes"].get("config_sha256")
-            for role in expected_deletions
-        }
-        if (
-            not isinstance(development_ids, list)
-            or not isinstance(sealed_ids, list)
-            or not isinstance(source_ids, list)
-            or set(development_ids) & set(sealed_ids)
-            or set(development_ids) | set(sealed_ids) != set(source_ids)
-            or len(label_config_hashes) != 1
-            or development.get("config_sha256") not in label_config_hashes
-            or sealed.get("config_sha256") not in label_config_hashes
-        ):
-            raise ReceiptValidationError("Stage 1 label split is not disjoint/exhaustive")
-
-    if stage_number != 2:
+    if stage_number != 1:
         return
 
     analysis_manifest = documents.get("analysis_ready_specimen_manifest")
     manifest_record = by_role.get("analysis_ready_specimen_manifest")
     if analysis_manifest is None or manifest_record is None:
         if terminal_state == "pass":
-            raise ReceiptValidationError("Stage 2 pass lacks an analysis-ready manifest")
+            raise ReceiptValidationError("Stage 1 pass lacks an analysis-ready manifest")
         return
     try:
         validate_specimen_manifest(
@@ -4980,7 +4537,7 @@ def _validate_stage_output_documents(
         != policy["metrology_summary"]["status"]
     ):
         raise ReceiptValidationError(
-            "Analysis-ready specimen manifest is stale or inconsistent with Stage 2"
+            "Analysis-ready specimen manifest is stale or inconsistent with Stage 1"
         )
     mask_record = by_role.get("canonical_segmentation_mask")
     canonical_mask = analysis_manifest["inputs"].get("canonical_mask")
@@ -5031,7 +4588,7 @@ def _validate_stage_output_documents(
             if digest is not None
         ):
             raise ReceiptValidationError(
-                f"Stage 2 evidence hashes are stale or incomplete: {role}"
+                f"Stage 1 evidence hashes are stale or incomplete: {role}"
             )
         if role in {"localization_report", "registration_qa"} and (
             document.get("specimen_id") != policy["specimen_id"]
@@ -5040,12 +4597,12 @@ def _validate_stage_output_documents(
             != policy["requested_analysis_scope"]
         ):
             raise ReceiptValidationError(
-                f"Stage 2 evidence identity/scope is mismatched: {role}"
+                f"Stage 1 evidence identity/scope is mismatched: {role}"
             )
 
     localization = policy.get("localization_summary")
     if not isinstance(localization, Mapping):
-        raise ReceiptValidationError("Stage 2 pass lacks localization evidence")
+        raise ReceiptValidationError("Stage 1 pass lacks localization evidence")
     localization_document = documents["localization_report"]
     qa_document = documents["registration_qa"]
     qa_metrology = qa_document.get("metrology")
@@ -5077,7 +4634,7 @@ def _validate_stage_output_documents(
         != policy["metrology_summary"]["status"]
     ):
         raise ReceiptValidationError(
-            "Stage 2 localization/QA policy evidence is inconsistent"
+            "Stage 1 localization/QA policy evidence is inconsistent"
         )
 
     analysis_config = documents.get("analysis_config")
@@ -5095,7 +4652,7 @@ def _validate_stage_output_documents(
         != parameters["registration"]["mode"]
         or analysis_config.get("label_inputs_accessed") is not False
     ):
-        raise ReceiptValidationError("Stage 2 analysis config is stale or unsafe")
+        raise ReceiptValidationError("Stage 1 analysis config is stale or unsafe")
 
     bindings_by_tool = {
         str(binding["tool_name"]): binding
@@ -5107,7 +4664,7 @@ def _validate_stage_output_documents(
         response = binding.get("response") if isinstance(binding, Mapping) else None
         if not isinstance(response, Mapping):
             raise ReceiptValidationError(
-                f"Stage 2 pass lacks a bound MCP response for {tool_name}"
+                f"Stage 1 pass lacks a bound MCP response for {tool_name}"
             )
         return response
 
@@ -5120,7 +4677,7 @@ def _validate_stage_output_documents(
         )
         if not isinstance(arguments, Mapping):
             raise ReceiptValidationError(
-                f"Stage 2 pass lacks bound MCP arguments for {tool_name}"
+                f"Stage 1 pass lacks bound MCP arguments for {tool_name}"
             )
         return arguments
 
@@ -5140,7 +4697,7 @@ def _validate_stage_output_documents(
         segmentation_parameters, Mapping
     ):
         raise ReceiptValidationError(
-            "Stage 2 exact Otsu result evidence is missing"
+            "Stage 1 exact Otsu result evidence is missing"
         )
     otsu_threshold = otsu_document.get("threshold")
     otsu_result_fields = (
@@ -5232,7 +4789,7 @@ def _validate_stage_output_documents(
         != output_hashes.get("otsu_report")
     ):
         raise ReceiptValidationError(
-            "Stage 2 exact Otsu response/result artifact is inconsistent"
+            "Stage 1 exact Otsu response/result artifact is inconsistent"
         )
 
     downstream_threshold_arguments = {
@@ -5262,7 +4819,7 @@ def _validate_stage_output_documents(
         or not matches_otsu_threshold(comparison_thresholds[0])
     ):
         raise ReceiptValidationError(
-            "Stage 2 downstream MCP requests are not bound to the exact Otsu threshold"
+            "Stage 1 downstream MCP requests are not bound to the exact Otsu threshold"
         )
 
     segment_result = response_for("segment_ct_dataset").get("result")
@@ -5278,7 +4835,7 @@ def _validate_stage_output_documents(
         or segment_result.get("dtype") != "uint8"
     ):
         raise ReceiptValidationError(
-            "Stage 2 segmentation response is not bound to the exact Otsu result"
+            "Stage 1 segmentation response is not bound to the exact Otsu result"
         )
 
     comparison = documents.get("segmentation_mask_comparison")
@@ -5298,13 +4855,13 @@ def _validate_stage_output_documents(
         != comparison
     ):
         raise ReceiptValidationError(
-            "Stage 2 segmentation comparison is not bound to the canonical Otsu mask"
+            "Stage 1 segmentation comparison is not bound to the canonical Otsu mask"
         )
 
     verification = documents.get("segmentation_verification_mcp_response")
     if not isinstance(verification, Mapping):
         raise ReceiptValidationError(
-            "Stage 2 pass lacks persisted segmentation verification evidence"
+            "Stage 1 pass lacks persisted segmentation verification evidence"
         )
     verification_request = verification["request"]
     verification_policy = verification["policy"]
@@ -5432,7 +4989,7 @@ def _validate_stage_output_documents(
         or candidates[0].get("false_negative_voxels") != 0
     ):
         raise ReceiptValidationError(
-            "Stage 2 persisted segmentation verification is stale or inconsistent"
+            "Stage 1 persisted segmentation verification is stale or inconsistent"
         )
 
     verification_response = response_for("verify_canonical_segmentation")
@@ -5474,7 +5031,7 @@ def _validate_stage_output_documents(
         or response_verification_artifact.get("retention") != "committed"
     ):
         raise ReceiptValidationError(
-            "Stage 2 segmentation verifier response is not bound to persisted evidence"
+            "Stage 1 segmentation verifier response is not bound to persisted evidence"
         )
 
     registration_document = documents.get("registration_report")
@@ -5512,7 +5069,7 @@ def _validate_stage_output_documents(
         )
     ):
         raise ReceiptValidationError(
-            "Stage 2 registration response/result artifacts are not bound to the "
+            "Stage 1 registration response/result artifacts are not bound to the "
             "exact Otsu threshold"
         )
 
@@ -5568,7 +5125,7 @@ def _validate_stage_output_documents(
         != expected_localization_response_result
     ):
         raise ReceiptValidationError(
-            "Stage 2 localization response/result artifact is not bound to the exact Otsu result"
+            "Stage 1 localization response/result artifact is not bound to the exact Otsu result"
         )
 
     qa_response_result = response_for("compute_registration_qa").get("result")
@@ -5588,13 +5145,13 @@ def _validate_stage_output_documents(
         or qa_response_result != expected_qa_response_result
     ):
         raise ReceiptValidationError(
-            "Stage 2 QA response/result artifact is not bound to the exact Otsu result"
+            "Stage 1 QA response/result artifact is not bound to the exact Otsu result"
         )
 
     result = documents.get("data_prep_result")
     completion = documents.get("data_prep_completion_receipt")
     if result is None or completion is None:
-        raise ReceiptValidationError("Stage 2 pass lacks coordinator result documents")
+        raise ReceiptValidationError("Stage 1 pass lacks coordinator result documents")
     manifest_canonical_sha256 = canonical_json_sha256(analysis_manifest)
     result_canonical_sha256 = canonical_json_sha256(result)
     completion_base = {
@@ -5630,7 +5187,7 @@ def _validate_stage_output_documents(
         != canonical_json_sha256(completion_base)
     ):
         raise ReceiptValidationError(
-            "Stage 2 manifest/result/completion hash chain is inconsistent"
+            "Stage 1 manifest/result/completion hash chain is inconsistent"
         )
     quality_counts = result.get("localization_quality_counts")
     artifact_bindings = result.get("artifact_bindings")
@@ -5653,7 +5210,7 @@ def _validate_stage_output_documents(
         )
     ):
         raise ReceiptValidationError(
-            "Stage 2 result localization counts or artifact bindings are stale"
+            "Stage 1 result localization counts or artifact bindings are stale"
         )
 
 
@@ -5708,7 +5265,7 @@ def _validate_stage_receipt_document(
             raise ReceiptValidationError(
                 "Dependency halt receipt may not claim an attempt policy"
             )
-    elif stage_number in {1, 2}:
+    elif stage_number == 1:
         policy = _validate_stage_policy_shape(
             stage_policy, stage_number=int(stage_number)
         )
@@ -5718,7 +5275,7 @@ def _validate_stage_receipt_document(
             )
     elif stage_policy is not None:
         raise ReceiptValidationError(
-            "Only Stage 1/2 attempt receipts may carry stage_policy"
+            "Only Stage 1 data-preparation receipts may carry stage_policy"
         )
     assertions = receipt.get("assertions")
     if not isinstance(assertions, Mapping) or any(
@@ -5727,8 +5284,6 @@ def _validate_stage_receipt_document(
         raise ReceiptValidationError("Stage receipt assertions must be boolean")
     required = set(contract.get("required_receipt_assertions", []))
     allowed = set(required)
-    if contract.get("stage_number") == 5:
-        allowed.add("optimization_performed")
     if dependency_halt:
         if assertions != {}:
             raise ReceiptValidationError(
@@ -5741,12 +5296,6 @@ def _validate_stage_receipt_document(
             )
         if any(assertions.get(name) is not True for name in required):
             raise ReceiptValidationError("Pass receipt contains a failed assertion")
-        if contract.get("stage_number") == 5 and (
-            assertions.get("optimization_performed") is not False
-        ):
-            raise ReceiptValidationError(
-                "Stage 5 pass receipt must attest that optimization was not performed"
-            )
     elif set(assertions) - allowed:
         raise ReceiptValidationError(
             "Non-pass receipt contains an undeclared assertion"
@@ -5864,13 +5413,13 @@ def build_stage_receipt(
                 pipeline_manifest=manifest,
                 repository_root=root,
             )
-        elif stage_number in {1, 2}:
-            if terminal_state == "pass" and stage_number == 2 and not any(
+        elif stage_number == 1:
+            if terminal_state == "pass" and not any(
                 artifact["role"] == "analysis_ready_specimen_manifest"
                 for artifact in normalized_outputs
             ):
                 raise ReceiptValidationError(
-                    "Stage 2 pass requires an analysis-ready specimen manifest replacement"
+                    "Stage 1 pass requires an analysis-ready specimen manifest replacement"
                 )
             validated_policy = _validate_stage_policy(
                 stage_policy,
@@ -5891,7 +5440,7 @@ def build_stage_receipt(
             )
         elif stage_policy is not None:
             raise ReceiptValidationError(
-                "stage_policy is accepted only for Stage 1/2 receipts"
+                "stage_policy is accepted only for Stage 1 data-preparation receipts"
             )
         if failure_kind == "deterministic_gate" and terminal_state != "halt":
             raise ReceiptValidationError(
@@ -6031,13 +5580,13 @@ def _verify_registration_freeze(
     record = attempt.get("registration_freeze")
     if record is None:
         raise ReceiptValidationError(
-            "Autonomous-v2 Stage 2 requires a CT-only registration freeze receipt"
+            "Autonomous-v2 Stage 1 requires a CT-only registration freeze receipt"
         )
     expected_path = (
         Path("analysis")
         / manifest["specimen_id"]
         / "receipts"
-        / f"stage_2_registration_freeze_attempt_{attempt['attempt']}.json"
+        / f"stage_1_registration_freeze_attempt_{attempt['attempt']}.json"
     ).as_posix()
     if (
         not isinstance(record, Mapping)
@@ -6076,11 +5625,11 @@ def _verify_registration_freeze(
     expected = {
         "schema_version": REGISTRATION_FREEZE_SCHEMA_VERSION,
         "specimen_id": manifest["specimen_id"],
-        "stage_number": 2,
+        "stage_number": 1,
         "attempt": attempt["attempt"],
         "run_token": attempt["run_token"],
         "config_sha256": manifest["config"]["sha256"],
-        "contract_sha256": manifest["stages"]["2"]["contract"]["sha256"],
+        "contract_sha256": manifest["stages"]["1"]["contract"]["sha256"],
         "predecessor_receipt_sha256": attempt["predecessor_receipt_sha256"],
         "input_handoff_sha256": attempt["handoff"]["canonical_sha256"],
         "aligned_graph_accessed": False,
@@ -6094,7 +5643,7 @@ def _verify_registration_freeze(
         event
         for event in manifest.get("events", [])
         if event.get("action") == "autonomous_registration_frozen"
-        and event.get("stage_number") == 2
+        and event.get("stage_number") == 1
         and event.get("timestamp") == payload["frozen_at"]
         and event.get("details")
         == {"freeze_sha256": payload["canonical_freeze_sha256"]}
@@ -6113,7 +5662,7 @@ def _verify_registration_freeze(
         raise ReceiptValidationError(
             "Registration freeze does not contain exactly the CT-only fit outputs"
         )
-    contract = _load_stage_contract(manifest, 2, repository_root)
+    contract = _load_stage_contract(manifest, 1, repository_root)
     _validate_artifact_allowlist(
         manifest,
         contract,
@@ -6126,7 +5675,7 @@ def _verify_registration_freeze(
         by_role = {item["role"]: item for item in completion_outputs}
         if any(by_role.get(item["role"]) != item for item in artifacts):
             raise ReceiptValidationError(
-                "Stage 2 completion outputs do not match the frozen CT-only fit"
+                "Stage 1 completion outputs do not match the frozen CT-only fit"
             )
     return payload
 
@@ -6213,7 +5762,7 @@ def _verify_missing_calibration_attestation(
         )
 
 
-def _verify_stage4_verifier(
+def _verify_stage3_verifier(
     outputs: Sequence[Mapping[str, Any]],
     repository_root: Path,
     *,
@@ -6223,7 +5772,7 @@ def _verify_stage4_verifier(
     by_role = {record["role"]: record for record in outputs}
     verifier_record = by_role.get("classifier_verifier_report")
     if verifier_record is None:
-        raise ReceiptValidationError("Stage 4 requires classifier_verifier_report")
+        raise ReceiptValidationError("Stage 3 requires classifier_verifier_report")
     verifier = _read_object(repository_root / verifier_record["path"])
     if verifier.get("schema_version") != "classifier-verifier-report/1.0.0":
         raise ReceiptValidationError("Classifier verifier schema is incompatible")
@@ -6252,11 +5801,11 @@ def _verify_stage4_verifier(
         raise ReceiptValidationError("Independent classifier verifier did not pass")
     expected_context = {
         "specimen_id": manifest["specimen_id"],
-        "stage_number": 4,
+        "stage_number": 3,
         "attempt": attempt["attempt"],
         "run_token": attempt["run_token"],
         "config_sha256": manifest["config"]["sha256"],
-        "contract_sha256": manifest["stages"]["4"]["contract"]["sha256"],
+        "contract_sha256": manifest["stages"]["3"]["contract"]["sha256"],
         "predecessor_receipt_sha256": attempt["predecessor_receipt_sha256"],
         "input_handoff_sha256": attempt["handoff"]["canonical_sha256"],
     }
@@ -6326,7 +5875,6 @@ def _verify_stage4_verifier(
         )
     specialist_roles = (
         "findings_missing",
-        "missing_calibration_attestation",
         "findings_thin",
         "findings_bent",
         "findings_broken",
@@ -6682,13 +6230,13 @@ def complete_stage(
                 pipeline_manifest=manifest,
                 repository_root=root,
             )
-        elif stage_number in {1, 2}:
-            if terminal == "pass" and stage_number == 2 and not any(
+        elif stage_number == 1:
+            if terminal == "pass" and not any(
                 artifact["role"] == "analysis_ready_specimen_manifest"
                 for artifact in outputs
             ):
                 raise ReceiptValidationError(
-                    "Stage 2 pass requires an analysis-ready specimen manifest replacement"
+                    "Stage 1 pass requires an analysis-ready specimen manifest replacement"
                 )
             validated_policy = _validate_stage_policy(
                 receipt.get("stage_policy"),
@@ -6730,36 +6278,20 @@ def complete_stage(
         for supplemental_handoff in supplemental:
             for artifact in supplemental_handoff.get("input_artifacts", []):
                 _normalize_artifact(root, artifact)
-        if stage_number == 4 and terminal == "pass":
-            _verify_missing_calibration_attestation(
+        if stage_number == 3 and terminal == "pass":
+            _verify_stage3_verifier(
                 outputs,
                 root,
                 manifest=manifest,
                 attempt=attempt,
             )
-            _verify_stage4_verifier(
-                outputs,
-                root,
-                manifest=manifest,
-                attempt=attempt,
-            )
-        if stage_number == 2 and manifest["registration_mode"] == "autonomous_v2":
+        if stage_number == 1 and manifest["registration_mode"] == "autonomous_v2":
             if terminal == "pass":
                 _verify_registration_freeze(
                     manifest,
                     attempt,
                     root,
                     completion_outputs=outputs,
-                )
-        if stage_number == 5 and terminal == "pass":
-            _verify_stage5_evaluation_result(
-                outputs,
-                root,
-                attempt=attempt,
-            )
-            if receipt.get("assertions", {}).get("optimization_performed") is not False:
-                raise ReceiptValidationError(
-                    "Stage 5 is one-shot reporting and may not optimize upstream decisions"
                 )
 
         receipt_record = {
@@ -6946,7 +6478,7 @@ def record_autonomous_registration_freeze(
     timestamp: str | None = None,
     clock: Clock | None = None,
 ) -> dict[str, Any]:
-    """Seal Stage 2 CT-only registration before any aligned-JSON validation."""
+    """Seal Stage 1 CT-only registration before any aligned-JSON validation."""
 
     root = Path(repository_root).resolve()
     path = _pipeline_manifest_location(root, manifest_path)
@@ -6955,11 +6487,11 @@ def record_autonomous_registration_freeze(
         manifest = _load_manifest_unlocked(path, root, verify_artifacts=True)
         if manifest["registration_mode"] != "autonomous_v2":
             raise IllegalTransitionError("Registration freeze is autonomous-v2 only")
-        stage = manifest["stages"]["2"]
+        stage = manifest["stages"]["1"]
         if stage["state"] != "running" or not stage["attempts"]:
-            raise IllegalTransitionError("Stage 2 must be running before registration freeze")
+            raise IllegalTransitionError("Stage 1 must be running before registration freeze")
         attempt = stage["attempts"][-1]
-        contract = _load_stage_contract(manifest, 2, root)
+        contract = _load_stage_contract(manifest, 1, root)
         artifacts = _normalize_artifacts(root, frozen_artifacts)
         _validate_artifact_allowlist(
             manifest,
@@ -7008,7 +6540,7 @@ def record_autonomous_registration_freeze(
         freeze_base = {
             "schema_version": REGISTRATION_FREEZE_SCHEMA_VERSION,
             "specimen_id": manifest["specimen_id"],
-            "stage_number": 2,
+            "stage_number": 1,
             "attempt": attempt["attempt"],
             "run_token": attempt["run_token"],
             "frozen_at": frozen_at,
@@ -7022,7 +6554,7 @@ def record_autonomous_registration_freeze(
             "frozen_artifacts": artifacts,
         }
         freeze = _with_self_hash(freeze_base, "canonical_freeze_sha256")
-        freeze_name = f"stage_2_registration_freeze_attempt_{attempt['attempt']}.json"
+        freeze_name = f"stage_1_registration_freeze_attempt_{attempt['attempt']}.json"
         relative, destination = _repository_output_location(
             root,
             output_path,
@@ -7073,7 +6605,7 @@ def record_autonomous_registration_freeze(
             manifest,
             timestamp=frozen_at,
             action="autonomous_registration_frozen",
-            stage_number=2,
+            stage_number=1,
             details={"freeze_sha256": freeze["canonical_freeze_sha256"]},
         )
         _write_manifest(path, manifest)
@@ -7098,9 +6630,9 @@ def authorize_post_freeze_aligned_input(
         manifest = _load_manifest_unlocked(path, root, verify_artifacts=True)
         if manifest["registration_mode"] != "autonomous_v2":
             raise IllegalTransitionError("Post-freeze authorization is autonomous-v2 only")
-        stage = manifest["stages"]["2"]
+        stage = manifest["stages"]["1"]
         if stage["state"] != "running" or not stage["attempts"]:
-            raise IllegalTransitionError("Stage 2 is not running")
+            raise IllegalTransitionError("Stage 1 is not running")
         attempt = stage["attempts"][-1]
         freeze_record = attempt.get("registration_freeze")
         if freeze_record is None:
@@ -7124,7 +6656,7 @@ def authorize_post_freeze_aligned_input(
             raise AccessPolicyError(
                 "Post-freeze input must be the aligned graph for registration_validator"
             )
-        contract = _load_stage_contract(manifest, 2, root)
+        contract = _load_stage_contract(manifest, 1, root)
         _validate_artifact_allowlist(
             manifest,
             contract,
@@ -7133,13 +6665,13 @@ def authorize_post_freeze_aligned_input(
             require_all=False,
             repository_root=root,
         )
-        _enforce_sensitive_access(manifest, 2, [artifact])
+        _enforce_sensitive_access(manifest, 1, [artifact])
         _record_sensitive_hashes(manifest, contract, [artifact])
         existing_records = attempt.get("supplemental_handoffs", [])
         if existing_records:
             if len(existing_records) != 1:
                 raise ManifestValidationError(
-                    "Autonomous Stage 2 has multiple post-freeze handoffs"
+                    "Autonomous Stage 1 has multiple post-freeze handoffs"
                 )
             existing_record = existing_records[0]
             existing = _verify_hashed_json_record(
@@ -7161,7 +6693,7 @@ def authorize_post_freeze_aligned_input(
         handoff_base = {
             "schema_version": POST_FREEZE_HANDOFF_SCHEMA_VERSION,
             "specimen_id": manifest["specimen_id"],
-            "stage_number": 2,
+            "stage_number": 1,
             "attempt": attempt["attempt"],
             "run_token": attempt["run_token"],
             "created_at": authorized_at,
@@ -7173,7 +6705,7 @@ def authorize_post_freeze_aligned_input(
         }
         handoff = _with_self_hash(handoff_base, "canonical_handoff_sha256")
         handoff_name = (
-            f"stage_2_post_freeze_validation_attempt_{attempt['attempt']}.json"
+            f"stage_1_post_freeze_validation_attempt_{attempt['attempt']}.json"
         )
         relative, destination = _repository_output_location(
             root,
@@ -7225,7 +6757,7 @@ def authorize_post_freeze_aligned_input(
             manifest,
             timestamp=authorized_at,
             action="post_freeze_aligned_input_authorized",
-            stage_number=2,
+            stage_number=1,
             details={
                 "aligned_graph_sha256": artifact["sha256"],
                 "freeze_sha256": freeze["canonical_freeze_sha256"],
