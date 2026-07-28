@@ -1,50 +1,34 @@
 ---
 name: ct-threshold-optimizer
-description: Compare binary segmentations of a 3D CT .npy volume across several density thresholds by repeatedly invoking the segment_ct_dataset MCP tool. Use when asked to tune, sweep, test, optimize, or compare CT segmentation thresholds and save separate candidate masks.
+description: Replay or compare bounded CT segmentation thresholds through segmentation-tools MCP for TIFF or NPY volumes. Use for exact per-scan Otsu production segmentation or explicitly exploratory threshold candidates without loading voxel arrays into context.
 ---
 
 # CT Threshold Optimizer
 
-Generate a small, reproducible threshold sweep through the MCP server, then compare the resulting masks. This workflow ranks candidates for human inspection; it does not prove segmentation accuracy without ground truth.
+Use `segmentation-tools` MCP only. This skill contains no executable scripts
+and never imports the MCP implementation or falls back to a local CLI.
 
-## Workflow
+## Production path
 
-1. Resolve the input `.npy` path and confirm that it is a 3D CT volume. Invoke
-   `$volume-metadata` with statistics enabled (never `--header-only`) and inspect
-   its shape, dtype, axes, spacing provenance, minimum, and maximum. Stop if
-   either intensity bound is `unknown` or non-finite; do not infer missing
-   values or proceed with a threshold sweep.
-2. Choose three to seven finite, distinct thresholds:
-   - Use thresholds supplied by the user.
-   - Otherwise, use values at 30%, 50%, and 70% of the observed intensity range: `minimum + fraction * (maximum - minimum)`.
-   - If the intensity range is zero, stop because no meaningful sweep is possible.
-3. Create a dedicated output directory next to the input unless the user provides one. Name masks `<input-stem>_threshold_<value>.npy`, replacing filename-unsafe characters in the value. Never overwrite existing masks without explicit permission; select a new directory or filename instead.
-4. Invoke the MCP tool `segment_ct_dataset` once per threshold with:
-   - `input_filepath`: absolute input path
-   - `output_filepath`: unique absolute mask path
-   - `threshold`: the absolute density threshold
-5. Treat any tool response beginning with `Error` or any missing output as a failed candidate. If the MCP tool is unavailable, stop and explain that the project MCP server must be registered and the Codex session restarted. Do not silently replace the MCP call with a local implementation.
-6. Invoke the MCP tool `compare_segmentation_masks` once with:
-   - `raw_filepath`: absolute input path
-   - `mask_filepaths`: successful absolute mask paths in threshold order
-   - `thresholds`: the corresponding numeric thresholds in the same order
-7. Present the returned candidate table containing threshold, output path,
-   foreground voxels, total voxels, and foreground percentage. Recommend visual
-   inspection of representative slices in Napari or with `visualize_slice`
-   before choosing a final threshold.
+1. Invoke `volume_info` for TIFF/NPY metadata, endian, ZYX/XYZ mapping, and hash.
+2. Invoke `replay_exact_otsu` once. Require the exact 65,536-bin per-scan
+   histogram, persisted input/config/method hashes, and all plausibility gates.
+3. For the reference scan, enforce threshold 40054 and 58,653,410 foreground
+   voxels as a replay check. Never tune toward that fraction.
+4. Invoke `segment_ct_dataset` at the accepted threshold to write the canonical
+   uint8 ZYX mask. Pin its path, role, dtype, shape, retention, and SHA-256.
+5. Invoke `compare_segmentation_masks` with an explicit report path to verify
+   shape and compact foreground statistics. Use `visualize_slice` only for a
+   bounded representative PNG.
 
-## Selection Guidance
+## Exploratory path
 
-- A foreground percentage that changes abruptly between adjacent thresholds can signal sensitivity to noise or partial-volume effects.
-- Prefer a stable candidate that preserves expected struts without filling voids, based on slice inspection and specimen knowledge.
-- If a reference mask exists, compare against it explicitly. Otherwise label any recommendation as provisional.
-- Keep every candidate output so the user can reproduce the comparison.
+Only when explicitly requested, use a small predeclared list of finite
+thresholds. Write every candidate to a unique path and compare them once. Mark
+all candidates provisional; never choose by labels, target foreground fraction,
+ground-truth segmentation, or open-ended search.
 
-## Constraints
-
-- Use absolute paths for MCP arguments.
-- Do not use normalized fractions as literal thresholds unless the volume itself is normalized.
-- Do not run an unbounded optimization loop.
-- Do not claim that foreground percentage alone measures segmentation quality.
-- Do not load or compare the arrays locally; all deterministic volume and mask
-  processing must use the required MCP tools.
+Require `part2-mcp-response/1.0.0` with status, gate, artifact metadata/hashes,
+counts, warnings, and structured errors. Never return voxel arrays. If the MCP
+server or a required tool is unavailable or incompatible, stop with a
+structured halt and state that no fallback was used.

@@ -1,0 +1,91 @@
+{
+  "validation_only_ground_truth": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/registered_jsons/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json",
+  "ground_truth_read_phase": "after detected_nodes.npy, fitted_transform.json, and our_registered.json were written",
+  "ground_truth_used_for_fit": false,
+  "ct_threshold": 40049,
+  "node_count": 10206,
+  "node_error_voxels": {
+    "median": 3.674148051696753,
+    "mean": 3.593311687936573,
+    "p95": 5.6474994050432334,
+    "p99": 6.334753892767448,
+    "maximum": 7.463752834267296
+  },
+  "fitted_transform": {
+    "scale": 39.18313867768968,
+    "rotation_deg": 0.3918252031827271,
+    "translation": [
+      60.92017692039468,
+      55.662928034357265,
+      29.613490954558472
+    ],
+    "rotation_matrix": [
+      [
+        0.9999767646506599,
+        0.006196953972938315,
+        -0.0028404084665306045
+      ],
+      [
+        -0.006195407398173319,
+        0.9999806553907292,
+        0.0005529660911519441
+      ],
+      [
+        0.0028437802253539857,
+        -0.0005353557551643033,
+        0.9999958131453578
+      ]
+    ]
+  },
+  "held_out_transform": {
+    "scale": 39.48880949493017,
+    "rotation_deg": 0.33510849611461374,
+    "translation": [
+      59.33960418617096,
+      52.1828934867313,
+      26.46173195820751
+    ],
+    "rotation_matrix": [
+      [
+        0.999986728616512,
+        0.005087147630571754,
+        -0.0008145672659472733
+      ],
+      [
+        -0.005084872943297161,
+        0.9999832336528703,
+        0.0027706461880856815
+      ],
+      [
+        0.0008286482948206045,
+        -0.0027664674467264305,
+        0.9999958299912404
+      ]
+    ]
+  },
+  "transform_error": {
+    "relative_scale": 0.007740694671479864,
+    "rotation_magnitude_deg": 0.05671670706811338,
+    "rotation_matrix_delta_deg": 0.18355154359439066,
+    "translation_delta_xyz": [
+      1.580572734223722,
+      3.480034547625962,
+      3.1517589963509636
+    ],
+    "translation_delta_norm": 4.954032235656215
+  },
+  "ct_node_sampling": {
+    "foreground_voxel_fraction_5x5x5": 0.9223155006858711,
+    "nodes_with_any_foreground_5x5x5": 0.9587497550460513,
+    "center_voxel_foreground_rate": 0.9268077601410935
+  },
+  "gates": {
+    "median_node_error_under_5_voxels": true,
+    "scale_within_1_percent": true,
+    "rotation_magnitude_within_0.2_deg": true,
+    "translation_within_few_voxels": true,
+    "foreground_fraction_5x5x5_at_least_85_percent": true
+  },
+  "overall_pass": true,
+  "total_elapsed_seconds": 15.407388292020187
+}

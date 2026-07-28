@@ -16,18 +16,30 @@ deterministic `inspect_volume_metadata` MCP tool.
 2. For authoritative intake, call `inspect_volume_metadata` with:
 
    - `input_filepath`: the explicit repository path;
+   - `output_filepath`:
+     `analysis/<specimen_id>/config/ct_metadata_response.json`;
+   - `call_receipt_filepath`:
+     `analysis/<specimen_id>/config/ct_metadata_mcp_call_receipt.json`;
    - `header_only: true`;
    - `include_sha256: true`;
    - the requested retention policy.
-3. Require `status: ok`, `authoritative: true`, a 64-character SHA-256, and a
+3. Require top-level `status: ok`, `gate: pass`, closed response and call-receipt
+   schemas, `result.authoritative: true`, a 64-character CT SHA-256, and a
    three-dimensional shape before intake.
-4. Consume `manifest_fragment.ct_volume` and
-   `manifest_fragment.ct_metadata` directly.
-5. Use `header_only: false` only when the user explicitly requests exact
+4. Preserve both `artifacts.metadata_response` and `artifacts.call_receipt`,
+   including their exact paths and SHA-256 values. Pass all four values to
+   specimen intake; intake must independently revalidate both persisted files,
+   their normalized request, CT path/hash, response path/hash, header facts,
+   result, and dimensions. Treat the separate receipt as integrity evidence,
+   not as a cryptographic signature or authenticated process-identity claim.
+5. Consume `result.manifest_fragment.ct_volume` and
+   `result.manifest_fragment.ct_metadata` only through that persisted response.
+6. Use `header_only: false` only when the user explicitly requests exact
    intensity or finite-value statistics.
 
 Header-only mode avoids voxel decoding but still streams the file once for its
-authoritative hash.
+authoritative hash. The response and receipt are outputs of this call within
+Stage 0; neither is a prerequisite artifact for starting Stage 0.
 
 If `inspect_volume_metadata` is unavailable, fails to initialize, or exposes an
 incompatible schema, stop before inspecting the file. Explain that the required

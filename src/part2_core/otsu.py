@@ -320,9 +320,12 @@ def _sha256_file(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
 
 
 def _atomic_json(path: Path, value: dict[str, Any], overwrite: bool) -> None:
-    if path.exists() and not overwrite:
+    payload = json.dumps(value, indent=2, sort_keys=True).encode("utf-8") + b"\n"
+    if path.exists():
+        if path.is_file() and path.read_bytes() == payload:
+            return
         raise OtsuReplayError(
-            f"Otsu artifact already exists; enable overwrite explicitly: {path}"
+            f"Otsu artifact already exists with different bytes: {path}"
         )
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -334,8 +337,7 @@ def _atomic_json(path: Path, value: dict[str, Any], overwrite: bool) -> None:
         delete=False,
     ) as stream:
         temporary = Path(stream.name)
-        json.dump(value, stream, indent=2, sort_keys=True)
-        stream.write("\n")
+        stream.write(payload.decode("utf-8"))
     try:
         os.replace(temporary, path)
     finally:
@@ -343,10 +345,14 @@ def _atomic_json(path: Path, value: dict[str, Any], overwrite: bool) -> None:
 
 
 def _atomic_npy(path: Path, value: np.ndarray[Any, Any], overwrite: bool) -> None:
-    if path.exists() and not overwrite:
-        raise OtsuReplayError(
-            f"Otsu artifact already exists; enable overwrite explicitly: {path}"
-        )
+    if path.exists():
+        try:
+            existing = np.load(path, mmap_mode="r", allow_pickle=False)
+            if existing.dtype == value.dtype and existing.shape == value.shape and np.array_equal(existing, value):
+                return
+        except Exception:
+            pass
+        raise OtsuReplayError(f"Otsu artifact already exists with different content: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         dir=path.parent,
@@ -374,11 +380,12 @@ def write_otsu_artifacts(
     destination = Path(output_directory).expanduser().resolve()
     histogram_path = destination / "exact_histogram_uint16.npy"
     report_path = destination / "histogram_report.json"
+    histogram_preexisted = histogram_path.exists()
     _atomic_npy(histogram_path, np.asarray(histogram, dtype=np.int64), overwrite)
     try:
         _atomic_json(report_path, result, overwrite)
     except Exception:
-        if not overwrite:
+        if not histogram_preexisted:
             histogram_path.unlink(missing_ok=True)
         raise
     return {

@@ -1,0 +1,11 @@
+interface:
+  display_name: "Part 2 Pipeline Runbook"
+  short_description: "Orchestrate hash-sealed Part 2 NDE stages"
+  default_prompt: "Use $part2-pipeline-runbook to run or resume the LLNL Part 2 NDE pipeline through verified stage handoffs."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools"
+      description: "Required versioned Part 2 artifact, registration, measurement, evaluation, and rendering tools"
+      transport: "stdio"

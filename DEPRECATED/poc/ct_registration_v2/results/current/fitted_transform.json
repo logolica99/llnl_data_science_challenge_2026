@@ -1,0 +1,160 @@
+{
+  "scale": 39.17874005836384,
+  "rotation_matrix": [
+    [
+      0.9999760297027437,
+      0.0063127991050923446,
+      -0.0028440441972954053
+    ],
+    [
+      -0.006311194227820791,
+      0.9999799200958073,
+      0.0005729158757932359
+    ],
+    [
+      0.0028476037919881987,
+      -0.000554952827508283,
+      0.9999957915811455
+    ]
+  ],
+  "translation": [
+    60.922422494271586,
+    55.6823213286857,
+    29.656709529305203
+  ],
+  "rotation_deg": 0.3980255548179882,
+  "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation",
+  "fit_inputs": {
+    "ct": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+    "design": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/octet_truss_9x9x9.json",
+    "ground_truth_registration": null
+  },
+  "ground_truth_used_for_fit": false,
+  "per_scan_threshold": 40054,
+  "coarse_initialization": {
+    "scale": 39.666666666666664,
+    "rotation_matrix": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "translation": [
+      56.0,
+      41.0,
+      23.0
+    ],
+    "rotation_deg": 0.0,
+    "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+  },
+  "multistart_best_pre_refinement": {
+    "scale": 39.14301283292532,
+    "rotation_matrix": [
+      [
+        0.9999707606836168,
+        0.006479227514601463,
+        -0.004061697753726034
+      ],
+      [
+        -0.006476424814926404,
+        0.9999787807682138,
+        0.0007028050465033809
+      ],
+      [
+        0.004066165201414668,
+        -0.0006764792168414119,
+        0.9999915043021237
+      ]
+    ],
+    "translation": [
+      61.67226100936347,
+      55.62392046026014,
+      29.696678484966583
+    ],
+    "rotation_deg": 0.4399276350696184,
+    "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+  },
+  "full_resolution_refinement": [
+    {
+      "pass": 0,
+      "valid_localizations": 2931,
+      "kept_localizations": 2345,
+      "shift_cutoff_voxels": 2.331440288993561,
+      "median_shift_voxels": 1.4805261954912923,
+      "p95_shift_voxels": 4.537755632303716,
+      "transform": {
+        "scale": 39.16944782824039,
+        "rotation_matrix": [
+          [
+            0.9999751533569455,
+            0.006410931486569691,
+            -0.0029313181722724997
+          ],
+          [
+            -0.006409149068852375,
+            0.9999792708138454,
+            0.0006170500976633245
+          ],
+          [
+            0.002935213274332589,
+            -0.0005982475109062359,
+            0.9999955133014093
+          ]
+        ],
+        "translation": [
+          61.001639266999064,
+          55.65882850222755,
+          29.729428647384452
+        ],
+        "rotation_deg": 0.4053964353478202,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      }
+    },
+    {
+      "pass": 1,
+      "valid_localizations": 2933,
+      "kept_localizations": 2346,
+      "shift_cutoff_voxels": 2.1878999521560236,
+      "median_shift_voxels": 1.3695154567297323,
+      "p95_shift_voxels": 4.857934800451186,
+      "transform": {
+        "scale": 39.17874005836384,
+        "rotation_matrix": [
+          [
+            0.9999760297027437,
+            0.0063127991050923446,
+            -0.0028440441972954053
+          ],
+          [
+            -0.006311194227820791,
+            0.9999799200958073,
+            0.0005729158757932359
+          ],
+          [
+            0.0028476037919881987,
+            -0.000554952827508283,
+            0.9999957915811455
+          ]
+        ],
+        "translation": [
+          60.922422494271586,
+          55.6823213286857,
+          29.656709529305203
+        ],
+        "rotation_deg": 0.3980255548179882,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      }
+    }
+  ]
+}

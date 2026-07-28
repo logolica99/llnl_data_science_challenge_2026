@@ -119,9 +119,21 @@ def _grid_shape(indices: np.ndarray[Any, Any]) -> tuple[list[int] | None, list[s
 
 
 def _atomic_savez(path: Path, arrays: dict[str, np.ndarray[Any, Any]], overwrite: bool) -> None:
-    if path.exists() and not overwrite:
+    if path.exists():
+        try:
+            with np.load(path, allow_pickle=False) as existing:
+                exact = set(existing.files) == set(arrays) and all(
+                    existing[name].dtype == value.dtype
+                    and existing[name].shape == value.shape
+                    and np.array_equal(existing[name], value, equal_nan=True)
+                    for name, value in arrays.items()
+                )
+            if exact:
+                return
+        except Exception:
+            pass
         raise GraphNormalizationError(
-            f"Normalized graph already exists; enable overwrite explicitly: {path}"
+            f"Normalized graph already exists with different content: {path}"
         )
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(

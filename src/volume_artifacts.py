@@ -15,21 +15,18 @@ from skimage import measure
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+try:
+    from .part2_core.volume import load_volume
+except ImportError:
+    from part2_core.volume import load_volume
+
 
 SUMMARY_CHUNK_DEPTH = 16
 
 
-def _load_3d_npy(filepath: str) -> tuple[Path, np.ndarray]:
-    path = Path(filepath).expanduser().resolve()
-    if path.suffix.lower() != ".npy":
-        raise ValueError(f"Expected a .npy file: {path}")
-    if not path.is_file():
-        raise FileNotFoundError(f"File does not exist: {path}")
-
-    array = np.load(path, mmap_mode="r", allow_pickle=False)
-    if array.ndim != 3:
-        raise ValueError(f"Expected a 3D array, found shape {array.shape}: {path}")
-    return path, array
+def _load_3d_array(filepath: str) -> tuple[Path, np.ndarray]:
+    volume = load_volume(filepath)
+    return volume.path, volume.array
 
 
 def _slabs(depth: int) -> Iterator[tuple[int, int]]:
@@ -50,7 +47,7 @@ def compare_segmentation_masks(
             "mask_filepaths and thresholds must contain the same number of items."
         )
 
-    raw_path, raw = _load_3d_npy(raw_filepath)
+    raw_path, raw = _load_3d_array(raw_filepath)
     candidates: list[dict[str, Any]] = []
 
     for threshold, mask_filepath in zip(
@@ -59,7 +56,7 @@ def compare_segmentation_masks(
         if not np.isfinite(threshold):
             raise ValueError("Every threshold must be finite.")
 
-        mask_path, mask = _load_3d_npy(mask_filepath)
+        mask_path, mask = _load_3d_array(mask_filepath)
         if mask.shape != raw.shape:
             raise ValueError(
                 f"Mask shape {mask.shape} does not match raw shape "
@@ -105,8 +102,8 @@ def summarize_nde_artifacts(
     skeleton_filepath: str | None = None,
 ) -> dict[str, Any]:
     """Return compact intensity, mask, and skeleton metrics for an NDE report."""
-    raw_path, raw = _load_3d_npy(raw_filepath)
-    mask_path, mask = _load_3d_npy(mask_filepath)
+    raw_path, raw = _load_3d_array(raw_filepath)
+    mask_path, mask = _load_3d_array(mask_filepath)
     if raw.dtype.kind not in "biuf":
         raise TypeError(
             f"Raw volume must use a real numeric dtype, found "
@@ -153,7 +150,7 @@ def summarize_nde_artifacts(
     skeleton_path: Path | None = None
     skeleton_metrics: dict[str, Any] | None = None
     if skeleton_filepath is not None:
-        skeleton_path, skeleton = _load_3d_npy(skeleton_filepath)
+        skeleton_path, skeleton = _load_3d_array(skeleton_filepath)
         if skeleton.shape != raw.shape:
             raise ValueError(
                 f"Skeleton shape {skeleton.shape} does not match raw shape "
@@ -249,7 +246,7 @@ def render_volume_3d(
     if not np.isfinite(elevation) or not np.isfinite(azimuth):
         raise ValueError("elevation and azimuth must be finite.")
 
-    input_path, volume = _load_3d_npy(input_filepath)
+    input_path, volume = _load_3d_array(input_filepath)
     output_path = Path(output_filepath).expanduser().resolve()
     if output_path.suffix.lower() != ".png":
         raise ValueError(f"Output file must use the .png extension: {output_path}")
@@ -287,7 +284,7 @@ def render_volume_3d(
     rendered_skeleton_points = 0
     skeleton_points: np.ndarray | None = None
     if skeleton_filepath is not None:
-        skeleton_path, skeleton = _load_3d_npy(skeleton_filepath)
+        skeleton_path, skeleton = _load_3d_array(skeleton_filepath)
         if skeleton.shape != volume.shape:
             raise ValueError(
                 f"Skeleton shape {skeleton.shape} does not match volume shape "

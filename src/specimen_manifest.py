@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -27,6 +28,66 @@ DERIVED_SECTIONS = (
     "registration_result",
 )
 ANALYSIS_READY = "analysis_ready"
+ROI_SCREENING_OUTPUTS = frozenset(
+    {
+        "segmentation",
+        "registration",
+        "node_localization",
+        "coarse_region_screening",
+        "padded_roi_definition",
+    }
+)
+METROLOGY_OUTPUTS = frozenset(
+    {"absolute_metrology", "direct_dimensional_measurement"}
+)
+ROI_GATE_FIELD_SETS = (
+    frozenset(
+        {
+            "image_support",
+            "localization_quality",
+            "coarse_region_support",
+            "padded_roi_in_bounds",
+        }
+    ),
+    frozenset(
+        {
+            "production_image_qa_pass",
+            "coarse_capture_pass",
+            "localization_binding_pass",
+            "localization_quantitative_gate_pass",
+            "padded_roi_capture_pass",
+            "overall_pass",
+        }
+    ),
+)
+LOCALIZATION_QUALITY_COUNT_FIELD_SETS = (
+    frozenset(
+        {
+            "primary",
+            "stable_coarse",
+            "fallback",
+            "ambiguous",
+            "rejected",
+            "boundary_limited",
+        }
+    ),
+    frozenset(
+        {
+            "primary_nodes",
+            "stable_coarse_nodes",
+            "fallback_nodes",
+            "ambiguous_nodes",
+            "rejected_or_low_confidence_nodes",
+            "boundary_limited_nodes",
+            "primary_edges",
+            "stable_coarse_edges",
+            "fallback_edges",
+            "ambiguous_edges",
+            "roi_screening_usable_edges",
+            "direct_metrology_usable_edges",
+        }
+    ),
+)
 
 
 class ManifestValidationError(ValueError):
@@ -133,6 +194,20 @@ def _analysis_readiness_errors(manifest: dict[str, Any]) -> list[str]:
     aligned_graph = manifest["inputs"].get("aligned_graph")
     if aligned_graph is None:
         errors.append("analysis_ready manifest has no aligned graph")
+    canonical_mask = manifest["inputs"].get("canonical_mask")
+    if canonical_mask is None:
+        errors.append("analysis_ready manifest has no canonical mask")
+    else:
+        expected_mask_path = (
+            f"analysis/{manifest['specimen_id']}/segmentation/canonical_mask.npy"
+        )
+        if canonical_mask["path"] != expected_mask_path:
+            errors.append(
+                "analysis_ready canonical mask path is not the specimen-scoped "
+                "canonical path"
+            )
+        if canonical_mask["shape"] != manifest["inputs"]["ct_metadata"]["shape"]:
+            errors.append("analysis_ready canonical mask shape differs from CT shape")
 
     required_sections = set(DERIVED_SECTIONS)
     missing_sections = sorted(required_sections - set(manifest["derived"]))
@@ -145,13 +220,16 @@ def _analysis_readiness_errors(manifest: dict[str, Any]) -> list[str]:
         errors.append("segmentation_result.overall_pass is false")
 
     registration = manifest["derived"]["registration_result"]["values"]
+    if registration["specimen_id"] != manifest["specimen_id"]:
+        errors.append("registration_result specimen_id differs from manifest")
+    if registration["design_id"] != manifest["design_id"]:
+        errors.append("registration_result design_id differs from manifest")
     failed_registration_gates = [
         field
         for field in (
             "overall_pass",
             "local_recenter_complete",
             "roi_gate_pass",
-            "metrology_gate_pass",
         )
         if not registration[field]
     ]
@@ -160,6 +238,54 @@ def _analysis_readiness_errors(manifest: dict[str, Any]) -> list[str]:
             "registration_result failed gates: "
             + ", ".join(failed_registration_gates)
         )
+    requested_scope = manifest["analysis_parameters"]["requested_analysis_scope"]
+    if registration["requested_analysis_scope"] != requested_scope:
+        errors.append("registration_result requested_analysis_scope differs from intake")
+    metrology_status = registration["metrology_gate_status"]
+    expected_metrology_status = (
+        "not_authorized" if requested_scope == "roi_screening" else "pass"
+    )
+    if metrology_status != expected_metrology_status:
+        errors.append(
+            "registration_result metrology_gate_status is "
+            f"{metrology_status!r}, expected {expected_metrology_status!r} for "
+            f"{requested_scope!r}"
+        )
+    expected_authorized = set(ROI_SCREENING_OUTPUTS)
+    expected_unauthorized = set(METROLOGY_OUTPUTS)
+    expected_reason_codes = {"ROI_GATES_PASS", "METROLOGY_NOT_AUTHORIZED"}
+    if requested_scope == "direct_metrology":
+        expected_authorized.update(METROLOGY_OUTPUTS)
+        expected_unauthorized.clear()
+        expected_reason_codes = {"ROI_GATES_PASS", "METROLOGY_GATES_PASS"}
+    if set(registration["authorized_outputs"]) != expected_authorized:
+        errors.append(
+            "registration_result authorized_outputs differs from the exact "
+            f"{requested_scope} allowlist"
+        )
+    if set(registration["unauthorized_outputs"]) != expected_unauthorized:
+        errors.append(
+            "registration_result unauthorized_outputs differs from the exact "
+            f"{requested_scope} denylist"
+        )
+    if set(registration["reason_codes"]) != expected_reason_codes:
+        errors.append(
+            "registration_result reason_codes differs from the exact "
+            f"{requested_scope} result"
+        )
+    if frozenset(registration["roi_gate_results"]) not in ROI_GATE_FIELD_SETS:
+        errors.append("registration_result ROI gate schema is not allowlisted")
+    if (
+        frozenset(registration["localization_quality_counts"])
+        not in LOCALIZATION_QUALITY_COUNT_FIELD_SETS
+    ):
+        errors.append(
+            "registration_result localization quality count schema is not allowlisted"
+        )
+    if not registration["roi_gate_results"] or not all(
+        registration["roi_gate_results"].values()
+    ):
+        errors.append("registration_result has a failed ROI gate")
     mode = manifest["analysis_parameters"]["registration"]["mode"]
     expected_state = "input" if mode == "challenge_aligned_json" else "derived"
     if registration["aligned_graph_state"] != expected_state:
@@ -223,6 +349,62 @@ def validate_manifest(
             "analysis_parameters_sha256 does not match canonical analysis_parameters"
         )
 
+    parameters = manifest["analysis_parameters"]
+    localization_policy = parameters["localization_policy"]
+    qa_policy = parameters["qa_policy"]
+    budgets = parameters["budgets"]
+    if not math.isclose(
+        float(localization_policy["search_radius_voxels"]),
+        float(budgets["local_recenter_radius_voxels"]),
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        errors.append(
+            "localization_policy.search_radius_voxels differs from the frozen "
+            "local_recenter_radius_voxels budget"
+        )
+    if not math.isclose(
+        float(qa_policy["roi_padding_fraction"]),
+        float(budgets["roi_padding_fraction"]),
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        errors.append(
+            "qa_policy.roi_padding_fraction differs from the frozen "
+            "roi_padding_fraction budget"
+        )
+    if not math.isclose(
+        float(localization_policy["core_support_weight"])
+        + float(localization_policy["incident_support_weight"]),
+        1.0,
+        rel_tol=0.0,
+        abs_tol=1e-12,
+    ):
+        errors.append("localization support weights must sum to 1")
+    incident_distances = [
+        float(value)
+        for value in localization_policy["incident_sample_distances_voxels"]
+    ]
+    if incident_distances != sorted(incident_distances) or any(
+        first >= second
+        for first, second in zip(
+            incident_distances,
+            incident_distances[1:],
+            strict=False,
+        )
+    ):
+        errors.append(
+            "localization incident_sample_distances_voxels must be strictly increasing"
+        )
+    segmentation_policy = parameters["segmentation"]
+    if (
+        float(segmentation_policy["minimum_foreground_fraction"])
+        > float(segmentation_policy["maximum_foreground_fraction"])
+    ):
+        errors.append(
+            "segmentation minimum_foreground_fraction exceeds maximum_foreground_fraction"
+        )
+
     input_hashes = {artifact["sha256"] for _, artifact in _artifact_items(manifest)}
     for section in DERIVED_SECTIONS:
         record = manifest["derived"].get(section)
@@ -237,7 +419,6 @@ def validate_manifest(
                 f"derived.{section} references unknown input hashes: "
                 + ", ".join(unknown_hashes)
             )
-
     mode = manifest["analysis_parameters"]["registration"]["mode"]
     intake = manifest.get("intake")
     if intake is not None:
@@ -273,6 +454,14 @@ def validate_manifest(
         errors.append(
             "autonomous_v2 mode requires an explicitly derived aligned graph"
         )
+
+    registration_result = manifest["derived"].get("registration_result")
+    if registration_result is not None:
+        result_scope = registration_result["values"]["requested_analysis_scope"]
+        if result_scope != manifest["analysis_parameters"]["requested_analysis_scope"]:
+            errors.append(
+                "derived.registration_result requested_analysis_scope differs from analysis_parameters"
+            )
 
     graph_summary = manifest["derived"].get("graph_summary")
     if intake is not None and graph_summary is not None:

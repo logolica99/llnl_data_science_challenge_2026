@@ -1,7 +1,7 @@
 interface:
   display_name: "CT Threshold Optimizer"
-  short_description: "Compare CT masks across candidate thresholds"
-  default_prompt: "Use $ct-threshold-optimizer to segment a CT volume at several thresholds and compare the masks."
+  short_description: "Run exact Otsu or bounded CT thresholds via MCP"
+  default_prompt: "Use $ct-threshold-optimizer to replay exact per-scan Otsu or compare explicitly bounded candidates through TIFF/NPY MCP tools."
 
 dependencies:
   tools:

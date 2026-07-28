@@ -1,0 +1,243 @@
+{
+  "scale": 39.18313867768968,
+  "rotation_matrix": [
+    [
+      0.9999767646506599,
+      0.006196953972938315,
+      -0.0028404084665306045
+    ],
+    [
+      -0.006195407398173319,
+      0.9999806553907292,
+      0.0005529660911519441
+    ],
+    [
+      0.0028437802253539857,
+      -0.0005353557551643033,
+      0.9999958131453578
+    ]
+  ],
+  "translation": [
+    60.92017692039468,
+    55.662928034357265,
+    29.613490954558472
+  ],
+  "rotation_deg": 0.3918252031827271,
+  "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation",
+  "fit_inputs": "ideal design JSON and CT intensities only",
+  "ground_truth_used_for_fit": false,
+  "coarse_initialization": {
+    "scale": 39.72222222222222,
+    "rotation_matrix": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "translation": [
+      55.5,
+      40.5,
+      22.5
+    ]
+  },
+  "detection": {
+    "ct_shape_zyx": [
+      331,
+      408,
+      419
+    ],
+    "source_ct_shape_zyx": [
+      761,
+      815,
+      837
+    ],
+    "threshold": 40049,
+    "foreground_voxel_count": 58675274,
+    "downsample_factor": 2,
+    "detection_z_range_full_resolution": [
+      50,
+      710
+    ],
+    "edt_peak_threshold_downsampled_voxels": 2.0,
+    "all_component_count": 5357,
+    "detected_node_count": 3528,
+    "component_size_range_kept": [
+      2,
+      999
+    ],
+    "full_sampled_foreground_bounds_xyz": [
+      [
+        18.0,
+        24.0,
+        0.0
+      ],
+      [
+        782.0,
+        768.0,
+        760.0
+      ]
+    ],
+    "detection_foreground_bounds_xyz": [
+      [
+        56.0,
+        40.0,
+        50.0
+      ],
+      [
+        770.0,
+        756.0,
+        710.0
+      ]
+    ],
+    "detected_bounds_xyz": [
+      [
+        62.666666666666664,
+        50.0,
+        50.0
+      ],
+      [
+        765.6111111111111,
+        724.3461538461538,
+        710.0
+      ]
+    ],
+    "elapsed_seconds": 6.007985624950379
+  },
+  "trimmed_icp": {
+    "keep_fraction": 0.7,
+    "iterations": 12,
+    "history": [
+      {
+        "iteration": 0,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 9.559318240723245,
+        "all_pair_median_residual_voxels": 10.989105268373129,
+        "cutoff_voxels": 12.838476061482444
+      },
+      {
+        "iteration": 1,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.2788467191810662,
+        "all_pair_median_residual_voxels": 1.5995737280320037,
+        "cutoff_voxels": 2.378034817516648
+      },
+      {
+        "iteration": 2,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.2037445669446967,
+        "all_pair_median_residual_voxels": 1.5077369009156998,
+        "cutoff_voxels": 2.2638730057460545
+      },
+      {
+        "iteration": 3,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.196603095772559,
+        "all_pair_median_residual_voxels": 1.5007203729745255,
+        "cutoff_voxels": 2.287696742072487
+      },
+      {
+        "iteration": 4,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1943794450378646,
+        "all_pair_median_residual_voxels": 1.5064365014194536,
+        "cutoff_voxels": 2.298289473239359
+      },
+      {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1935111017424749,
+        "all_pair_median_residual_voxels": 1.5079461628848398,
+        "cutoff_voxels": 2.3083120336752385
+      },
+      {
+        "iteration": 6,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1930186551259896,
+        "all_pair_median_residual_voxels": 1.503919141806497,
+        "cutoff_voxels": 2.305310728156489
+      },
+      {
+        "iteration": 7,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1927907824685167,
+        "all_pair_median_residual_voxels": 1.496595623335156,
+        "cutoff_voxels": 2.3189409848484206
+      },
+      {
+        "iteration": 8,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1926918746087507,
+        "all_pair_median_residual_voxels": 1.4980982894909607,
+        "cutoff_voxels": 2.319514324472407
+      },
+      {
+        "iteration": 9,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1925783201579507,
+        "all_pair_median_residual_voxels": 1.4963858142742679,
+        "cutoff_voxels": 2.3239140609744955
+      },
+      {
+        "iteration": 10,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1925468727107613,
+        "all_pair_median_residual_voxels": 1.497389935686761,
+        "cutoff_voxels": 2.3238156011413236
+      },
+      {
+        "iteration": 11,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 1.1925564162403415,
+        "all_pair_median_residual_voxels": 1.4974798330350987,
+        "cutoff_voxels": 2.325106257352088
+      }
+    ]
+  },
+  "full_resolution_refinement": {
+    "passes": 2,
+    "history": [
+      {
+        "pass": 0,
+        "valid_localizations": 2928,
+        "kept_localizations": 2342,
+        "shift_cutoff_voxels": 2.182236516662825,
+        "median_shift_voxels": 1.3481384439776454,
+        "p95_shift_voxels": 4.922009596719766,
+        "scale": 39.18226177239214,
+        "rotation_deg": 0.3968917139618171,
+        "translation": [
+          60.88729196515993,
+          55.67702917179696,
+          29.623448757571623
+        ]
+      },
+      {
+        "pass": 1,
+        "valid_localizations": 2929,
+        "kept_localizations": 2343,
+        "shift_cutoff_voxels": 2.2356733824421116,
+        "median_shift_voxels": 1.3225529920278067,
+        "p95_shift_voxels": 4.988977045208998,
+        "scale": 39.18313867768968,
+        "rotation_deg": 0.3918252031827271,
+        "translation": [
+          60.92017692039468,
+          55.662928034357265,
+          29.613490954558472
+        ]
+      }
+    ]
+  },
+  "elapsed_before_validation_seconds": 15.03105183399748
+}

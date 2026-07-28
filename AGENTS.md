@@ -17,3 +17,35 @@
   artifact paths.
 - Validate MCP-backed changes through an MCP client, not only by calling the
   underlying Python function directly.
+
+## Part 2 pipeline orchestration
+
+For every request that runs, resumes, validates, or inspects the LLNL Part 2
+pipeline or any Stage 0–6 operation, the active main agent is the control-plane
+orchestrator.
+
+Before performing scientific work or dispatching any agent, it must:
+
+1. Invoke `$part2-pipeline-runbook`.
+2. Read and follow `.codex/agents/orchestrator.toml`.
+3. Read the current pipeline manifest and applicable
+   `analysis/contracts/*.json` stage contract.
+4. Use the deterministic orchestration-state CLI for initialization, preflight,
+   stage transitions, receipts, halts, manual-review resolution, and validation.
+5. Dispatch only the exact contract-declared stage owner and bounded subagents.
+
+The stage identities and order are immutable:
+
+`0 specimen_ingest → 1 design_diff → 2 data_prep → 3 strut_metrics →
+4 defect_lead/verifier → 5 eval_agent → 6 report_agent`
+
+Never rename, reinterpret, combine, skip, or replace these stages with an
+ad-hoc workflow.
+
+Treat a missing or unreadable runbook, contract, agent definition, skill, MCP
+server, MCP tool, or schema-compatible interface as a hard dependency failure.
+Record a structured `halt` through the deterministic orchestration-state CLI,
+name every missing or incompatible dependency, and leave all downstream stages
+locked. Never use an undeclared agent or tool, weaken a contract, import an MCP
+implementation directly, invoke a bundled scientific CLI as fallback, or write
+a local substitute.

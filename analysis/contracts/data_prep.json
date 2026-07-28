@@ -1,0 +1,385 @@
+{
+  "schema_version": "agent-stage-contract/1.0.0",
+  "stage_number": 2,
+  "stage": "data_prep",
+  "owner": "data_prep",
+  "invoked_by": "orchestrator",
+  "execution_kind": "hybrid",
+  "maximum_attempts": 2,
+  "one_shot": false,
+  "required_dependencies": {
+    "agents": [
+      {
+        "name": "data_prep",
+        "contract_version": "agent-stage-contract/1.0.0"
+      }
+    ],
+    "mcp_tools": [
+      {
+        "server": "segmentation-tools",
+        "name": "volume_info",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "replay_exact_otsu",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "segment_ct_dataset",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "compare_segmentation_masks",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "verify_canonical_segmentation",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "visualize_slice",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "register_lattice_to_ct",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "localize_lattice_nodes",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
+        "name": "compute_registration_qa",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      }
+    ]
+  },
+  "required_inputs": [
+    "verified_stage_1_receipt_hash_in_control_metadata",
+    "attempt_scoped_stage_2_handoff",
+    "verified_data_prep_handoff",
+    "frozen_analysis_parameters_sha256",
+    "specimen_id",
+    "design_id",
+    "requested_analysis_scope",
+    "frozen_localization_policy",
+    "frozen_qa_policy",
+    "ct_volume",
+    "nominal_graph_json",
+    "normalized_nominal_graph_map",
+    "registration_mode"
+  ],
+  "optional_inputs": [
+    "authorized_challenge_aligned_json",
+    "autonomous_post_freeze_validation_reference"
+  ],
+  "required_outputs": [
+    "analysis/<specimen_id>/config/analysis_config.json",
+    "analysis/<specimen_id>/segmentation/exact_histogram_uint16.npy",
+    "analysis/<specimen_id>/segmentation/histogram_report.json",
+    "analysis/<specimen_id>/segmentation/canonical_mask.npy",
+    "analysis/<specimen_id>/segmentation/mask_comparison.json",
+    "analysis/<specimen_id>/segmentation/segmentation_verification_mcp_response.json",
+    "analysis/<specimen_id>/registration/registered_graph.json",
+    "analysis/<specimen_id>/registration/registration_report.json",
+    "analysis/<specimen_id>/registration/localized_graph.json",
+    "analysis/<specimen_id>/registration/localization_report.json",
+    "analysis/<specimen_id>/qa/registration_qa.json",
+    "analysis/<specimen_id>/qa/slice_380.png",
+    "analysis/<specimen_id>/qa/bias_by_xyz.png",
+    "analysis/<specimen_id>/config/data_prep_result.json",
+    "analysis/<specimen_id>/config/data_prep_completion_receipt.json",
+    "analysis/<specimen_id>/config/specimen_manifest.json (analysis-ready replacement)"
+  ],
+  "forbidden_operations": [
+    "defect_label_access",
+    "development_split_access",
+    "sealed_split_access",
+    "threshold_target_fraction_tuning",
+    "open_ended_threshold_optimization",
+    "autonomous_pre_freeze_aligned_json_access",
+    "global_refit_after_independent_node_localization",
+    "defect_classification",
+    "stage_3_roi_measurement",
+    "mcp_cli_or_direct_import_fallback"
+  ],
+  "input_artifacts": {
+    "allowed": [
+      {
+        "role": "stage_handoff",
+        "path": "analysis/<specimen_id>/handoffs/stage_2_data_prep_attempt_<attempt>.json",
+        "consumers": [
+          "data_prep"
+        ]
+      },
+      {
+        "role": "data_prep_handoff",
+        "path": "analysis/<specimen_id>/config/data_prep_handoff.json",
+        "consumers": [
+          "data_prep"
+        ]
+      },
+      {
+        "role": "specimen_manifest",
+        "path": "analysis/<specimen_id>/config/specimen_manifest.json",
+        "consumers": [
+          "data_prep"
+        ]
+      },
+      {
+        "role": "ct_volume",
+        "path": "<manifest-declared-ct-volume>",
+        "consumers": [
+          "data_prep",
+          "replay_exact_otsu",
+          "register_lattice_to_ct",
+          "localize_lattice_nodes",
+          "compute_registration_qa"
+        ]
+      },
+      {
+        "role": "nominal_graph",
+        "path": "<manifest-declared-nominal-graph-json>",
+        "consumers": [
+          "data_prep",
+          "register_lattice_to_ct"
+        ]
+      },
+      {
+        "role": "normalized_nominal_graph",
+        "path": "analysis/<specimen_id>/design/normalized_nominal_graph.npz",
+        "consumers": [
+          "data_prep"
+        ]
+      },
+      {
+        "role": "challenge_aligned_graph",
+        "path": "<manifest-declared-aligned-graph-json>",
+        "consumers": [
+          "data_prep",
+          "register_lattice_to_ct"
+        ],
+        "phases": [
+          "challenge_aligned_json"
+        ]
+      },
+      {
+        "role": "autonomous_validation_reference",
+        "path": "<manifest-declared-aligned-graph-json>",
+        "consumers": [
+          "data_prep"
+        ],
+        "phases": [
+          "autonomous_v2_post_freeze_validation"
+        ]
+      }
+    ],
+    "required_roles": [
+      "stage_handoff",
+      "data_prep_handoff",
+      "specimen_manifest",
+      "ct_volume",
+      "nominal_graph",
+      "normalized_nominal_graph"
+    ],
+    "forbidden": [
+      {
+        "role": "intentional_deletion_labels",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_*.json"
+      },
+      {
+        "role": "development_labels",
+        "path": "analysis/<specimen_id>/labels/dev_split.json"
+      },
+      {
+        "role": "sealed_labels",
+        "path": "evals/labels/sealed_split.json"
+      },
+      {
+        "role": "ground_truth_segmentation",
+        "path": "<ground-truth-segmentation>"
+      },
+      {
+        "role": "autonomous_pre_freeze_aligned_graph",
+        "path": "<manifest-declared-aligned-graph-json>"
+      }
+    ]
+  },
+  "output_artifacts": {
+    "allowed": [
+      {
+        "role": "manual_review_evidence",
+        "path": "analysis/<specimen_id>/reviews/stage_2_attempt_<attempt>/**",
+        "allow_multiple": true
+      },
+      {
+        "role": "analysis_config",
+        "path": "analysis/<specimen_id>/config/analysis_config.json"
+      },
+      {
+        "role": "exact_histogram",
+        "path": "analysis/<specimen_id>/segmentation/exact_histogram_uint16.npy"
+      },
+      {
+        "role": "otsu_report",
+        "path": "analysis/<specimen_id>/segmentation/histogram_report.json"
+      },
+      {
+        "role": "canonical_segmentation_mask",
+        "path": "analysis/<specimen_id>/segmentation/canonical_mask.npy",
+        "dtype": "uint8",
+        "shape_source": "specimen_manifest.inputs.ct_metadata.shape",
+        "array_axes": ["z", "y", "x"],
+        "retention": "committed"
+      },
+      {
+        "role": "segmentation_mask_comparison",
+        "path": "analysis/<specimen_id>/segmentation/mask_comparison.json"
+      },
+      {
+        "role": "segmentation_verification_mcp_response",
+        "path": "analysis/<specimen_id>/segmentation/segmentation_verification_mcp_response.json"
+      },
+      {
+        "role": "registered_graph",
+        "path": "analysis/<specimen_id>/registration/registered_graph.json"
+      },
+      {
+        "role": "registration_report",
+        "path": "analysis/<specimen_id>/registration/registration_report.json"
+      },
+      {
+        "role": "registration_fit_freeze",
+        "path": "analysis/<specimen_id>/registration/ct_only_fit_freeze.json"
+      },
+      {
+        "role": "localized_graph",
+        "path": "analysis/<specimen_id>/registration/localized_graph.json"
+      },
+      {
+        "role": "localization_report",
+        "path": "analysis/<specimen_id>/registration/localization_report.json"
+      },
+      {
+        "role": "registration_qa",
+        "path": "analysis/<specimen_id>/qa/registration_qa.json"
+      },
+      {
+        "role": "junction_overlay",
+        "path": "analysis/<specimen_id>/qa/slice_380.png"
+      },
+      {
+        "role": "spatial_bias_figure",
+        "path": "analysis/<specimen_id>/qa/bias_by_xyz.png"
+      },
+      {
+        "role": "data_prep_result",
+        "path": "analysis/<specimen_id>/config/data_prep_result.json"
+      },
+      {
+        "role": "data_prep_completion_receipt",
+        "path": "analysis/<specimen_id>/config/data_prep_completion_receipt.json"
+      },
+      {
+        "role": "analysis_ready_specimen_manifest",
+        "path": "analysis/<specimen_id>/config/specimen_manifest.json",
+        "replaces_role": "specimen_manifest"
+      }
+    ],
+    "required_roles": [
+      "analysis_config",
+      "exact_histogram",
+      "otsu_report",
+      "canonical_segmentation_mask",
+      "segmentation_mask_comparison",
+      "segmentation_verification_mcp_response",
+      "registered_graph",
+      "registration_report",
+      "localized_graph",
+      "localization_report",
+      "registration_qa",
+      "junction_overlay",
+      "spatial_bias_figure",
+      "data_prep_result",
+      "data_prep_completion_receipt",
+      "analysis_ready_specimen_manifest"
+    ]
+  },
+  "required_receipt_assertions": [
+    "contract_version_matches",
+    "stage_1_receipt_hash_matches",
+    "data_prep_handoff_hash_matches",
+    "frozen_config_hash_matches",
+    "specimen_and_design_identifiers_match_every_bound_artifact",
+    "requested_analysis_scope_matches_hashed_intake",
+    "localization_and_qa_policies_match_hashed_intake",
+    "stage_handoff_excludes_all_label_roles_paths_and_hashes",
+    "input_artifact_hashes_match",
+    "output_artifact_hashes_match",
+    "exact_histogram_otsu_complete",
+    "canonical_segmentation_verified_by_persisted_mcp_evidence",
+    "reference_specimen_replay_matches_40054_and_58653410",
+    "graph_counts_and_topology_match_manifest",
+    "registration_mode_recorded_in_every_output",
+    "autonomous_fit_inputs_exclude_aligned_json",
+    "autonomous_fit_artifacts_frozen_before_optional_reference_access",
+    "independent_node_positions_retained",
+    "global_refit_not_performed_after_localization",
+    "localization_uses_label_blind_deterministic_multistart",
+    "localization_incident_support_uses_robust_aggregation",
+    "localization_support_non_degrading_or_coarse_position_retained",
+    "primary_stable_coarse_fallback_ambiguous_rejected_and_boundary_limited_counts_recorded_separately",
+    "fallback_node_and_incident_edge_quality_propagated",
+    "localization_aggregate_gates_pass_frozen_thresholds",
+    "qa_uncertainty_derived_from_hashed_artifacts_not_agent_scalar",
+    "coarse_capture_gate_passed",
+    "padded_roi_gate_passed",
+    "metrology_gate_recorded_separately",
+    "roi_gate_results_authorized_and_recorded",
+    "authorized_and_unauthorized_outputs_recorded",
+    "reason_codes_and_localization_quality_counts_recorded",
+    "localization_and_qa_artifact_paths_and_hashes_bound",
+    "defect_labels_not_accessed",
+    "accessed_inputs_within_phase_allowlist",
+    "forbidden_inputs_not_accessed"
+  ],
+  "next_stage": "strut_metrics",
+  "unlock_condition": {
+    "terminal_state": "pass",
+    "completion_receipt_verified": true,
+    "matching_hashes_required": true,
+    "frozen_config_hash_required": true,
+    "coarse_capture_and_padded_roi_gates_pass": true,
+    "roi_screening_allows_metrology_not_authorized": true,
+    "direct_metrology_requires_passing_absolute_uncertainty": true,
+    "next_stage_locked_until_verified": true
+  },
+  "manual_review_conditions": [
+    "direct_metrology_scope_with_missing_or_excessive_absolute_uncertainty",
+    "bounded_localization_instability_or_insufficient_ct_support_with_preserved_coarse_coordinates",
+    "ambiguity_or_fallback_fraction_exceeds_frozen_policy_without_a_deterministic_hard_failure"
+  ],
+  "halt_conditions": [
+    "missing_or_schema_incompatible_dependency",
+    "histogram_rejection_gate_failure",
+    "registration_or_topology_gate_failure",
+    "coarse_capture_or_padded_roi_gate_failure",
+    "malformed_missing_or_tampered_analysis_scope",
+    "specimen_design_run_or_artifact_binding_mismatch",
+    "rejected_or_boundary_limited_fraction_exceeds_frozen_policy",
+    "autonomous_pre_freeze_aligned_json_access",
+    "defect_label_access",
+    "deterministic_gate_failure",
+    "receipt_or_artifact_hash_mismatch",
+    "frozen_config_hash_mismatch",
+    "attempt_limit_reached"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "fit_manifest": {
+    "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/pacificvis_8x8x8_v2run/fit_manifest.json",
+    "sha256": "69aa037c4449c612e9c372134a008c1283aba77ba7eb620431bab1dee48a2ca7",
+    "bytes": 5986
+  },
+  "fitted_transform": {
+    "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/pacificvis_8x8x8_v2run/fitted_transform.json",
+    "sha256": "cb15e6ec27cbaeac7feda001305dadcae32d6f1dd954ab141741c5cdc8eabdab",
+    "bytes": 4114
+  },
+  "our_registered": {
+    "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/pacificvis_8x8x8_v2run/our_registered.json",
+    "sha256": "5424210b9bb123f540c1e808f83933e71db66e192287586dc27966e84a617c0d",
+    "bytes": 3483704
+  },
+  "ground_truth_used_for_fit": false,
+  "fit_completed_before_ground_truth_access": true
+}

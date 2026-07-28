@@ -26,9 +26,29 @@ import numpy as np
 
 
 class SpecimenManifestTests(unittest.TestCase):
+    @staticmethod
+    def _promote_analysis_ready(
+        manifest: dict[str, object],
+    ) -> dict[str, object]:
+        manifest["lifecycle_state"] = "analysis_ready"
+        inputs = manifest["inputs"]
+        inputs["canonical_mask"] = {
+            "path": (
+                f"analysis/{manifest['specimen_id']}/segmentation/"
+                "canonical_mask.npy"
+            ),
+            "sha256": "a" * 64,
+            "role": "canonical_segmentation_mask",
+            "retention": "committed",
+            "dtype": "uint8",
+            "shape": inputs["ct_metadata"]["shape"],
+            "array_axes": ["z", "y", "x"],
+        }
+        return manifest
+
     def test_all_example_manifests_validate(self) -> None:
         paths = manifest_paths()
-        self.assertEqual(2, len(paths))
+        self.assertGreaterEqual(len(paths), 2)
         for path in paths:
             with self.subTest(path=path):
                 self.assertEqual([], validate_manifest(path))
@@ -43,6 +63,214 @@ class SpecimenManifestTests(unittest.TestCase):
             ManifestValidationError, "analysis_parameters_sha256"
         ):
             validate_manifest(temporary)
+
+    def test_derived_records_reject_arbitrary_extra_fields(self) -> None:
+        source = manifest_paths()[0]
+        for section in (
+            "graph_summary",
+            "voxel_spacing",
+            "segmentation_result",
+            "registration_result",
+        ):
+            with self.subTest(section=section):
+                manifest = json.loads(source.read_text(encoding="utf-8"))
+                manifest["derived"][section]["unrecognized_field"] = True
+                temporary = self._write_temporary(manifest)
+                self.addCleanup(
+                    lambda path=temporary: path.unlink(missing_ok=True)
+                )
+                with self.assertRaisesRegex(
+                    ManifestValidationError, "unrecognized_field"
+                ):
+                    validate_manifest(temporary)
+
+    def test_analysis_ready_requires_canonical_mask(self) -> None:
+        source = next(
+            path
+            for path in manifest_paths()
+            if "brian_tran_9x9x9_0point5dash1" in path.as_posix()
+        )
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["lifecycle_state"] = "analysis_ready"
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        with self.assertRaisesRegex(ManifestValidationError, "canonical_mask"):
+            validate_manifest(temporary)
+
+    def test_analysis_ready_canonical_mask_is_specimen_scoped_and_shape_bound(
+        self,
+    ) -> None:
+        source = next(
+            path
+            for path in manifest_paths()
+            if "brian_tran_9x9x9_0point5dash1" in path.as_posix()
+        )
+        for name, mutate, pattern in (
+            (
+                "path",
+                lambda value: value["inputs"]["canonical_mask"].__setitem__(
+                    "path", "analysis/other_specimen/segmentation/canonical_mask.npy"
+                ),
+                "specimen-scoped canonical path",
+            ),
+            (
+                "shape",
+                lambda value: value["inputs"]["canonical_mask"].__setitem__(
+                    "shape", [1, 1, 1]
+                ),
+                "shape differs from CT shape",
+            ),
+        ):
+            with self.subTest(case=name):
+                manifest = self._promote_analysis_ready(
+                    json.loads(source.read_text(encoding="utf-8"))
+                )
+                mutate(manifest)
+                temporary = self._write_temporary(manifest)
+                self.addCleanup(lambda path=temporary: path.unlink(missing_ok=True))
+                with self.assertRaisesRegex(ManifestValidationError, pattern):
+                    validate_manifest(temporary)
+
+    def test_registration_result_rejects_open_or_unknown_control_fields(self) -> None:
+        source = next(
+            path
+            for path in manifest_paths()
+            if "brian_tran_9x9x9_0point5dash1" in path.as_posix()
+        )
+        cases = (
+            (
+                "roi-gate-extra",
+                lambda values: values["roi_gate_results"].__setitem__(
+                    "unrecognized_gate", True
+                ),
+                "roi_gate_results",
+            ),
+            (
+                "localization-count-extra",
+                lambda values: values["localization_quality_counts"].__setitem__(
+                    "unrecognized_count", 0
+                ),
+                "localization_quality_counts",
+            ),
+            (
+                "authorization-enum",
+                lambda values: values["authorized_outputs"].append(
+                    "unrecognized_output"
+                ),
+                "authorized_outputs",
+            ),
+            (
+                "reason-enum",
+                lambda values: values["reason_codes"].append(
+                    "UNRECOGNIZED_REASON"
+                ),
+                "reason_codes",
+            ),
+        )
+        for name, mutate, pattern in cases:
+            with self.subTest(case=name):
+                manifest = self._promote_analysis_ready(
+                    json.loads(source.read_text(encoding="utf-8"))
+                )
+                mutate(manifest["derived"]["registration_result"]["values"])
+                temporary = self._write_temporary(manifest)
+                self.addCleanup(lambda path=temporary: path.unlink(missing_ok=True))
+                with self.assertRaisesRegex(ManifestValidationError, pattern):
+                    validate_manifest(temporary)
+
+    def test_registration_result_requires_exact_scope_authorization_and_reasons(
+        self,
+    ) -> None:
+        source = next(
+            path
+            for path in manifest_paths()
+            if "brian_tran_9x9x9_0point5dash1" in path.as_posix()
+        )
+        for name, mutate, pattern in (
+            (
+                "authorization",
+                lambda values: values["authorized_outputs"].append(
+                    "absolute_metrology"
+                ),
+                "exact roi_screening allowlist",
+            ),
+            (
+                "reasons",
+                lambda values: values.__setitem__(
+                    "reason_codes", ["ROI_GATES_PASS", "METROLOGY_GATES_PASS"]
+                ),
+                "exact roi_screening result",
+            ),
+        ):
+            with self.subTest(case=name):
+                manifest = self._promote_analysis_ready(
+                    json.loads(source.read_text(encoding="utf-8"))
+                )
+                mutate(manifest["derived"]["registration_result"]["values"])
+                temporary = self._write_temporary(manifest)
+                self.addCleanup(lambda path=temporary: path.unlink(missing_ok=True))
+                with self.assertRaisesRegex(ManifestValidationError, pattern):
+                    validate_manifest(temporary)
+
+    def test_intake_voxel_spacing_provenance_is_closed(self) -> None:
+        source = manifest_paths()[0]
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest["inputs"]["ct_metadata"]["voxel_spacing"] = {
+            axis: {
+                "value": "unknown",
+                "unit": "unknown",
+                "provenance": {
+                    "source": "unknown",
+                    "field": "unknown",
+                    "raw_value": "unknown",
+                    "unexpected": True,
+                },
+            }
+            for axis in ("z", "y", "x")
+        }
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        with self.assertRaisesRegex(ManifestValidationError, "unexpected"):
+            validate_manifest(temporary)
+
+    def test_manifest_rejects_conflicting_frozen_stage_2_policy(self) -> None:
+        source = manifest_paths()[0]
+        for name, mutate, pattern in (
+            (
+                "search-budget",
+                lambda value: value["analysis_parameters"]["localization_policy"].__setitem__(
+                    "search_radius_voxels", 7.5
+                ),
+                "search_radius_voxels differs",
+            ),
+            (
+                "padding-budget",
+                lambda value: value["analysis_parameters"]["qa_policy"].__setitem__(
+                    "roi_padding_fraction", 0.1
+                ),
+                "roi_padding_fraction differs",
+            ),
+            (
+                "support-weights",
+                lambda value: value["analysis_parameters"]["localization_policy"].__setitem__(
+                    "incident_support_weight", 0.4
+                ),
+                "support weights must sum to 1",
+            ),
+        ):
+            with self.subTest(case=name):
+                manifest = json.loads(source.read_text(encoding="utf-8"))
+                mutate(manifest)
+                new_hash = canonical_json_sha256(manifest["analysis_parameters"])
+                manifest["analysis_parameters_sha256"] = new_hash
+                for record in manifest["derived"].values():
+                    record["provenance"]["config_sha256"] = new_hash
+                temporary = self._write_temporary(manifest)
+                self.addCleanup(lambda path=temporary: path.unlink(missing_ok=True))
+                with self.assertRaisesRegex(ManifestValidationError, pattern):
+                    validate_manifest(temporary)
 
     def test_nominal_and_registered_9x9_topologies_match(self) -> None:
         nominal = topology_summary(
@@ -134,16 +362,46 @@ class SpecimenManifestTests(unittest.TestCase):
         ):
             require_analysis_ready(temporary, consumer="roi_metrics")
 
-    def test_analysis_ready_rejects_failed_registration_gate(self) -> None:
+    def test_roi_analysis_ready_rejects_failed_roi_gate(self) -> None:
         source = manifest_paths()[0]
-        manifest = json.loads(source.read_text(encoding="utf-8"))
+        manifest = self._promote_analysis_ready(
+            json.loads(source.read_text(encoding="utf-8"))
+        )
         manifest["derived"]["registration_result"]["values"][
-            "metrology_gate_pass"
-        ] = False
+            "roi_gate_results"
+        ]["padded_roi_in_bounds"] = False
         temporary = self._write_temporary(manifest)
         self.addCleanup(temporary.unlink)
 
-        with self.assertRaisesRegex(ManifestValidationError, "metrology_gate_pass"):
+        with self.assertRaisesRegex(ManifestValidationError, "failed ROI gate"):
+            validate_manifest(temporary)
+
+    def test_direct_metrology_analysis_ready_requires_passing_uncertainty(self) -> None:
+        source = next(
+            path for path in manifest_paths() if "pacificvis" in path.as_posix()
+        )
+        manifest = self._promote_analysis_ready(
+            json.loads(source.read_text(encoding="utf-8"))
+        )
+        manifest["derived"]["registration_result"]["values"][
+            "metrology_gate_status"
+        ] = "insufficient_evidence"
+        manifest["derived"]["registration_result"]["values"][
+            "unauthorized_outputs"
+        ] = ["absolute_metrology", "direct_dimensional_measurement"]
+        manifest["derived"]["registration_result"]["values"][
+            "authorized_outputs"
+        ] = [
+            value
+            for value in manifest["derived"]["registration_result"]["values"][
+                "authorized_outputs"
+            ]
+            if value not in {"absolute_metrology", "direct_dimensional_measurement"}
+        ]
+        temporary = self._write_temporary(manifest)
+        self.addCleanup(temporary.unlink)
+
+        with self.assertRaisesRegex(ManifestValidationError, "metrology_gate_status"):
             validate_manifest(temporary)
 
     def _write_temporary(self, manifest: dict[str, object]) -> Path:

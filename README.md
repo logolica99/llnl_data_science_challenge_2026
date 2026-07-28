@@ -16,6 +16,23 @@ The goal of this challenge is to build an AI-assisted workflow for analyzing X-r
 
 By the end of the challenge, participants should understand how to move from standalone scientific scripts toward reusable, agent-driven workflows that can reason over data, call tools, and produce traceable analysis outputs.
 
+## Part 2 Orchestration Demo
+
+An interactive local demonstrator under
+[`demo/part2-orchestrator`](demo/part2-orchestrator) shows the production Part 2
+control plane advancing through its immutable Stage 0–6 handoffs. It includes
+verified walkthrough, manual-review, tampered-receipt, and missing-dependency
+scenarios. The orchestration and integrity checks are real; specialist outputs
+are clearly labeled deterministic fixtures, and no scientific algorithm runs.
+
+```bash
+cd demo/part2-orchestrator
+npm install
+npm run demo
+```
+
+Then open <http://localhost:3000>.
+
 ## Repository Contents
 
 - `DATA_SCIENCE_CHALLENGE_2026.md/pdf` - main challenge instructions
@@ -25,6 +42,7 @@ By the end of the challenge, participants should understand how to move from sta
 - `presentation/` - introductory challenge slides
 - `.agents/skills/` - project-specific Codex skills
 - `.codex/agents/` - project-specific Codex subagent definitions
+- `demo/part2-orchestrator/` - live visual demonstrator for the Part 2 control plane
 
 ## Contact
 
@@ -125,8 +143,25 @@ The server script in this repository, `src/mcp_server.py`, should follow this pa
 The server also exposes `inspect_volume_metadata`, a structured Part 2 tool
 used by the `volume-metadata` skill. It constrains NPY/TIFF inputs to the
 repository, performs header-only inspection plus streaming SHA-256 by default,
-and returns compact manifest-ready JSON. The skill owns the scientific policy
-and call sequence; the MCP tool owns deterministic file inspection.
+and atomically persists a closed response plus a separate closed call receipt.
+For Stage 0 those paths are
+`analysis/<specimen_id>/config/ct_metadata_response.json` and
+`analysis/<specimen_id>/config/ct_metadata_mcp_call_receipt.json`. The ingest
+command requires both paths and both exact SHA-256 values through
+`--ct-metadata-response`, `--ct-metadata-response-sha256`,
+`--ct-metadata-call-receipt`, and `--ct-metadata-call-receipt-sha256`. It
+rejects non-pass, preview, open, stale, cross-path, non-3-D, CT-hash-mismatched,
+or response/receipt-disagreeing evidence. The receipt binds the normalized
+request, header facts, CT hash, response path, and response hash. This is an
+integrity and lineage chain, not a cryptographic signature or authenticated
+proof of process identity; a writer with the same filesystem authority remains
+inside the trust boundary. The intake core does not import or call the volume
+inspector. Before Stage 0 can complete, the orchestrator semantically
+revalidates all six output documents against the closed, self-hashed scientist
+intake request and the current CAD, graph, CT, and optional aligned-graph bytes.
+The metadata files are Stage 0 outputs, not pre-start inputs. The skill owns the
+scientific policy and call sequence; the MCP tool owns deterministic file
+inspection.
 
 The server also owns threshold-mask comparison, report metric extraction, and
 3D artifact rendering through `compare_segmentation_masks`,
@@ -141,6 +176,12 @@ Deterministic volume, mask, skeleton, comparison, and rendering operations live
 behind MCP tools rather than executable scripts bundled inside project skills.
 See `AGENTS.md` for the repository-wide rule.
 
+> [!NOTE]
+> The Part 1 tutorial below is retained for challenge history. Its data,
+> illustrations, evaluation records, and retired segmentation agent now live
+> under [`DEPRECATED/`](DEPRECATED/README.md) and are not part of the production
+> Part 2 pipeline.
+
 #### Basic Image Processing Terms
 Before starting Tasks 1-3, here are a few image-processing terms you will use with respect to a volume/image:
 
@@ -152,7 +193,7 @@ The images below show the same 2D slice from the `9x9x9_octet_lattice` dataset a
 
 | Raw CT slice | Segmentation mask | Extracted skeleton |
 | --- | --- | --- |
-| <img src="images/slice.png" alt="Raw CT slice from the 9x9x9 octet lattice dataset" width="260"> | <img src="images/segmentation.png" alt="Binary segmentation mask for the same CT slice" width="260"> | <img src="images/skeleton.png" alt="Extracted skeleton for the same segmented slice" width="260"> |
+| <img src="DEPRECATED/part1/images/slice.png" alt="Raw CT slice from the 9x9x9 octet lattice dataset" width="260"> | <img src="DEPRECATED/part1/images/segmentation.png" alt="Binary segmentation mask for the same CT slice" width="260"> | <img src="DEPRECATED/part1/images/skeleton.png" alt="Extracted skeleton for the same segmented slice" width="260"> |
 
 ### Task 1: Tool Calling with MCP
 
@@ -179,7 +220,7 @@ You can test if the MCP tool is available in Codex by starting the Codex CLI fro
 Refer to the Codex configuration reference for more details: [Codex configuration](https://developers.openai.com/codex/config-reference)
 
 To test your tool, ask Codex CLI to segment the dataset, for example: 
-> "Please segment the dataset in `data/unitcell/unitcell.npy` with a threshold of ..."
+> "Please segment the archived dataset in `DEPRECATED/part1/data/unitcell/unitcell.npy` with a threshold of ..."
 
 ### Task 2: Multiple MCP tools
 
@@ -280,7 +321,9 @@ LLM evaluations are essential to ensure that the agent produces correct results 
 
 In this task, we will evaluate the results generated by your Segmentation Subagent using an LLM. You will create an evaluation rubric to compare the **Result Image**, which comes from the previous task where your agent generated it, against the **Ground Truth Image** (located at `data/9x9x9_octet_lattice/ground_truth_segmentation_slice_380.png`).
 
-Create a new file named `rubric_segmentation_1.md` in the `evals` folder. In this file, you should define your rubric based on these guidelines to instruct the LLM:
+The historical rubric is archived at
+`DEPRECATED/part1/evals/rubric_segmentation_1.md`. In the original task, this
+file was created in `evals/` using the following guidelines:
 
 #### Criteria:
 1. **Structural Integrity**: Does the result capture the connectivity of the lattice struts compared to the ground truth?
@@ -304,8 +347,8 @@ Once your rubric is created in the `evals` folder, you can run the evaluation us
 ```bash
 codex \
   -i data/9x9x9_octet_lattice/ground_truth_segmentation_slice_380.png \
-  -i data/9x9x9_octet_lattice/segmentation/slice_380.png \
-  "Use evals/rubric_segmentation_1.md as the rubric. The first attached image is the ground truth. The second attached image is the result. Return only JSON with reasoning and score."
+  -i DEPRECATED/historical/9x9x9_octet_lattice/segmentation/slice_380.png \
+  "Use DEPRECATED/part1/evals/rubric_segmentation_1.md as the rubric. The first attached image is the ground truth. The second attached image is the result. Return only JSON with reasoning and score."
 ```
 
 ## Part 2: Open-Ended Agentic AI for Materials Science Project
@@ -335,11 +378,14 @@ Tran, B. et al., [“Resonant ultrasound spectroscopy measurement and modeling o
 
 > **Note:** The STL file is not aligned/registered with the TIF or JSON file. Registration is a problem by itself. If you do not want to work on registration, `210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json` is already aligned with the respective TIF file of the same name.
 
-The registered JSON aligns the complete lattice geometry, but the lattice's
-cube symmetry leaves the STL missing-strut pattern's signed axis permutation
-ambiguous. Do not transfer STL-derived strut IDs directly into the registered
-JSON. The corrected Napari overlay remaps each deleted edge through the
-CT-validated cube orientation first. See
+The lattice's cube symmetry leaves three graph-to-STL orientations
+geometrically equivalent. Production Stage 1 therefore passes only with either
+one unambiguous geometry hypothesis or an immutable, intake-hashed transform
+declaration that the tool independently verifies; otherwise it returns
+`manual_review` and never guesses from deletion labels. The authoritative
+centerline scale is 2.28 mm per graph unit (4.56 mm per unit cell, two graph
+units per cell); the larger STL material envelope must not be divided by the
+graph centerline span. See
 [`data/missing_struts/analysis/0_5_stl_heatmap/README.md`](data/missing_struts/analysis/0_5_stl_heatmap/README.md)
 for the detection method, coordinate transform, validation, and usage.
 

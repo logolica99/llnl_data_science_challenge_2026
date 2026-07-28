@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "available_case_count": 1,
+  "independent_scan_count": 1,
+  "distinct_geometry_count": 1,
+  "case_pass_fraction": 0.0,
+  "requirements": {
+    "minimum_independent_scans": 3,
+    "minimum_distinct_geometries": 2,
+    "minimum_case_pass_fraction": 0.9
+  },
+  "gates": {
+    "enough_independent_scans": false,
+    "enough_distinct_geometries": false,
+    "case_pass_fraction": false
+  },
+  "overall_pass": false,
+  "status": "insufficient_external_evidence",
+  "cases": [
+    {
+      "name": "missing_struts_0p5_scan",
+      "geometry_id": "octet_truss_9x9x9",
+      "fit_manifest": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/fit_manifest.json",
+      "validation_result": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/held_out_validation.json",
+      "available": true,
+      "pass": false,
+      "ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+      "validation_overall_pass": false
+    }
+  ]
+}

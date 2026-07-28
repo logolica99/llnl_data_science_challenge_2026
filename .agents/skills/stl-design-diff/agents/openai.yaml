@@ -1,0 +1,11 @@
+interface:
+  display_name: "STL Design Diff"
+  short_description: "Resolve and label design-only STL strut deletions"
+  default_prompt: "Use $stl-design-diff to resolve CAD orientation and create sealed design-only deletion labels through segmentation-tools MCP."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools"
+      description: "Deterministic graph, CAD orientation, and STL tube-emptiness tools"
+      transport: "stdio"
