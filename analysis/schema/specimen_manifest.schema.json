@@ -48,14 +48,16 @@
       "required": [
         "ct",
         "ct_metadata",
-        "design_graph",
-        "cad"
+        "design_graph"
       ],
       "properties": {
         "ct": {
           "$ref": "#/$defs/artifact"
         },
         "design_graph": {
+          "$ref": "#/$defs/artifact"
+        },
+        "normalized_nominal_graph": {
           "$ref": "#/$defs/artifact"
         },
         "design_transform_declaration": {
@@ -1026,7 +1028,6 @@
       "required": [
         "association",
         "registration_mode_selection",
-        "cad_inspection",
         "graph_inspection",
         "volume_metadata"
       ],
@@ -1037,7 +1038,6 @@
           "required": [
             "source",
             "confirmed",
-            "design_graph_to_cad",
             "ct_to_specimen"
           ],
           "properties": {
@@ -1262,6 +1262,7 @@
           "enum": [
             "ct_volume",
             "design_graph",
+            "normalized_nominal_graph",
             "aligned_graph",
             "derived_aligned_graph",
             "design_transform_declaration",

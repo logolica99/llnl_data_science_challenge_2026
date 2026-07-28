@@ -20,7 +20,9 @@ By the end of the challenge, participants should understand how to move from sta
 
 An interactive local demonstrator under
 [`demo/part2-orchestrator`](demo/part2-orchestrator) shows the production Part 2
-control plane advancing through its immutable Stage 0–6 handoffs. It includes
+control plane advancing through its immutable Stage 0–4 handoffs. Production
+accepts a nominal lattice graph JSON and its specimen CT volume; graph
+normalization now occurs during intake. It includes
 verified walkthrough, manual-review, tampered-receipt, and missing-dependency
 scenarios. The orchestration and integrity checks are real; specialist outputs
 are clearly labeled deterministic fixtures, and no scientific algorithm runs.
@@ -157,16 +159,22 @@ integrity and lineage chain, not a cryptographic signature or authenticated
 proof of process identity; a writer with the same filesystem authority remains
 inside the trust boundary. The intake core does not import or call the volume
 inspector. Before Stage 0 can complete, the orchestrator semantically
-revalidates all six output documents against the closed, self-hashed scientist
-intake request and the current CAD, graph, CT, and optional aligned-graph bytes.
+revalidates the output bundle against the closed, self-hashed scientist intake
+request and the current nominal graph and CT bytes.
 The metadata files are Stage 0 outputs, not pre-start inputs. The skill owns the
 scientific policy and call sequence; the MCP tool owns deterministic file
 inspection.
 
-The server also owns threshold-mask comparison, report metric extraction, and
-3D artifact rendering through `compare_segmentation_masks`,
-`summarize_nde_artifacts`, and `render_volume_3d`. These tools keep voxel arrays
-out of agent context and return compact statistics or written artifact paths.
+The production server owns threshold-mask comparison and graph-aware Stage 4
+reporting through `compare_segmentation_masks`, `get_strut_report`,
+`compute_spatial_stats`, and `render_lattice_3d`. These tools keep voxel and
+graph arrays out of agent context and return compact, hash-bound artifact
+metadata.
+
+Labeled evaluation, bounded threshold exploration, and the historical
+voxel/skeleton report tools live on the disabled-by-default
+`segmentation-tools-research` server in `research/mcp_server.py`. Research
+outputs are restricted to `research/runs/` and cannot mutate production runs.
 
 Repository skills require their declared MCP dependencies. If a required
 server or tool is unavailable, the skill must stop and ask the user to
@@ -237,7 +245,9 @@ After implementing and adding the tool, test it again in the Codex CLI. You shou
 
 In the previous tasks, you created custom functions specifically for the LLM to invoke. However, MCP tools were often utilized as wrappers to expose existing functions from a software's API. This enables the LLM to effectively "control" the software without needing to rewrite its core logic. 
 
-To demonstrate this, create a third MCP tool that exposes the `skeletonize_mask` function from the provided `skeletonization.py` script to simulate an API wrapper:
+Historically, this task exposed `skeletonize_mask` as a third MCP tool. That
+exercise is now isolated on the disabled research server in
+`research/mcp_server.py`; it is not a production tool:
 
 ```python
 def skeletonize(input_filepath: str, output_filepath: str) -> str:
@@ -252,28 +262,33 @@ While MCP provides a powerful way to equip LLMs with tools, it does have limitat
 
 Skills can help mitigate these issues by providing focused, domain-specific instruction sets and tools designed for particular workflows. In this task, we will provide the LLM with a specific skill that allows it to write a detailed Non-Destructive Evaluation (NDE) report based on the analysis. 
 
-This project-specific skill is already located in the `.agents/skills/nde_report_expert` directory. To utilize this skill, you must run the Codex CLI from the root directory of this project so it can detect the local `.agents/skills` folder.
+The production reporting skill is located in
+`.agents/skills/nde-report-generator`. It is invoked by `report_agent` during
+Stage 4 and uses only frozen graph, metric, classification, evidence, and QA
+artifacts.
 
 > [!IMPORTANT]
 > After adding or editing project skills, close and restart the Codex CLI from the root of this repository. Codex CLI does not currently reload skills inside an existing session.
 
-This skill is designed to demonstrate three core capabilities:
-1. It runs a local Python script (`3d_visualize`).
-2. It can autonomously invoke your custom MCP functions (`segment_ct_dataset()` and `skeletonize()`).
-3. It contains specific system instructions on how to structure and generate the final report.
+This skill demonstrates three production capabilities:
+1. It invokes `compute_spatial_stats` and `render_lattice_3d` through MCP.
+2. It retrieves cited findings through `get_strut_report` without recomputation.
+3. It creates a hash-bound number crosscheck, presentation checklist, and final report.
 
 To trigger this skill, tell Codex: 
-> "Please create an NDE report from the files in ./data"
+> "Use $nde-report-generator for the current Stage 4 handoff."
 
 ### Task 5: Custom Skills
 
-Now that you've seen how to trigger a project-specific skill, it's time to build your own! Create a new subdirectory under `.agents/skills/` (e.g., `.agents/skills/my_custom_skill`) and add a `SKILL.md` file to define its behavior. Check the `nde_report_expert` skill to see how deterministic work is delegated to required MCP tools.
+Now that you've seen how to trigger a project-specific skill, it's time to build your own! Create a new subdirectory under `.agents/skills/` (e.g., `.agents/skills/my-custom-skill`) and add a `SKILL.md` file to define its behavior. Check `nde-report-generator` to see how deterministic work is delegated to required MCP tools.
 
 After creating or changing a skill, close and restart Codex CLI before trying to use it.
 
 Here are a few ideas for skills you could build for this dataset:
 *   **Metadata Extractor:** A skill that loads a generated `.npy` file and simply prints out basic metadata like its shape, data type, and the maximum and minimum values to the terminal.
-*   **Threshold Optimizer:** A skill that calls the `segment_ct_dataset()` MCP tool multiple times with different threshold values (e.g., 0.3, 0.5, 0.7) and saves the results in separate files for comparison.
+*   **Threshold Explorer:** Keep threshold experiments outside production. The
+    explicit research-only example is in
+    `research/skills/ct-threshold-explorer/` and calls the disabled research MCP.
 
 ### Task 6: Subagents
 
@@ -378,16 +393,13 @@ Tran, B. et al., [“Resonant ultrasound spectroscopy measurement and modeling o
 
 > **Note:** The STL file is not aligned/registered with the TIF or JSON file. Registration is a problem by itself. If you do not want to work on registration, `210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json` is already aligned with the respective TIF file of the same name.
 
-The lattice's cube symmetry leaves three graph-to-STL orientations
-geometrically equivalent. Production Stage 1 therefore passes only with either
-one unambiguous geometry hypothesis or an immutable, intake-hashed transform
-declaration that the tool independently verifies; otherwise it returns
-`manual_review` and never guesses from deletion labels. The authoritative
-centerline scale is 2.28 mm per graph unit (4.56 mm per unit cell, two graph
-units per cell); the larger STL material envelope must not be divided by the
-graph centerline span. See
+The four STL designs and their known missing-strut percentages are useful for
+research and retrospective benchmarking, but they are outside the production
+analysis boundary. Production accepts one nominal graph JSON and one specimen
+CT volume, then registers the nominal graph to CT autonomously without known
+defect labels or pre-aligned coordinates. See
 [`data/missing_struts/analysis/0_5_stl_heatmap/README.md`](data/missing_struts/analysis/0_5_stl_heatmap/README.md)
-for the detection method, coordinate transform, validation, and usage.
+for the historical research method and its coordinate-transform details.
 
 ### Project Goals
 
@@ -473,7 +485,7 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
-### `src/skeletonization.py`
+### Historical `research/skeletonization.py`
 
 ```python
 import numpy as np

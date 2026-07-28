@@ -1,4 +1,4 @@
-# Stage 2 MCP contract
+# Stage 1 MCP contract
 
 Required `segmentation-tools` interfaces:
 

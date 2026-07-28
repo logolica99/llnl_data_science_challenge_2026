@@ -16,7 +16,6 @@ from scipy.spatial.transform import Rotation
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from part2_core.evaluation import compute_detection_metrics  # noqa: E402
 from part2_core.artifacts import sha256_file, sha256_json  # noqa: E402
 from part2_core.evidence import render_strut_evidence  # noqa: E402
 from part2_core.lattice import load_lattice_json  # noqa: E402
@@ -658,17 +657,6 @@ class ProductionPipelineTests(SyntheticFixture):
         self.assertFalse(report["provenance"]["metrics_recomputed"])
         self.assertIn("axial", report["evidence"])
 
-        sealed = self.root / "sealed.json"
-        sealed.write_text(json.dumps({"strut_ids": [303]}), encoding="utf-8")
-        detection = compute_detection_metrics(
-            classifications_path,
-            sealed,
-            self.root / "detection.json",
-        )
-        self.assertEqual(1.0, detection["strict_recall"]["value"])
-        self.assertNotIn("precision", detection)
-        self.assertTrue(detection["provenance"]["sealed_labels_read"])
-
     def test_registration_qa_is_scope_aware_and_rejects_scope_tampering(self) -> None:
         localized, localization_report = self._register_and_localize()
         localization_document = json.loads(
@@ -1281,8 +1269,9 @@ class GraphSizeAndWrapperBoundaryTests(unittest.TestCase):
             "compute_strut_metrics",
             "classify_struts",
             "render_strut_evidence",
-            "compute_detection_metrics",
             "get_strut_report",
+            "compute_spatial_stats",
+            "render_lattice_3d",
         }
         wrappers = [
             node

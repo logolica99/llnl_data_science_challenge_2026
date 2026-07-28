@@ -1,76 +1,32 @@
 # Control, retry, and access policy
 
-## Hash and handoff invariants
+## Integrity invariants
 
-- Freeze the pipeline config hash and all seven contract hashes at manifest
-  creation. A changed config starts a distinct run; never edit/reset this run.
-- Bind each attempt to a unique token derived from specimen, stage, attempt,
-  timestamp, config, contract, predecessor receipt, and exact input artifacts.
-- Give agents only the attempt-scoped handoff. Keep predecessor receipts and
-  sensitive-path registries in orchestrator scope.
-- Re-hash handoff inputs, outputs, completion receipt, active prior artifacts,
-  and verifier/freeze checkpoints before transition.
-- Bind specimen ID, design ID, run ID, requested scope, config hash, and exact
-  artifact paths/roles/hashes. Reject standalone or cross-run artifacts even if
-  their internal schema is valid.
-- Treat exact receipt replay as a byte-identical no-op, but still re-hash live
-  artifacts. Reject a replay whose artifact was deleted or changed.
-- Reject absolute, escaping, symlink-aliased, duplicate, stale, or colliding
-  artifact records.
+- Freeze the configuration and five contract hashes when the run is created.
+- Bind every attempt to the specimen, stage, timestamp, config, contract,
+  predecessor receipt, and exact input artifacts.
+- Rehash live inputs, outputs, handoffs, and receipts before every transition.
+- Reject absolute, escaping, stale, duplicate, or path-colliding artifacts.
+- Exact receipt replay is byte-identical and must not alter state.
 
-`specimen_manifest.json` has one declared lineage exception: Stage 2 may replace
-the Stage 0 version only when its output record binds the exact prior hash and
-the data-prep completion receipt binds prior and final hashes. No other
-same-path replacement is legal.
+Stage 1 may replace the Stage 0 specimen manifest only through the declared
+replacement binding and data-prep completion receipt.
 
-## Transitions and attempts
+## Transitions and retries
 
-- Legal: `locked → ready → running → pass|manual_review|halt`.
-- Only verified predecessor `pass` performs `locked → ready`.
-- `pass` and `halt` are immutable.
-- Resume `manual_review → ready` only with a hashed resolution under
-  `analysis/<specimen_id>/reviews/`, a reason, an audit timestamp, and remaining
-  judgment attempts. Preserve all prior evidence.
-- Put review outputs under the attempt-scoped
-  `reviews/stage_<n>_attempt_<attempt>/` path; never overwrite canonical pass
-  artifacts during a correction attempt.
-- A second `manual_review` at the two-attempt limit becomes `halt`.
-- A deterministic gate failure always returns `halt`; transport or judgment
-  correction is the only retryable class.
-- Stage 5 is reserved atomically at start. It cannot be re-opened after
-  success, crash, review, or halt.
+Legal transitions are `locked → ready → running → pass|manual_review|halt`.
+Only predecessor `pass` unlocks the next stage. Agent/judgment stages allow two
+attempts; deterministic Stage 2 allows one. Deterministic gate failure is a
+non-retryable `halt`.
 
-## Access checks
+## Access policy
 
-Authorize using the combination of canonical path, role, SHA-256, stage,
-consumer, and phase. Compare hashes against the sensitive registry so renaming
-a label file does not declassify it.
+- Stage 0: nominal graph + CT only; graph normalization is an MCP output.
+- Stage 1: Stage 0 graph/CT artifacts only; no CAD/STL, aligned graph, or labels.
+- Stage 2: measurements only; no classification or labels.
+- Stage 3: metrics/evidence only; no training, development, sealed, or ground-
+  truth labels.
+- Stage 4: committed production artifacts only; no research-label artifacts.
 
-- Stage 2/3: no defect-label hash, role, or path.
-- Stage 4: dev split only for `missing_strut_agent`; full intentional labels and
-  sealed split forbidden; the shared handoff is dev-blind and only the separate
-  consumer-scoped handoff may name or hash the development split.
-- Stage 5: sealed split only for `eval_agent` during sealed evaluation.
-- Stage 6: no raw dev/sealed split; use evaluation/attribution artifacts.
-- Autonomous Stage 2: aligned JSON only in a supplemental post-freeze validator
-  handoff tied to the CT-only freeze receipt.
-- Stage 2→3: bind the canonical mask's exact path, role, dtype, ZYX shape,
-  retention, and SHA-256 in both handoffs, and require the closed persisted MCP
-  verifier artifact bound to the pre-finalization manifest, exact-Otsu report,
-  comparison report, CT, and mask hashes; neither handoff may contain any label
-  path, role, hash, count, or content.
-- Stage 1: only an intake-hashed declaration may resolve symmetric geometry;
-  its identity, source/provenance, graph/STL hashes, and verification report are
-  receipt-bound.
-- Stage 2: `roi_screening` unlocks only ROI/screening outputs and requires
-  metrology `not_authorized`; `direct_metrology` unlocks dimensional outputs
-  only when absolute-uncertainty gates pass. The analysis-ready manifest and
-  data-prep completion receipt are required Stage 2 outputs.
-
-## Fail-closed dependency behavior
-
-Preflight every declared agent and MCP tool against its exact contract/response
-schema. On missing, unhealthy, disabled, or incompatible capability, record a
-structured `halt` with zero fabricated outputs and `fallback_used: false`.
-Current unimplemented downstream capabilities are expected to halt rather than
-being approximated locally.
+Research evaluation operates on exported copies and cannot unlock stages,
+change thresholds, revise classifications, or write a production receipt.

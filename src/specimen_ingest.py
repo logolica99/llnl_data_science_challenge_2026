@@ -20,12 +20,6 @@ from typing import Any, Iterable
 import numpy as np
 import trimesh
 
-from part2_core.design_diff import (
-    DeclaredTransformValidationError,
-    Stage1PolicyValidationError,
-    load_production_stage1_policy,
-    validate_declared_transform_artifact,
-)
 from specimen_manifest import (
     DEFAULT_SCHEMA,
     ManifestValidationError,
@@ -46,7 +40,7 @@ VOLUME_METADATA_CALL_RECEIPT_SCHEMA_VERSION = (
 MCP_RESPONSE_SCHEMA_VERSION = "part2-mcp-response/1.0.0"
 UNKNOWN = "unknown"
 SPECIMEN_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
-REGISTRATION_MODES = {"challenge_aligned_json", "autonomous_v2"}
+REGISTRATION_MODES = {"autonomous_v2"}
 ANALYSIS_SCOPES = {"roi_screening", "direct_metrology"}
 
 
@@ -936,7 +930,7 @@ def ingest_specimen(
     specimen_id: str,
     design_id: str,
     requested_analysis_scope: str,
-    cad_path: Path,
+    cad_path: Path | None = None,
     design_graph_path: Path,
     ct_path: Path,
     ct_metadata_response_path: Path,
@@ -955,6 +949,8 @@ def ingest_specimen(
     aligned_graph_units: str = UNKNOWN,
     retention: str = "committed",
     schema_path: Path = DEFAULT_SCHEMA,
+    normalized_graph_path: Path | None = None,
+    normalized_graph_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Inspect explicit inputs and write idempotent intake artifacts."""
     root = repository_root.expanduser().resolve()
@@ -972,7 +968,7 @@ def ingest_specimen(
         )
     if not association_confirmed:
         raise SpecimenIngestError(
-            "Scientist must explicitly confirm the CAD/graph/CT association"
+            "Scientist must explicitly confirm the nominal-graph/CT association"
         )
     if retention not in {"committed", "external", "regenerable"}:
         raise SpecimenIngestError(f"Unsupported retention policy: {retention!r}")
@@ -981,13 +977,39 @@ def ingest_specimen(
     design = inspect_lattice_graph(
         design_graph_path, repository_root=root, allowed_roots=data_roots
     )
-    cad = inspect_cad_stl(
-        cad_path,
-        repository_root=root,
-        allowed_roots=data_roots,
-        units=cad_units,
-        units_provenance=cad_units_provenance,
+    cad = (
+        inspect_cad_stl(
+            cad_path,
+            repository_root=root,
+            allowed_roots=data_roots,
+            units=cad_units,
+            units_provenance=cad_units_provenance,
+        )
+        if cad_path is not None
+        else None
     )
+    normalized_graph: dict[str, Any] | None = None
+    if normalized_graph_path is not None:
+        resolved_normalized, normalized_relative = _resolve_input(
+            normalized_graph_path,
+            repository_root=root,
+            allowed_roots=[root / "analysis"],
+        )
+        if resolved_normalized.suffix.lower() != ".npz":
+            raise SpecimenIngestError("Normalized nominal graph must be an .npz artifact")
+        actual_normalized_sha256 = sha256_file(resolved_normalized)
+        if normalized_graph_sha256 != actual_normalized_sha256:
+            raise SpecimenIngestError("Normalized nominal graph SHA-256 mismatch")
+        normalized_graph = _artifact(
+            normalized_relative,
+            actual_normalized_sha256,
+            "normalized_nominal_graph",
+            retention,
+        )
+    elif normalized_graph_sha256 is not None:
+        raise SpecimenIngestError(
+            "normalized_graph_sha256 requires normalized_graph_path"
+        )
     resolved_ct, ct_relative = _resolve_input(
         ct_path, repository_root=root, allowed_roots=data_roots
     )
@@ -1026,47 +1048,10 @@ def ingest_specimen(
     transform_declaration: dict[str, Any] | None = None
     transform_declaration_verification: dict[str, Any] | None = None
     if design_transform_declaration_path is not None:
-        resolved_declaration, declaration_relative = _resolve_input(
-            design_transform_declaration_path,
-            repository_root=root,
-            allowed_roots=data_roots,
+        raise SpecimenIngestError(
+            "Production intake accepts only a nominal graph JSON and specimen CT; "
+            "graph-to-CAD transform declarations are not supported"
         )
-        if resolved_declaration.suffix.lower() != ".json":
-            raise SpecimenIngestError(
-                "Design transform declaration must be a JSON artifact"
-            )
-        declaration_sha256 = sha256_file(resolved_declaration)
-        try:
-            stage1_policy = load_production_stage1_policy()
-            transform_declaration_verification = (
-                validate_declared_transform_artifact(
-                    resolved_declaration,
-                    expected_artifact_sha256=declaration_sha256,
-                    specimen_id=specimen_id,
-                    design_id=design_id,
-                    nominal_graph_path=Path(root / design["path"]),
-                    full_design_stl_path=Path(root / cad["path"]),
-                    stage1_policy_path=stage1_policy["artifact_path"],
-                    stage1_policy_sha256=stage1_policy["artifact_sha256"],
-                )
-            )
-        except (
-            DeclaredTransformValidationError,
-            Stage1PolicyValidationError,
-            OSError,
-            ValueError,
-        ) as exc:
-            reason_code = getattr(exc, "code", type(exc).__name__)
-            raise SpecimenIngestError(
-                "Design transform declaration failed closed schema, hash, "
-                f"identity, or transform validation [{reason_code}]: {exc}"
-            ) from exc
-        transform_declaration = {
-            "path": declaration_relative,
-            "sha256": declaration_sha256,
-            "role": "design_transform_declaration",
-            "retention": retention,
-        }
 
     declared_graph_axes = _axes(graph_axes, "xyz")
     declared_array_axes = _axes(array_axes, "zyx")
@@ -1084,15 +1069,15 @@ def ingest_specimen(
             f"Unsupported aligned graph units: {aligned_graph_units!r}"
         )
     unresolved_fields: list[str] = []
-    for field, value in (
-        ("intake.cad_inspection.units", cad_units),
+    declared_fields = [
         ("analysis_parameters.coordinates.graph_axes", declared_graph_axes),
         ("analysis_parameters.coordinates.array_axes", declared_array_axes),
-        (
-            "analysis_parameters.coordinates.aligned_graph_units",
-            aligned_graph_units,
-        ),
-    ):
+    ]
+    if aligned is not None:
+        declared_fields.append(
+            ("analysis_parameters.coordinates.aligned_graph_units", aligned_graph_units)
+        )
+    for field, value in declared_fields:
         if value == UNKNOWN:
             unresolved_fields.append(field)
 
@@ -1122,8 +1107,11 @@ def ingest_specimen(
         "design_graph": _artifact(
             design["path"], design["sha256"], "design_graph", retention
         ),
-        "cad": _artifact(cad["path"], cad["sha256"], "cad", retention),
     }
+    if cad is not None:
+        inputs["cad"] = _artifact(cad["path"], cad["sha256"], "cad", retention)
+    if normalized_graph is not None:
+        inputs["normalized_nominal_graph"] = normalized_graph
     graph_input_hashes = [design["sha256"]]
     if aligned is not None:
         inputs["aligned_graph"] = _artifact(
@@ -1176,14 +1164,12 @@ def ingest_specimen(
             "association": {
                 "source": "scientist_explicit",
                 "confirmed": True,
-                "design_graph_to_cad": True,
                 "ct_to_specimen": True,
             },
             "registration_mode_selection": {
                 "mode": registration_mode,
                 "source": "scientist_explicit",
             },
-            "cad_inspection": cad,
             "graph_inspection": design,
             "volume_metadata": {
                 "method": ct["method"],
@@ -1195,6 +1181,9 @@ def ingest_specimen(
         "analysis_parameters_sha256": config_hash,
         "derived": {"graph_summary": graph_summary},
     }
+    if cad is not None:
+        manifest["intake"]["cad_inspection"] = cad
+        manifest["intake"]["association"]["design_graph_to_cad"] = True
 
     request = {
         "schema_version": REQUEST_SCHEMA_VERSION,
@@ -1204,7 +1193,7 @@ def ingest_specimen(
         "design_id": design_id,
         "requested_analysis_scope": requested_analysis_scope,
         "paths": {
-            "cad": cad["path"],
+            "cad": cad["path"] if cad else None,
             "design_graph": design["path"],
             "ct": ct["path"],
             "ct_metadata_response": ct_metadata_response["path"],
@@ -1285,12 +1274,17 @@ def ingest_specimen(
         "requested_analysis_scope": requested_analysis_scope,
         "lifecycle_state": lifecycle_state,
         "input_sha256": {
-            "cad": cad["sha256"],
             "design_graph": design["sha256"],
             "ct": ct["sha256"],
             "ct_metadata_response": ct_metadata_response["sha256"],
             "ct_metadata_mcp_call_receipt": ct_metadata_call_receipt["sha256"],
             **({"aligned_graph": aligned["sha256"]} if aligned else {}),
+            **({"cad": cad["sha256"]} if cad else {}),
+            **(
+                {"normalized_nominal_graph": normalized_graph["sha256"]}
+                if normalized_graph
+                else {}
+            ),
             **(
                 {"design_transform_declaration": transform_declaration["sha256"]}
                 if transform_declaration
@@ -1316,8 +1310,10 @@ def ingest_specimen(
             "ct_metadata_mcp_call_receipt_closed": True,
             "ct_metadata_mcp_call_receipt_hash_bound": True,
             "ct_metadata_header_facts_bound_to_call_receipt": True,
-            "cad_readable": True,
+            "cad_readable": cad is None or cad["readable"] is True,
+            "cad_readable_or_not_supplied": cad is None or cad["readable"] is True,
             "graph_id_reference_integrity": True,
+            "normalized_graph_hash_bound": normalized_graph is not None or cad is not None,
             "manifest_schema_valid": True,
             "design_transform_declaration_valid": (
                 transform_declaration_verification is not None
@@ -1595,7 +1591,7 @@ def validate_ingest_artifact_bundle(
     )
     manifest_inputs = manifest["inputs"]
     expected_paths = {
-        "cad": manifest_inputs["cad"]["path"],
+        "cad": manifest_inputs.get("cad", {}).get("path"),
         "design_graph": manifest_inputs["design_graph"]["path"],
         "ct": manifest_inputs["ct"]["path"],
         "ct_metadata_response": (
@@ -1707,11 +1703,16 @@ def validate_ingest_artifact_bundle(
         )
 
     coordinates = manifest["analysis_parameters"]["coordinates"]
+    cad_inspection = manifest.get("intake", {}).get("cad_inspection")
     expected_declared = {
-        "cad_units": manifest["intake"]["cad_inspection"]["units"],
-        "cad_units_provenance": manifest["intake"]["cad_inspection"][
-            "units_provenance"
-        ],
+        "cad_units": (
+            cad_inspection.get("units") if cad_inspection else declared["cad_units"]
+        ),
+        "cad_units_provenance": (
+            cad_inspection.get("units_provenance")
+            if cad_inspection
+            else declared["cad_units_provenance"]
+        ),
         "graph_axes": coordinates["graph_axes"],
         "array_axes": coordinates["array_axes"],
         "aligned_graph_units": coordinates["aligned_graph_units"],
@@ -1745,13 +1746,6 @@ def validate_ingest_artifact_bundle(
         )
 
     try:
-        current_cad = inspect_cad_stl(
-            root / manifest_inputs["cad"]["path"],
-            repository_root=root,
-            allowed_roots=[root],
-            units=declared["cad_units"],
-            units_provenance=declared["cad_units_provenance"],
-        )
         current_graph = inspect_lattice_graph(
             root / manifest_inputs["design_graph"]["path"],
             repository_root=root,
@@ -1761,10 +1755,18 @@ def validate_ingest_artifact_bundle(
         raise SpecimenIngestError(
             f"Stage 0 source artifact failed semantic reinspection: {exc}"
         ) from exc
-    if current_cad != manifest["intake"]["cad_inspection"]:
-        raise SpecimenIngestError(
-            "Stage 0 CAD inspection record differs from the current STL"
+    if "cad" in manifest_inputs:
+        current_cad = inspect_cad_stl(
+            root / manifest_inputs["cad"]["path"],
+            repository_root=root,
+            allowed_roots=[root],
+            units=declared["cad_units"],
+            units_provenance=declared["cad_units_provenance"],
         )
+        if current_cad != manifest["intake"].get("cad_inspection"):
+            raise SpecimenIngestError(
+                "Stage 0 CAD inspection record differs from the current STL"
+            )
     if current_graph != manifest["intake"]["graph_inspection"]:
         raise SpecimenIngestError(
             "Stage 0 graph inspection record differs from the current graph"
@@ -1812,7 +1814,9 @@ def validate_ingest_artifact_bundle(
             "ct_metadata_mcp_call_receipt_hash_bound",
             "ct_metadata_header_facts_bound_to_call_receipt",
             "cad_readable",
+            "cad_readable_or_not_supplied",
             "graph_id_reference_integrity",
+            "normalized_graph_hash_bound",
             "manifest_schema_valid",
             "design_transform_declaration_valid",
             "design_transform_declaration_hash_bound",

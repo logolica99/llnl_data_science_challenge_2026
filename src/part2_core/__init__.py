@@ -4,14 +4,6 @@ This package has no MCP or agent dependencies.  The MCP server imports these
 functions and is responsible only for path policy and structured envelopes.
 """
 
-from .evaluation import compute_detection_metrics, wilson_interval
-from .design_diff import (
-    deterministic_stratified_split,
-    label_deleted_edges,
-    load_production_stage1_policy,
-    resolve_cad_graph_orientation,
-    validate_declared_transform_artifact,
-)
 from .evidence import render_strut_evidence
 from .graph import GraphNormalizationError, normalize_lattice_graph
 from .localization import localize_lattice_nodes
@@ -41,6 +33,7 @@ from .registration import (
     trimmed_icp,
 )
 from .reports import get_strut_report
+from .spatial import compute_spatial_stats, render_lattice_3d
 from .segmentation import (
     compare_segmentation_masks,
     segment_ct_dataset,
@@ -77,20 +70,17 @@ __all__ = [
     "VolumeView",
     "classify_struts",
     "coarse_initialization",
-    "compute_detection_metrics",
     "compute_registration_qa",
+    "compute_spatial_stats",
     "compute_strut_metrics",
     "compare_segmentation_masks",
     "detect_ct_nodes",
     "deterministic_histogram",
-    "deterministic_stratified_split",
     "error_response",
     "get_strut_report",
     "histogram_diagnostics",
     "histogram_sha256",
     "iter_array_chunks",
-    "label_deleted_edges",
-    "load_production_stage1_policy",
     "load_volume",
     "localize_lattice_nodes",
     "multistart_fit",
@@ -100,7 +90,7 @@ __all__ = [
     "replay_exact_otsu",
     "register_lattice_to_ct",
     "render_strut_evidence",
-    "resolve_cad_graph_orientation",
+    "render_lattice_3d",
     "rotation_difference_deg",
     "run_robustness_suite",
     "run_synthetic_suite",
@@ -112,8 +102,6 @@ __all__ = [
     "trimmed_icp",
     "volume_metadata",
     "visualize_slice",
-    "validate_declared_transform_artifact",
-    "wilson_interval",
     "write_otsu_artifacts",
     "xyz_to_zyx_indices",
 ]

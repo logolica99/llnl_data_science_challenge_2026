@@ -1,7 +1,7 @@
 interface:
   display_name: "CT Registration"
   short_description: "Run exact Otsu, lattice registration, localization, and QA."
-  default_prompt: "Use $ct-registration to prepare a CT scan through exact Otsu, declared-mode registration, independent node localization, and all-edge QA via segmentation-tools MCP only."
+  default_prompt: "Use $ct-registration to prepare a CT scan through exact Otsu, autonomous registration, independent node localization, and all-edge QA via segmentation-tools MCP only."
 
 dependencies:
   tools:

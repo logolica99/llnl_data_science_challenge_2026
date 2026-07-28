@@ -106,7 +106,7 @@ class Part2DemoTests(unittest.TestCase):
         final = self.run_to_stop(run)
 
         self.assertEqual("pass", final["pipelineState"])
-        self.assertTrue(final["sealedEvaluationConsumed"])
+        self.assertEqual(5, len(final["stages"]))
         self.assertTrue(all(stage["state"] == "pass" for stage in final["stages"]))
         self.assertTrue(
             any(event["kind"] == "registration_frozen" for event in final["events"])
@@ -160,16 +160,12 @@ class Part2DemoTests(unittest.TestCase):
             any("stage_completed" in item["line"] for item in completed["terminalLines"])
         )
 
-    def test_challenge_walkthrough_uses_declared_branch_without_freeze(self) -> None:
-        run = self.store.create(
-            scenario="verified_walkthrough",
-            registration_mode="challenge_aligned_json",
-        )
-        final = self.run_to_stop(run)
-        self.assertEqual("pass", final["pipelineState"])
-        self.assertFalse(
-            any(event["kind"] == "registration_frozen" for event in final["events"])
-        )
+    def test_nonproduction_registration_mode_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Unsupported registration mode"):
+            self.store.create(
+                scenario="verified_walkthrough",
+                registration_mode="challenge_aligned_json",
+            )
 
     def test_manual_review_stops_and_requires_explicit_resume(self) -> None:
         run = self.store.create(
@@ -178,14 +174,14 @@ class Part2DemoTests(unittest.TestCase):
         )
         paused = self.run_to_stop(run)
         self.assertEqual("manual_review", paused["pipelineState"])
-        self.assertEqual(2, paused["currentStage"])
-        self.assertEqual("locked", paused["stages"][3]["state"])
+        self.assertEqual(1, paused["currentStage"])
+        self.assertEqual("locked", paused["stages"][2]["state"])
         self.assertEqual("resume", paused["allowedAction"])
 
         run.resume(str(paused["manifestSha256"]))
         final = self.run_to_stop(run)
         self.assertEqual("pass", final["pipelineState"])
-        self.assertEqual(2, final["stages"][2]["attemptCount"])
+        self.assertEqual(2, final["stages"][1]["attemptCount"])
 
     def test_missing_dependency_records_halt_without_consuming_attempt(self) -> None:
         run = self.store.create(
@@ -329,7 +325,7 @@ class Part2DemoTests(unittest.TestCase):
         self.assertFalse(outside.exists())
 
         for unsafe in ("../outside.json", str(outside.resolve())):
-            contract = copy.deepcopy(run.runner.contracts[4])
+            contract = copy.deepcopy(run.runner.contracts[3])
             target = next(
                 rule
                 for rule in contract["output_artifacts"]["allowed"]
@@ -339,60 +335,27 @@ class Part2DemoTests(unittest.TestCase):
             with self.subTest(path=unsafe), self.assertRaises(RuntimeError):
                 run.runner._validate_contract_paths(contract)
 
-    def test_corrupt_sensitive_artifact_errors_are_redacted_over_http(self) -> None:
-        for role in ("development_labels", "sealed_labels"):
-            with self.subTest(role=role):
-                run = self.store.create(
-                    scenario="verified_walkthrough",
-                    registration_mode="autonomous_v2",
-                )
-                for _ in range(4):
-                    state = run.projection()
-                    run.advance(str(state["manifestSha256"]))
-                expected_manifest_sha256 = str(run.projection()["manifestSha256"])
-                manifest = run.runner.manifest()
-                artifact = next(
-                    item
-                    for item in manifest["stages"]["1"]["attempts"][-1][
-                        "output_artifacts"
-                    ]
-                    if item["role"] == role
-                )
-                (run.runner.root / artifact["path"]).write_text(
-                    "tampered fixture\n",
-                    encoding="utf-8",
-                )
-
-                method = "GET" if role == "development_labels" else "POST"
-                path = f"/api/v1/demo-runs/{run.run_id}"
-                request_body = None
-                headers = {"Origin": "http://localhost:3000"}
-                if method == "POST":
-                    path += "/steps"
-                    request_body = json.dumps(
-                        {"expectedManifestSha256": expected_manifest_sha256}
-                    ).encode()
-                    headers["Content-Type"] = "application/json"
-                status, _, payload = self.request(
-                    method,
-                    path,
-                    body=request_body,
-                    headers=headers,
-                )
-                serialized = json.dumps(payload, sort_keys=True)
-                self.assertEqual(409, status)
-                self.assertEqual(
-                    (
-                        "verification_failed"
-                        if method == "GET"
-                        else "orchestration_rejected"
-                    ),
-                    payload["error"],
-                )
-                self.assertNotIn(str(self.base.resolve()), serialized)
-                self.assertNotIn(str(artifact["path"]), serialized)
-                self.assertNotIn(str(artifact["sha256"]), serialized)
-                self.assertNotIn(role, serialized)
+    def test_production_fixture_contains_no_label_artifacts(self) -> None:
+        run = self.store.create(
+            scenario="verified_walkthrough",
+            registration_mode="autonomous_v2",
+        )
+        self.run_to_stop(run)
+        manifest = run.runner.manifest()
+        roles = {
+            artifact["role"]
+            for stage in manifest["stages"].values()
+            for attempt in stage["attempts"]
+            for artifact in (
+                attempt["input_artifacts"] + attempt["output_artifacts"]
+            )
+        }
+        for forbidden in (
+            "development_labels",
+            "sealed_labels",
+            "intentional_deletion_labels",
+        ):
+            self.assertNotIn(forbidden, roles)
 
     def test_http_origin_and_cors_policy(self) -> None:
         status, headers, payload = self.request(
@@ -438,35 +401,23 @@ class Part2DemoTests(unittest.TestCase):
         self.assertEqual("invalid_request", payload["error"])
         self.assertEqual("Request body is too large", payload["message"])
 
-    def test_stage5_fixture_aggregate_is_internally_coherent(self) -> None:
+    def test_fixture_uses_five_stage_production_contracts(self) -> None:
         run = self.store.create(
             scenario="verified_walkthrough",
             registration_mode="autonomous_v2",
         )
         self.run_to_stop(run)
         manifest = run.runner.manifest()
-        artifact = next(
-            item
-            for item in manifest["stages"]["5"]["attempts"][-1][
-                "output_artifacts"
-            ]
-            if item["role"] == "sealed_evaluation_result"
-        )
-        aggregate = json.loads(
-            (run.runner.root / artifact["path"]).read_text(encoding="utf-8")
-        )
-        matrix = aggregate["confusion_matrix"]["rows_actual_columns_predicted"]
+        self.assertEqual([0, 1, 2, 3, 4], manifest["stage_order"])
         self.assertEqual(
-            aggregate["sealed_strut_count"],
-            sum(sum(row.values()) for row in matrix.values()),
-        )
-        self.assertEqual(
-            aggregate["strict_recall"]["detected"],
-            matrix["missing"]["missing"],
-        )
-        self.assertEqual(
-            aggregate["lenient_recall"]["detected"],
-            matrix["missing"]["missing"] + matrix["missing"]["broken"],
+            [
+                "specimen_ingest",
+                "data_prep",
+                "strut_metrics",
+                "defect_analysis",
+                "nde_report",
+            ],
+            [manifest["stages"][str(number)]["name"] for number in range(5)],
         )
 
     def test_demo_adapter_imports_no_scientific_implementation(self) -> None:

@@ -10,9 +10,9 @@ skill, MCP implementation, test, or runtime artifact.
 | Archived material | Production replacement |
 |---|---|
 | `poc/ct_registration/` and `poc/ct_registration_v2/` | `src/part2_core/registration.py`, the `register_lattice_to_ct` MCP tool, and the `ct-registration` skill |
-| `poc/tube_emptiness_test/` and `scripts/missing_strut_heatmap.py` | `src/part2_core/design_diff.py`, the Stage 1 MCP tools, and the `stl-design-diff` skill |
+| `poc/tube_emptiness_test/` and `scripts/missing_strut_heatmap.py` | Research-only design comparison outside the production nominal-graph + CT workflow |
 | `agents/segmentation_agent.toml` | `.codex/agents/data_prep.toml` |
-| `scripts/ct-threshold-optimizer/` | Deterministic segmentation MCP tools; executable scripts are forbidden inside active project skills |
+| `scripts/ct-threshold-optimizer/` | `research/skills/ct-threshold-explorer/` and the disabled `segmentation-tools-research` MCP server |
 | Other files under `scripts/` | Production MCP tools, agent workflows, and QA artifacts |
 
 The POC result directories are snapshots. Their numbers and generated files
@@ -42,9 +42,10 @@ ignored instead of being copied into Git history:
 - `data/missing_struts/reconstruction/`
 - caches and editor/OS metadata
 
-## Deliberately not deprecated
+## Research-only replacements
 
-- `.agents/skills/nde_report_expert/` remains available until the planned
-  production Stage 3–6 reporting path replaces it.
-- `src/skeletonization.py` remains active because the live `skeletonize` MCP
-  tool imports `skeletonize_mask` from it.
+- The production Stage 4 skill is `.agents/skills/nde-report-generator/` and
+  uses graph-aware reporting tools.
+- Historical skeletonization, voxel rendering, exploratory thresholds, and
+  labeled evaluation are available only under `research/` and are not
+  registered on the production MCP server.

@@ -41,7 +41,7 @@ test("server-renders the orchestration demonstrator", async () => {
   assert.match(html, /One check is one legal state transition\./);
   assert.match(html, /Backend stdout mirror/);
   assert.match(html, /The verified handoff chain/);
-  assert.match(html, /Labels move through narrow lanes/);
+  assert.match(html, /Production remains label-free/);
   assert.match(html, /What just happened/);
   assert.match(html, /http:\/\/localhost(?::3000)?\/og\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|SkeletonPreview/);
@@ -60,7 +60,7 @@ test("ships the live local adapter and removes starter-only assets", async () =>
   assert.match(page, /expectedManifestSha256/);
   assert.match(page, /terminalLines/);
   assert.match(page, /manual_review/);
-  assert.match(page, /sealedEvaluationConsumed/);
+  assert.match(page, /Nominal graph \+ CT/);
   assert.match(layout, /Part 2 NDE Orchestration Demonstrator/);
   assert.match(packageJson, /"demo"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);

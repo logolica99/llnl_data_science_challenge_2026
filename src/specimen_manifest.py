@@ -430,6 +430,12 @@ def validate_manifest(
             ("cad", "cad_inspection"),
             ("design_graph", "graph_inspection"),
         ):
+            if input_name not in manifest["inputs"]:
+                if inspection_name in intake:
+                    errors.append(
+                        f"intake.{inspection_name} exists without inputs.{input_name}"
+                    )
+                continue
             artifact = manifest["inputs"][input_name]
             inspection = intake[inspection_name]
             if inspection["path"] != artifact["path"]:
@@ -487,7 +493,13 @@ def validate_manifest(
     if manifest["lifecycle_state"] != "provisional":
         coordinates = manifest["analysis_parameters"]["coordinates"]
         unresolved_coordinates = sorted(
-            key for key, value in coordinates.items() if value == "unknown"
+            key
+            for key, value in coordinates.items()
+            if value == "unknown"
+            and not (
+                key == "aligned_graph_units"
+                and "aligned_graph" not in manifest["inputs"]
+            )
         )
         if manifest["inputs"]["ct_metadata"]["array_axes"] == "unknown":
             unresolved_coordinates.append("inputs.ct_metadata.array_axes")
@@ -561,7 +573,11 @@ def validate_manifest(
 def manifest_paths(repository_root: Path = REPOSITORY_ROOT) -> list[Path]:
     """Discover committed specimen manifests in deterministic order."""
     return sorted(
-        repository_root.glob("analysis/*/config/specimen_manifest.json")
+        path
+        for path in repository_root.glob("analysis/*/config/specimen_manifest.json")
+        # Ignored runtime attempts are validated explicitly by their run owner;
+        # they are not committed example manifests and may use an older schema.
+        if "_runtime_" not in path.parent.parent.name
     )
 
 

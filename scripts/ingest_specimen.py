@@ -24,8 +24,14 @@ def parse_args() -> argparse.Namespace:
         required=True,
         choices=("roi_screening", "direct_metrology"),
     )
-    parser.add_argument("--cad", required=True, type=Path)
+    parser.add_argument(
+        "--cad",
+        type=Path,
+        help="Optional research-only CAD input; production intake uses graph + CT only.",
+    )
     parser.add_argument("--design-graph", required=True, type=Path)
+    parser.add_argument("--normalized-graph", type=Path)
+    parser.add_argument("--normalized-graph-sha256")
     parser.add_argument("--ct", required=True, type=Path)
     parser.add_argument(
         "--ct-metadata-response",
@@ -60,7 +66,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--registration-mode",
         required=True,
-        choices=("challenge_aligned_json", "autonomous_v2"),
+        choices=("autonomous_v2",),
     )
     parser.add_argument(
         "--confirm-association",
@@ -118,6 +124,8 @@ def main() -> int:
             graph_axes=args.graph_axes,
             array_axes=args.array_axes,
             aligned_graph_units=args.aligned_graph_units,
+            normalized_graph_path=args.normalized_graph,
+            normalized_graph_sha256=args.normalized_graph_sha256,
             retention=args.retention,
         )
     except (OSError, TypeError, ValueError, SpecimenIngestError) as exc:

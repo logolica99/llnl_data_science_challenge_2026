@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Part 2 orchestrator — real fail-closed proof</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1018; --panel:#121a25; --line:#2a3748; --text:#edf4ff; --muted:#9babc0; --good:#63d7a1; --bad:#ff7b72; --lock:#77869a; --accent:#69a7ff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 ui-sans-serif,system-ui,-apple-system,sans-serif; }
+    main { width:min(1100px,calc(100% - 32px)); margin:32px auto 56px; }
+    h1 { margin:0 0 6px; font-size:clamp(24px,4vw,42px); font-weight:650; letter-spacing:-.03em; }
+    h2 { font-size:18px; margin:0 0 14px; }
+    p { color:var(--muted); margin:0; }
+    .status { display:inline-flex; gap:8px; align-items:center; color:var(--bad); margin:18px 0 26px; font-weight:650; }
+    .status::before { content:""; width:10px; height:10px; border-radius:50%; background:var(--bad); box-shadow:0 0 18px var(--bad); }
+    .grid { display:grid; grid-template-columns:minmax(260px,.8fr) minmax(0,1.6fr); gap:16px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; }
+    .stages { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+    .stage { display:flex; gap:12px; align-items:center; border-left:3px solid var(--lock); padding:9px 10px; background:#0d141e; }
+    .stage-halt { border-color:var(--bad); }
+    .stage-number { width:25px; height:25px; border:1px solid var(--line); border-radius:50%; display:grid; place-items:center; color:var(--muted); font-size:12px; }
+    .stage small { display:block; color:var(--muted); margin-top:2px; }
+    .proof { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+    .proof div { background:#0d141e; padding:12px; border-radius:8px; }
+    .proof span { display:block; color:var(--muted); font-size:12px; }
+    code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
+    .halt { border-left:3px solid var(--bad); padding-left:14px; margin:14px 0 18px; }
+    .halt strong { color:var(--bad); }
+    .halt ul { margin:8px 0 0; padding-left:20px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th,td { padding:8px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { color:var(--muted); font-weight:500; }
+    .wide { grid-column:1/-1; }
+    pre { margin:0; background:#070b11; border:1px solid var(--line); border-radius:8px; padding:16px; color:#c8f7d8; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .foot { margin-top:14px; font-size:12px; }
+    @media (max-width:760px) { .grid { grid-template-columns:1fr; } .proof { grid-template-columns:1fr; } .wide { grid-column:auto; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Real fail-closed run</h1>
+  <p>No specialist outputs, receipts, labels, CT results, or success states were simulated.</p>
+  <div class="status">HALT at Stage 0 · downstream locked</div>
+  <div class="grid">
+    <section>
+      <h2>Pipeline</h2>
+      <ol class="stages">
+        <li class="stage stage-halt">
+          <span class="stage-number">0</span>
+          <span><strong>specimen_ingest</strong><small>halt · attempts 0/2</small></span>
+        </li>
+        <li class="stage stage-locked">
+          <span class="stage-number">1</span>
+          <span><strong>data_prep</strong><small>locked · attempts 0/2</small></span>
+        </li>
+        <li class="stage stage-locked">
+          <span class="stage-number">2</span>
+          <span><strong>strut_metrics</strong><small>locked · attempts 0/1</small></span>
+        </li>
+        <li class="stage stage-locked">
+          <span class="stage-number">3</span>
+          <span><strong>defect_analysis</strong><small>locked · attempts 0/2</small></span>
+        </li>
+        <li class="stage stage-locked">
+          <span class="stage-number">4</span>
+          <span><strong>nde_report</strong><small>locked · attempts 0/2</small></span>
+        </li></ol>
+    </section>
+    <section>
+      <h2>What the orchestrator proved</h2>
+      <div class="proof">
+        <div><span>Manifest SHA-256</span><code>8bef9424ab173778e390c68603c50d1e7015090e36f1355ef1677df4587a17a8</code></div>
+        <div><span>Frozen config SHA-256</span><code>db4ce8150e54aaa96d57e2af121524872116dc10ff1770a93539005138fb29e4</code></div>
+        <div><span>Stage contracts</span><strong>5 hashed and validated</strong></div>
+      </div>
+      <div class="halt">
+        <strong>Structured dependency halt</strong>
+        <ul><li><code>agent</code> specimen_ingest: missing</li><li><code>mcp_server</code> segmentation-tools: missing_or_unhealthy</li><li><code>mcp_server</code> segmentation-tools: missing_or_unhealthy</li></ul>
+      </div>
+      <p>Configured agents found: data_prep, orchestrator, report_agent, specimen_ingest. The MCP server is configured=true and enabled=true, but a configuration listing is not a live response-schema attestation. No fallback was used.</p>
+    </section>
+    <section class="wide">
+      <h2>Declared agent coverage</h2>
+      <table>
+        <thead><tr><th>Stage</th><th>Contract</th><th>Configured files</th><th>Missing files</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>0</td>
+          <td>specimen_ingest</td>
+          <td>specimen_ingest</td>
+          <td>none</td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>data_prep</td>
+          <td>data_prep</td>
+          <td>none</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>strut_metrics</td>
+          <td>none</td>
+          <td>strut_metrics</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>defect_analysis</td>
+          <td>none</td>
+          <td>defect_lead, missing_strut_agent, thin_strut_agent, broken_strut_agent, classifier_verifier</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>nde_report</td>
+          <td>report_agent</td>
+          <td>none</td>
+        </tr></tbody>
+      </table>
+    </section>
+    <section class="wide">
+      <h2>Terminal transcript</h2>
+      <pre>[part2-orchestrator] loaded and hashed 5 production stage contracts
+[part2-orchestrator] source config analysis/brian_tran_9x9x9_0point5dash1/config/specimen_manifest.json sha256=db4ce8150e54aaa96d57e2af121524872116dc10ff1770a93539005138fb29e4
+[part2-orchestrator] configured agents: data_prep, orchestrator, report_agent, specimen_ingest
+[part2-orchestrator] agent configuration found; callable agent runtime is not attested to this standalone runner
+[part2-orchestrator] segmentation-tools configuration: configured=True enabled=True live_schema_verified=False
+[part2-orchestrator] manifest created sha256=9ce749a70db77237c4c89e2fd09679575693a01f4da9cc210d711903a36a7731 stage=0 state=ready
+[part2-orchestrator] preflight Stage 0 before creating any attempt or handoff
+[part2-orchestrator] dependency_halt code=missing_or_incompatible_dependency attempt_count=0
+[part2-orchestrator] fallback_used=False; Stages 1-4 remain locked
+[part2-orchestrator] halt receipt sha256=0706266e1ca789ea5cdeca458eaa7adfd0eb2788cd068267ae0fa7cb16f69f5b
+[part2-orchestrator] final manifest sha256=8bef9424ab173778e390c68603c50d1e7015090e36f1355ef1677df4587a17a8</pre>
+      <p class="foot">Generated 2026-07-28T22:51:24.432992Z from production control-plane state and copied evidence.</p>
+    </section>
+  </div>
+</main>
+</body>
+</html>

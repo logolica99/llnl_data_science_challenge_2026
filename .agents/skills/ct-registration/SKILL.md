@@ -1,11 +1,11 @@
 ---
 name: ct-registration
-description: Prepare one CT scan for strut analysis with exact 65,536-bin Otsu segmentation, declared-mode lattice registration, independent full-resolution node localization, and all-edge registration QA. Use for production Stage 2 in challenge-aligned or CT-only autonomous-v2 mode.
+description: Prepare one CT scan for strut analysis with exact 65,536-bin Otsu segmentation, autonomous nominal-graph registration, independent full-resolution node localization, and all-edge registration QA. Use for production Stage 1.
 ---
 
 # CT Registration
 
-Consume only the immutable Stage 2 handoff and its verified Stage 0 data-prep
+Consume only the immutable Stage 1 handoff and its verified Stage 0 data-prep
 handoff. All volume, mask, registration, localization, QA, visualization, and
 comparison work belongs to the declared `segmentation-tools` MCP interfaces.
 The handoff's hash-bound `requested_analysis_scope`, localization policy, QA
@@ -30,15 +30,10 @@ from free-form agent arguments.
    canonical mask, comparison report, normalized request, and every SHA-256.
    The verifier independently replays exact Otsu and `raw >= threshold`; the
    agent must not reproduce either computation locally.
-4. Follow exactly one registration mode:
-
-   - `challenge_aligned_json`: validate the authorized Stage 0 aligned graph's
-     schema, counts, topology, axes, bounds, and hash. Record the mode in every
-     result. This is an authorized shortcut, not a claim of autonomous fit.
-   - `autonomous_v2`: expose only CT and nominal topology to fitting. Require
-     holdout evidence, 21 deterministic multistarts, synthetic recovery, and
-     bounded threshold/EDT/trim robustness. Freeze and hash CT-only fit
-     artifacts before any optional aligned-reference validation.
+4. Run `autonomous_v2` using only CT and nominal topology. Require holdout
+   evidence, deterministic multistarts, synthetic recovery, and bounded
+   threshold/EDT/trim robustness. Freeze and hash the CT-only fit artifacts
+   before localization. Aligned-reference validation is not a production input.
 
 5. Invoke `localize_lattice_nodes` for independent full-resolution local
    recentering of every node. Require deterministic seven-seed convergence on
@@ -52,7 +47,7 @@ from free-form agent arguments.
    thresholds, and propagate each node's quality/provenance to incident edges.
    Bounded fallback may pass; fallback, ambiguity, or rejection must never be
    relabeled as a primary match.
-6. Invoke `compute_registration_qa` over every node and all 18,468 edges. Keep
+6. Invoke `compute_registration_qa` over every nominal node and edge. Keep
    coarse capture, padded-ROI capture, and metrology as separate gates. Emit
    a color-coded slice 380 status overlay and XYZ bias figures. QA must derive
    displacement and repeatability from the hashed localization report; the
@@ -70,8 +65,8 @@ from free-form agent arguments.
 
 ## Isolation and replay
 
-Never read defect labels, development labels, sealed labels, Stage 3 metrics,
-or ground-truth segmentation. Stage 2/3 handoffs must expose no label path,
+Never read training labels, evaluation labels, downstream metrics, CAD/STL,
+aligned graphs, or ground-truth segmentation. Stage 1/2 handoffs expose no label path,
 role, hash, count, or content. Reject existing output paths unless the tool
 confirms exact idempotent replay. MCP responses remain compact: status, gate,
 schema, artifact paths/hashes/counts, warnings, and structured failure only;

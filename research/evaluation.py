@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from .artifacts import read_json_object, sha256_file, write_json_atomic
+from part2_core.artifacts import read_json_object, sha256_file, write_json_atomic
 
 DETECTION_METRICS_SCHEMA_VERSION = "part2-detection-metrics/1.0.0"
 CLASSES = ["missing", "broken", "thin", "present"]

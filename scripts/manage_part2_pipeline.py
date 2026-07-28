@@ -15,7 +15,6 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
 from part2_orchestration import (  # noqa: E402
     OrchestrationError,
-    authorize_post_freeze_aligned_input,
     build_stage_receipt,
     complete_stage,
     create_pipeline_manifest,
@@ -70,7 +69,7 @@ def _build_parser() -> argparse.ArgumentParser:
     init.add_argument("--config", type=Path, required=True)
     init.add_argument(
         "--registration-mode",
-        choices=("challenge_aligned_json", "autonomous_v2"),
+        choices=("autonomous_v2",),
         required=True,
     )
     init.add_argument("--manifest", type=Path)
@@ -132,7 +131,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _root(resume)
 
     freeze = subparsers.add_parser(
-        "freeze-registration", help="seal autonomous CT-only Stage 2 artifacts"
+        "freeze-registration", help="seal autonomous CT-only Stage 1 artifacts"
     )
     freeze.add_argument("manifest", type=Path)
     freeze.add_argument("--artifacts", type=Path, required=True)
@@ -140,14 +139,6 @@ def _build_parser() -> argparse.ArgumentParser:
     _timestamp(freeze)
     _root(freeze)
 
-    aligned = subparsers.add_parser(
-        "authorize-aligned", help="open an autonomous post-freeze validator handoff"
-    )
-    aligned.add_argument("manifest", type=Path)
-    aligned.add_argument("--artifact", type=Path, required=True)
-    aligned.add_argument("--output", type=Path)
-    _timestamp(aligned)
-    _root(aligned)
     return parser
 
 
@@ -219,14 +210,6 @@ def _dispatch(args: argparse.Namespace) -> Any:
         return record_autonomous_registration_freeze(
             args.manifest,
             frozen_artifacts=_array_file(args.artifacts),
-            repository_root=root,
-            output_path=args.output,
-            timestamp=args.timestamp,
-        )
-    if args.command == "authorize-aligned":
-        return authorize_post_freeze_aligned_input(
-            args.manifest,
-            aligned_artifact=_object_file(args.artifact),
             repository_root=root,
             output_path=args.output,
             timestamp=args.timestamp,

@@ -1,4 +1,4 @@
-"""Contract tests for MCP-owned comparison, summary, and 3D rendering."""
+"""Contract tests for the isolated, disabled-by-default research MCP."""
 
 from __future__ import annotations
 
@@ -13,10 +13,12 @@ import numpy as np
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
+sys.path.insert(0, str(REPOSITORY_ROOT))
 
-from mcp_server import (  # noqa: E402
+from research.evaluation import compute_detection_metrics  # noqa: E402
+from research.mcp_server import mcp  # noqa: E402
+from research.volume_artifacts import (  # noqa: E402
     compare_segmentation_masks,
-    mcp,
     render_volume_3d,
     summarize_nde_artifacts,
 )
@@ -24,7 +26,9 @@ from mcp_server import (  # noqa: E402
 
 class MCPArtifactToolTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory(dir=REPOSITORY_ROOT)
+        runs = REPOSITORY_ROOT / "research" / "runs"
+        runs.mkdir(parents=True, exist_ok=True)
+        self.temporary = tempfile.TemporaryDirectory(dir=runs)
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
 
@@ -120,14 +124,11 @@ class MCPArtifactToolTests(unittest.IsolatedAsyncioTestCase):
     async def test_tools_are_registered_with_typed_schemas(self) -> None:
         tools = {tool.name: tool for tool in await mcp.list_tools()}
 
-        self.assertIn("compare_segmentation_masks", tools)
         self.assertIn("summarize_nde_artifacts", tools)
         self.assertIn("render_volume_3d", tools)
-        compare_properties = tools["compare_segmentation_masks"].parameters[
-            "properties"
-        ]
-        self.assertEqual("array", compare_properties["mask_filepaths"]["type"])
-        self.assertEqual("number", compare_properties["thresholds"]["items"]["type"])
+        self.assertIn("skeletonize", tools)
+        self.assertIn("compute_detection_metrics", tools)
+        self.assertIn("explore_ct_thresholds", tools)
         render_properties = tools["render_volume_3d"].parameters["properties"]
         self.assertEqual(0.5, render_properties["surface_level"]["default"])
         self.assertEqual(False, render_properties["overwrite"]["default"])
@@ -135,14 +136,6 @@ class MCPArtifactToolTests(unittest.IsolatedAsyncioTestCase):
     async def test_tools_return_structured_content_through_mcp(self) -> None:
         output = self.root / "mcp-render.png"
         async with Client(mcp) as client:
-            comparison = await client.call_tool(
-                "compare_segmentation_masks",
-                {
-                    "raw_filepath": str(self.raw),
-                    "mask_filepaths": [str(self.mask)],
-                    "thresholds": [0.5],
-                },
-            )
             summary = await client.call_tool(
                 "summarize_nde_artifacts",
                 {
@@ -161,13 +154,67 @@ class MCPArtifactToolTests(unittest.IsolatedAsyncioTestCase):
                 },
             )
 
-        self.assertFalse(comparison.is_error)
-        self.assertEqual("ok", comparison.structured_content["status"])
         self.assertFalse(summary.is_error)
-        self.assertEqual(216, summary.structured_content["mask"]["foreground_voxels"])
+        self.assertTrue(summary.structured_content["research_only"])
+        self.assertEqual(
+            216,
+            summary.structured_content["result"]["mask"]["foreground_voxels"],
+        )
         self.assertFalse(render.is_error)
-        self.assertEqual(str(output), render.structured_content["output_path"])
+        self.assertEqual(
+            output.relative_to(REPOSITORY_ROOT).as_posix(),
+            render.structured_content["result"]["output_path"],
+        )
         self.assertTrue(output.is_file())
+
+    async def test_labeled_evaluation_requires_research_copies(self) -> None:
+        classifications = self.root / "classifications.json"
+        labels = self.root / "labels.json"
+        output = self.root / "detection.json"
+        classifications.write_text(
+            '{"classifications":[{"strut_id":7,"class":"missing"}]}',
+            encoding="utf-8",
+        )
+        labels.write_text('{"strut_ids":[7]}', encoding="utf-8")
+        direct = compute_detection_metrics(classifications, labels, output)
+        self.assertEqual(1.0, direct["strict_recall"]["value"])
+
+        output.unlink()
+        async with Client(mcp) as client:
+            call = await client.call_tool(
+                "compute_detection_metrics",
+                {
+                    "classifications_filepath": str(classifications),
+                    "sealed_labels_filepath": str(labels),
+                    "output_filepath": str(output),
+                },
+            )
+        self.assertFalse(call.is_error)
+        self.assertTrue(call.structured_content["research_only"])
+        self.assertEqual(
+            1.0,
+            call.structured_content["result"]["strict_recall"]["value"],
+        )
+
+    async def test_threshold_exploration_writes_only_research_artifacts(self) -> None:
+        volume = np.linspace(0, 100, 8 * 8 * 8, dtype=np.uint16).reshape(8, 8, 8)
+        source = self.root / "threshold-source.npy"
+        np.save(source, volume)
+        output = self.root / "threshold-run"
+        async with Client(mcp) as client:
+            call = await client.call_tool(
+                "explore_ct_thresholds",
+                {
+                    "input_filepath": str(source),
+                    "output_directory": str(output),
+                    "threshold_offsets": [-1.0, 0.0, 1.0],
+                },
+            )
+        self.assertFalse(call.is_error, call)
+        result = call.structured_content
+        self.assertTrue(result["research_only"])
+        self.assertEqual(3, result["result"]["candidate_count"])
+        self.assertTrue((output / "threshold_comparison.json").is_file())
 
 
 if __name__ == "__main__":
