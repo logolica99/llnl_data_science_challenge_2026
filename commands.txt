@@ -1,0 +1,8 @@
+PYTHONPATH=.python_pkgs python scripts/openvisus/view_idx.py --mode orthoslices --downsample 2 \
+  --tiff "/Users/jubaerjami/Downloads/tif_stacks/210127_Brian_Tran_strut_lattices_1_1 1 Slices.tif"\
+  --missing-csv "/Users/jubaerjami/Downloads/1-1broken_strut.csv"
+
+
+  PYTHONPATH=.python_pkgs python scripts/openvisus/view_idx.py --mode orthoslices --downsample 2 \
+  --tiff "/Users/jubaerjami/Documents/llnl_data_science_challenge_2026/data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif"\
+  --missing-csv missing_strut_candidates.csv
