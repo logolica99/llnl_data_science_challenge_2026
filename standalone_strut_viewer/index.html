@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Strut Scope</title>
+  <meta name="description" content="Local viewing-only inspection of CSV-listed struts in registered CT TIFF volumes.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">LOCAL CT REVIEW</p>
+      <h1>Strut Scope</h1>
+      <p class="subtitle">Inspect uploaded struts without automated defect labels.</p>
+    </div>
+    <div class="privacy-pill"><span></span> Files stay on this computer</div>
+  </header>
+
+  <main>
+    <section class="upload-panel" id="uploadPanel" aria-labelledby="uploadTitle">
+      <div class="section-heading">
+        <div>
+          <p class="step-label">01 / LOAD DATA</p>
+          <h2 id="uploadTitle">Choose the three matching files</h2>
+        </div>
+        <p class="section-note">The registered JSON must use TIFF voxel coordinates.</p>
+      </div>
+
+      <div class="file-grid">
+        <label class="file-card">
+          <input id="tiffFile" type="file" accept=".tif,.tiff,image/tiff">
+          <span class="file-index">A</span>
+          <span class="file-copy">
+            <b>CT TIFF stack</b>
+            <small id="tiffName">Choose a 3D .tif or .tiff</small>
+          </span>
+          <span class="file-action">Browse</span>
+        </label>
+        <label class="file-card">
+          <input id="jsonFile" type="file" accept=".json,application/json">
+          <span class="file-index">B</span>
+          <span class="file-copy">
+            <b>Registered JSON</b>
+            <small id="jsonName">Junction and strut voxel positions</small>
+          </span>
+          <span class="file-action">Browse</span>
+        </label>
+        <label class="file-card">
+          <input id="csvFile" type="file" accept=".csv,text/csv">
+          <span class="file-index">C</span>
+          <span class="file-copy">
+            <b>Flagged-strut CSV</b>
+            <small id="csvName">Requires a strut_id column</small>
+          </span>
+          <span class="file-action">Browse</span>
+        </label>
+      </div>
+
+      <div class="load-row">
+        <button id="loadFiles" class="primary-button" disabled>Load viewer</button>
+        <button id="clearFiles" class="text-button" hidden>Clear files</button>
+        <div id="loadStatus" class="load-status" role="status">Select all three files to begin.</div>
+      </div>
+    </section>
+
+    <section id="workspace" class="workspace" hidden>
+      <aside class="strut-browser">
+        <div class="browser-heading">
+          <p class="step-label">02 / SELECT STRUT</p>
+          <span id="strutCount" class="count-chip">0 struts</span>
+        </div>
+        <label class="search-box">
+          <span>Search</span>
+          <input id="searchInput" type="search" placeholder="Enter strut ID" autocomplete="off">
+        </label>
+        <div id="strutList" class="strut-list" role="listbox" aria-label="Uploaded struts"></div>
+        <p id="unmatchedNote" class="unmatched-note"></p>
+      </aside>
+
+      <article class="inspection-panel">
+        <div id="emptyState" class="empty-state">
+          <div class="empty-mark"></div>
+          <p class="step-label">03 / INSPECT</p>
+          <h2>Select a strut</h2>
+          <p>Its measured radius profile and uploaded CSV metadata will appear here.</p>
+        </div>
+
+        <div id="strutDetail" hidden>
+          <div class="detail-heading">
+            <div>
+              <p class="step-label">03 / INSPECT</p>
+              <h2>Strut <span id="detailId">—</span></h2>
+            </div>
+            <button id="openViews" class="primary-button">Open four views</button>
+          </div>
+
+          <div class="metric-strip">
+            <div><span>Tracked coverage</span><b id="coverageMetric">—</b></div>
+            <div><span>Median radius</span><b id="radiusMetric">—</b></div>
+            <div><span>Registered length</span><b id="lengthMetric">—</b></div>
+            <div><span>Auto threshold</span><b id="thresholdMetric">—</b></div>
+          </div>
+
+          <section class="graph-card">
+            <div class="card-title">
+              <div>
+                <h3>Radius along strut</h3>
+                <p>Area-equivalent radius from each perpendicular CT section.</p>
+              </div>
+              <div class="graph-key"><span></span> tracked radius</div>
+            </div>
+            <canvas id="radiusGraph" aria-label="Radius profile graph"></canvas>
+          </section>
+
+          <section class="metadata-card">
+            <div class="card-title">
+              <div>
+                <h3>Uploaded reference data</h3>
+                <p>Values copied from the selected CSV row.</p>
+              </div>
+            </div>
+            <div id="metadataGrid" class="metadata-grid"></div>
+          </section>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div id="viewerModal" class="modal" hidden>
+    <div class="modal-shell" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div>
+          <p class="step-label">LOCAL CT VOLUME</p>
+          <h2 id="modalTitle">Strut —</h2>
+        </div>
+        <div class="modal-actions">
+          <button id="overlayToggle" class="toggle-button tracked-toggle" aria-pressed="true">
+            <span></span> CT tracking: on
+          </button>
+          <button id="registeredToggle" class="toggle-button registered-toggle" aria-pressed="true">
+            <span></span> Registered position: on
+          </button>
+          <button id="closeModal" class="close-button" aria-label="Close viewer">×</button>
+        </div>
+      </div>
+      <p class="modal-note">Cyan shows the CT-tracked strut. Coral shows where the registered JSON says the strut should be.</p>
+
+      <div class="view-grid">
+        <section class="view-card">
+          <div class="view-title"><h3>XY / Z slice</h3><span id="xyLabel">—</span></div>
+          <div class="canvas-frame"><canvas id="xyCanvas"></canvas></div>
+          <input id="xySlider" type="range" min="0" max="1" value="0" aria-label="XY Z slice">
+        </section>
+        <section class="view-card">
+          <div class="view-title"><h3>XZ / Y slice</h3><span id="xzLabel">—</span></div>
+          <div class="canvas-frame"><canvas id="xzCanvas"></canvas></div>
+          <input id="xzSlider" type="range" min="0" max="1" value="0" aria-label="XZ Y slice">
+        </section>
+        <section class="view-card">
+          <div class="view-title"><h3>YZ / X slice</h3><span id="yzLabel">—</span></div>
+          <div class="canvas-frame"><canvas id="yzCanvas"></canvas></div>
+          <input id="yzSlider" type="range" min="0" max="1" value="0" aria-label="YZ X slice">
+        </section>
+        <section class="view-card">
+          <div class="view-title"><h3>Perpendicular cross-section</h3><span id="perpLabel">—</span></div>
+          <div class="canvas-frame"><canvas id="perpCanvas"></canvas></div>
+          <input id="perpSlider" type="range" min="10" max="90" value="50" aria-label="Position along strut">
+          <p id="perpReadout" class="perp-readout">—</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

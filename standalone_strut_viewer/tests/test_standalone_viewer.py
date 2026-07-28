@@ -1,0 +1,137 @@
+import io
+import json
+import sys
+import threading
+import unittest
+import urllib.request
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+import numpy as np
+import tifffile
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import server
+
+
+def synthetic_volume():
+    volume = np.zeros((64, 48, 48), dtype=np.uint16)
+    yy, xx = np.indices((48, 48))
+    disk = (xx - 28) ** 2 + (yy - 24) ** 2 <= 3 ** 2
+    for z in range(5, 59):
+        volume[z][disk] = 1000
+    return volume
+
+
+class StandaloneViewerTests(unittest.TestCase):
+    def tearDown(self):
+        server.STATE.clear()
+
+    def test_profile_tracks_shifted_cylinder(self):
+        volume = synthetic_volume()
+        result = server.extract_profile(
+            volume,
+            np.array([24.0, 24.0, 5.0]),
+            np.array([24.0, 24.0, 58.0]),
+            threshold=500.0,
+        )
+        self.assertGreater(result["coverage"], 0.85)
+        self.assertAlmostEqual(result["median_radius_voxels"], 3.0, delta=0.65)
+        tracked = [
+            item for item in result["profile"]
+            if item["center_u_voxels"] is not None
+        ]
+        self.assertTrue(tracked)
+        self.assertGreater(
+            float(np.median([
+                abs(item["center_u_voxels"]) + abs(item["center_v_voxels"])
+                for item in tracked
+            ])),
+            3.0,
+        )
+
+    def test_catalog_matches_csv_ids_to_registered_json(self):
+        state = server.AppState()
+        try:
+            state.set_registration({
+                "junctions": [
+                    {"id": 1, "position": [1, 2, 3]},
+                    {"id": 2, "position": [4, 5, 6]},
+                ],
+                "struts": [
+                    {"id": 10, "junction0": 1, "junction1": 2},
+                ],
+            })
+            state.set_csv("strut_id,note\n10,review\n99,unknown\n")
+            catalog = state.catalog()
+            self.assertEqual([item["strut_id"] for item in catalog["entries"]], [10])
+            self.assertEqual(catalog["unmatched_ids"], [99])
+            self.assertEqual(catalog["entries"][0]["fields"]["note"], "review")
+        finally:
+            state.clear()
+
+    def test_http_upload_profile_volume_and_cleanup(self):
+        httpd = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        base = f"http://127.0.0.1:{httpd.server_address[1]}"
+
+        def request(path, method="GET", body=None):
+            req = urllib.request.Request(
+                base + path,
+                data=body,
+                method=method,
+                headers={"Content-Type": "application/octet-stream"},
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                return response.status, response.headers, response.read()
+
+        try:
+            tiff_buffer = io.BytesIO()
+            tifffile.imwrite(tiff_buffer, synthetic_volume())
+            status, _, payload = request(
+                "/api/tiff", "POST", tiff_buffer.getvalue()
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(payload)["shape_zyx"], [64, 48, 48])
+
+            registration = json.dumps({
+                "junctions": [
+                    {"id": 1, "position": [24, 24, 5]},
+                    {"id": 2, "position": [24, 24, 58]},
+                ],
+                "struts": [{"id": 10, "junction0": 1, "junction1": 2}],
+            }).encode()
+            request("/api/registration", "POST", registration)
+            request("/api/csv", "POST", b"strut_id,note\n10,inspect\n")
+
+            _, _, catalog_body = request("/api/catalog")
+            catalog = json.loads(catalog_body)
+            self.assertTrue(catalog["ready"])
+            self.assertEqual(catalog["entries"][0]["strut_id"], 10)
+
+            threshold = catalog["threshold"]
+            _, _, profile_body = request(
+                f"/api/profile/10?threshold={threshold}"
+            )
+            profile = json.loads(profile_body)
+            self.assertGreater(profile["coverage"], 0.85)
+
+            _, headers, crop_body = request("/api/volume/10")
+            shape = [int(value) for value in headers["X-Volume-Shape"].split(",")]
+            self.assertEqual(len(crop_body), int(np.prod(shape)) * 4)
+
+            temp_dir = server.STATE.temp_dir
+            self.assertTrue(Path(temp_dir).exists())
+            request("/api/session", "DELETE")
+            self.assertFalse(Path(temp_dir).exists())
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join(timeout=5)
+
+
+if __name__ == "__main__":
+    unittest.main()
