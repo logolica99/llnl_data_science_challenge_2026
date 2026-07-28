@@ -22,9 +22,14 @@ count, or content downstream.
 Use exact per-scan Otsu, the canonical uint8 mask contract, one declared
 registration branch, independent all-node localization without a later global
 refit, and all-node/all-edge QA with separate coarse, padded-ROI, and metrology
-gates. In autonomous_v2, CT-only fit artifacts and the freeze receipt must be
+gates. Localization must use deterministic multistart convergence and robust
+incident-edge support without labels; retain stable coarse coordinates when CT
+support does not improve. Derive uncertainty only from hashed localization and
+registration evidence and never supply a judgment-selected uncertainty scalar.
+In autonomous_v2, CT-only fit artifacts and the freeze receipt must be
 immutable and hashed before optional aligned validation. In challenge mode,
-record challenge_aligned_json everywhere and do not claim autonomous fit.
+record challenge_aligned_json everywhere, do not claim autonomous fit, and do
+not claim direct metrology without an absolute CT-only uncertainty artifact.
 
 If coarse and padded ROI pass but metrology fails, return manual_review and
 require explicit ROI-only authorization. Ambiguous localization also abstains.

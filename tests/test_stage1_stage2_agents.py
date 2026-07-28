@@ -49,7 +49,8 @@ class AgentSurfaceTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("segmentation-tools", (root / "agents" / "openai.yaml").read_text())
 
     async def test_stage_tools_are_registered_through_actual_mcp_client(self) -> None:
-        tools = {tool.name for tool in await mcp.list_tools()}
+        registered = {tool.name: tool for tool in await mcp.list_tools()}
+        tools = set(registered)
         self.assertTrue(
             {
                 "load_lattice_graph",
@@ -65,6 +66,12 @@ class AgentSurfaceTests(unittest.IsolatedAsyncioTestCase):
                 "compute_registration_qa",
             }.issubset(tools)
         )
+        qa_schema = registered["compute_registration_qa"].parameters
+        self.assertIn("localization_report_filepath", qa_schema["required"])
+        self.assertNotIn(
+            "registration_uncertainty_voxels", qa_schema["properties"]
+        )
+        self.assertNotIn("local_search_radius_voxels", qa_schema["properties"])
 
     async def test_canonical_mask_replay_is_idempotent_and_config_drift_halts(self) -> None:
         with tempfile.TemporaryDirectory(dir=REPOSITORY_ROOT) as temporary:
@@ -89,6 +96,30 @@ class AgentSurfaceTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(replay.structured_content["result"]["changed"])
             self.assertEqual("error", drift.structured_content["status"])
             self.assertEqual("halt", drift.structured_content["gate"])
+
+    async def test_mask_comparison_halts_on_threshold_content_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPOSITORY_ROOT) as temporary:
+            root = Path(temporary)
+            volume = root / "volume.npy"
+            mask = root / "wrong-mask.npy"
+            np.save(volume, np.arange(64, dtype=np.uint16).reshape(4, 4, 4))
+            np.save(mask, np.zeros((4, 4, 4), dtype=np.uint8))
+            async with Client(mcp) as client:
+                call = await client.call_tool(
+                    "compare_segmentation_masks",
+                    {
+                        "raw_filepath": str(volume),
+                        "mask_filepaths": [str(mask)],
+                        "thresholds": [32],
+                    },
+                )
+            result = call.structured_content
+            self.assertEqual("halt", result["gate"])
+            self.assertFalse(result["result"]["overall_pass"])
+            self.assertEqual(
+                32,
+                result["result"]["candidates"][0]["mismatched_voxels"],
+            )
 
 
 class DesignLabelCoreTests(unittest.TestCase):
@@ -118,11 +149,20 @@ class DesignLabelCoreTests(unittest.TestCase):
         self.graph_path.write_text(json.dumps(graph), encoding="utf-8")
         # The core subtracts the graph center [2, 0, 0].
         edge_centers = [np.asarray([value, 0.0, 0.0]) for value in (-1.5, -0.5, 0.5, 1.5)]
-        baseline = [point for point in edge_centers for _ in range(175)]
+        edge_clouds = [[point] * 175 for point in edge_centers]
+        baseline = [point for cloud in edge_clouds for point in cloud]
         write_binary_stl(self.root / "0.stl", baseline)
-        write_binary_stl(self.root / "0p1.stl", baseline[175:])
-        write_binary_stl(self.root / "0p5.stl", baseline[350:])
-        write_binary_stl(self.root / "1p0.stl", baseline[525:])
+        # Each percentage is an independent specimen. These deletion sets are
+        # deliberately non-nested to prevent cross-variant subset assumptions.
+        write_binary_stl(
+            self.root / "0p1.stl",
+            [point for cloud in edge_clouds[1:] for point in cloud],
+        )
+        write_binary_stl(
+            self.root / "0p5.stl",
+            [point for index in (0, 3) for point in edge_clouds[index]],
+        )
+        write_binary_stl(self.root / "1p0.stl", edge_clouds[1])
         orientation = {
             "gate": "pass",
             "gates": {"orientation_unambiguous": True},
@@ -135,7 +175,7 @@ class DesignLabelCoreTests(unittest.TestCase):
         self.orientation_path = self.root / "orientation.json"
         self.orientation_path.write_text(json.dumps(orientation), encoding="utf-8")
 
-    def test_tube_emptiness_preserves_ids_monotone_sets_and_triangle_evidence(self) -> None:
+    def test_tube_emptiness_validates_non_nested_specimens_independently(self) -> None:
         report = label_deleted_edges(
             self.graph_path,
             self.root / "0.stl",
@@ -153,14 +193,25 @@ class DesignLabelCoreTests(unittest.TestCase):
         )
         # This small fixture intentionally fails only the production graph-count gate.
         self.assertEqual("halt", report["gate"])
-        self.assertTrue(report["gates"]["deletion_sets_monotone"])
+        self.assertNotIn("deletion_sets_monotone", report["gates"])
+        self.assertTrue(
+            all(
+                passed
+                for name, passed in report["gates"].items()
+                if name != "graph_counts_match_reference"
+            )
+        )
         self.assertTrue(report["gates"]["triangle_deficit_ratio_between_170_and_180"])
         first = json.loads((self.root / "labels" / "intentional_deletions_0p1.json").read_text())
         self.assertEqual([101], first["deleted_strut_ids"])
+        second = json.loads((self.root / "labels" / "intentional_deletions_0p5.json").read_text())
+        third = json.loads((self.root / "labels" / "intentional_deletions_1p0.json").read_text())
+        self.assertEqual([205, 309], second["deleted_strut_ids"])
+        self.assertEqual([101, 309, 413], third["deleted_strut_ids"])
         dev = set(json.loads((self.root / "dev.json").read_text())["strut_ids"])
         sealed = set(json.loads((self.root / "sealed.json").read_text())["strut_ids"])
         self.assertTrue(dev.isdisjoint(sealed))
-        self.assertEqual({101, 205}, dev | sealed)
+        self.assertEqual({205, 309}, dev | sealed)
         self.assertIn("Design-diff label report", (self.root / "report.md").read_text())
 
         replay = label_deleted_edges(

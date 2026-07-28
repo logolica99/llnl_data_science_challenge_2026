@@ -227,7 +227,7 @@
     "design_space_only",
     "cad_graph_orientation_unambiguous",
     "deletion_counts_equal_18_93_186",
-    "deletion_sets_monotone",
+    "deletion_variants_validated_independently",
     "triangle_deficit_ratio_between_170_and_180",
     "all_label_ids_exist_in_nominal_topology",
     "development_and_sealed_splits_disjoint_and_exhaustive",

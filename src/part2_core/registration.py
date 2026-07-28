@@ -744,6 +744,9 @@ def register_lattice_to_ct(
         registered_document,
         overwrite=overwrite,
     )
+    persistent_graph_artifact = {
+        key: value for key, value in graph_artifact.items() if key != "changed"
+    }
     hashes = {
         "nominal_graph_sha256": nominal.source_sha256,
         "registered_graph_sha256": graph_artifact["sha256"],
@@ -764,7 +767,7 @@ def register_lattice_to_ct(
         "mode_details": mode_details,
         "artifacts": {
             "registered_graph": {
-                **graph_artifact,
+                **persistent_graph_artifact,
                 "role": "registered_lattice_graph",
                 "retention": "regenerable",
             }
@@ -788,6 +791,7 @@ def register_lattice_to_ct(
         "role": "registration_report",
         "retention": "committed",
     }
+    report["artifacts"]["registered_graph"]["changed"] = graph_artifact["changed"]
     report["hashes"]["registration_report_sha256"] = report_artifact["sha256"]
     if analysis_config_path is not None:
         analysis_config = {

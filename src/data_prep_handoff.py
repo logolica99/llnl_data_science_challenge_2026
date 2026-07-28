@@ -258,29 +258,30 @@ def _validate_data_prep_result(
         )
 
     canonical_mask = result.get("canonical_mask")
-    if canonical_mask is not None:
-        if not isinstance(canonical_mask, dict):
-            raise DataPrepHandoffError("canonical_mask must be an artifact object")
-        required = {"path", "sha256", "role", "retention", "dtype", "shape", "array_axes"}
-        if set(canonical_mask) != required:
-            raise DataPrepHandoffError("canonical_mask contract fields are incomplete")
-        mask_relative = Path(str(canonical_mask.get("path", "")))
-        if mask_relative.is_absolute() or ".." in mask_relative.parts:
-            raise DataPrepHandoffError("Canonical mask path escapes repository")
-        mask_path = repository_root.resolve() / mask_relative
-        if not mask_path.is_file() or sha256_file(mask_path) != canonical_mask.get("sha256"):
-            raise DataPrepHandoffError("Canonical mask is missing or has a SHA-256 mismatch")
-        expected_shape = manifest["inputs"]["ct_metadata"]["shape"]
-        if (
-            canonical_mask.get("role") != "canonical_segmentation_mask"
-            or canonical_mask.get("dtype") != "uint8"
-            or canonical_mask.get("shape") != expected_shape
-            or canonical_mask.get("array_axes") != ["z", "y", "x"]
-            or canonical_mask.get("retention") not in {"committed", "regenerable"}
-        ):
-            raise DataPrepHandoffError(
-                "Canonical mask path/role/dtype/shape/retention/axes contract mismatch"
-            )
+    if not isinstance(canonical_mask, dict):
+        raise DataPrepHandoffError(
+            "Data-prep result must provide canonical_mask as an artifact object"
+        )
+    required = {"path", "sha256", "role", "retention", "dtype", "shape", "array_axes"}
+    if set(canonical_mask) != required:
+        raise DataPrepHandoffError("canonical_mask contract fields are incomplete")
+    mask_relative = Path(str(canonical_mask.get("path", "")))
+    if mask_relative.is_absolute() or ".." in mask_relative.parts:
+        raise DataPrepHandoffError("Canonical mask path escapes repository")
+    mask_path = repository_root.resolve() / mask_relative
+    if not mask_path.is_file() or sha256_file(mask_path) != canonical_mask.get("sha256"):
+        raise DataPrepHandoffError("Canonical mask is missing or has a SHA-256 mismatch")
+    expected_shape = manifest["inputs"]["ct_metadata"]["shape"]
+    if (
+        canonical_mask.get("role") != "canonical_segmentation_mask"
+        or canonical_mask.get("dtype") != "uint8"
+        or canonical_mask.get("shape") != expected_shape
+        or canonical_mask.get("array_axes") != ["z", "y", "x"]
+        or canonical_mask.get("retention") not in {"committed", "regenerable"}
+    ):
+        raise DataPrepHandoffError(
+            "Canonical mask path/role/dtype/shape/retention/axes contract mismatch"
+        )
 
 
 def apply_data_prep_result(
@@ -308,8 +309,7 @@ def apply_data_prep_result(
     prior_manifest_hash = canonical_json_sha256(manifest)
     finalized = json.loads(json.dumps(manifest))
     finalized["inputs"]["aligned_graph"] = result["aligned_graph"]
-    if "canonical_mask" in result:
-        finalized["inputs"]["canonical_mask"] = result["canonical_mask"]
+    finalized["inputs"]["canonical_mask"] = result["canonical_mask"]
     finalized["derived"] = result["derived"]
     finalized["lifecycle_state"] = ANALYSIS_READY
     finalized["unresolved_fields"] = []
@@ -345,7 +345,7 @@ def apply_data_prep_result(
         "lifecycle_state": ANALYSIS_READY,
         "registration_mode": finalized["analysis_parameters"]["registration"]["mode"],
         "self_verification": result["self_verification"],
-        "canonical_mask": result.get("canonical_mask"),
+        "canonical_mask": result["canonical_mask"],
     }
     completion = {
         **completion_base,

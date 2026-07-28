@@ -27,6 +27,7 @@ from specimen_manifest import (  # noqa: E402
     canonical_json_sha256,
     load_json,
     require_analysis_ready,
+    sha256_file,
 )
 
 
@@ -53,6 +54,8 @@ class DataPrepHandoffTests(unittest.TestCase):
         trimesh.creation.box().export(self.cad)
         self.ct = self.data / "scan.npy"
         np.save(self.ct, np.arange(24, dtype=np.float32).reshape(2, 3, 4))
+        self.mask = self.data / "canonical-mask.npy"
+        np.save(self.mask, np.ones((2, 3, 4), dtype=np.uint8))
 
     def _ingest(self, *, provisional: bool = False) -> dict[str, object]:
         return ingest_specimen(
@@ -160,6 +163,15 @@ class DataPrepHandoffTests(unittest.TestCase):
             "input_manifest_sha256": canonical_json_sha256(manifest),
             "analysis_parameters_sha256": config_hash,
             "aligned_graph": aligned_artifact,
+            "canonical_mask": {
+                "path": self.mask.relative_to(self.root).as_posix(),
+                "sha256": sha256_file(self.mask),
+                "role": "canonical_segmentation_mask",
+                "retention": "committed",
+                "dtype": "uint8",
+                "shape": [2, 3, 4],
+                "array_axes": ["z", "y", "x"],
+            },
             "derived": derived,
             "self_verification": {
                 "exact_otsu_complete": True,
@@ -261,7 +273,26 @@ class DataPrepHandoffTests(unittest.TestCase):
             "derived_aligned_graph",
             finalized["inputs"]["aligned_graph"]["role"],
         )
+        self.assertEqual(
+            "canonical_segmentation_mask",
+            finalized["inputs"]["canonical_mask"]["role"],
+        )
         self.assertTrue(Path(completion["completion_receipt_path"]).is_file())
+
+    def test_data_prep_result_without_canonical_mask_cannot_advance(self) -> None:
+        intake = self._ingest()
+        manifest_path = Path(intake["paths"]["specimen_manifest"])
+        result = self._data_prep_result(manifest_path)
+        del result["canonical_mask"]
+        result_path = manifest_path.parent / "missing_mask_data_prep_result.json"
+        result_path.write_text(json.dumps(result), encoding="utf-8")
+
+        with self.assertRaisesRegex(DataPrepHandoffError, "canonical_mask"):
+            apply_data_prep_result(
+                manifest_path,
+                result_path,
+                repository_root=self.root,
+            )
 
     def test_failed_data_prep_self_verification_cannot_advance(self) -> None:
         intake = self._ingest()

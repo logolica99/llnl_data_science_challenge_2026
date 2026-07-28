@@ -33,12 +33,20 @@ comparison work belongs to the declared `segmentation-tools` MCP interfaces.
      artifacts before any optional aligned-reference validation.
 
 5. Invoke `localize_lattice_nodes` for independent full-resolution local
-   recentering of every node. Retain each accepted position and each coarse
-   fallback with ambiguity evidence; never globally refit afterward.
+   recentering of every node. Require deterministic seven-seed convergence on
+   the Gaussian-smoothed canonical foreground, robust median support along the
+   registered incident-edge directions, and a non-degrading CT-support check.
+   Treat the incident-edge score robustly so one missing strut cannot bias its
+   junction. Retain a coarse coordinate when CT support does not improve and
+   preserve a fallback when support is insufficient; never globally refit.
 6. Invoke `compute_registration_qa` over every node and all 18,468 edges. Keep
    coarse capture, padded-ROI capture, and metrology as separate gates. Emit
-   slice 380 and XYZ bias figures. If coarse and padded ROI pass but metrology
-   fails, return `manual_review` requiring explicit ROI-only authorization.
+   a color-coded slice 380 status overlay and XYZ bias figures. QA must derive
+   displacement and repeatability from the hashed localization report; the
+   agent must not supply an uncertainty scalar. Challenge-aligned mode has no
+   CT-only absolute-registration uncertainty, so it cannot claim direct
+   metrology. If coarse and padded ROI pass but metrology fails, return
+   `manual_review` requiring explicit ROI-only authorization.
 7. Publish the config, exact histogram/report, canonical mask/comparison,
    registered and localized graph/reports, QA and figures, data-prep result,
    completion receipt, and analysis-ready manifest replacement.

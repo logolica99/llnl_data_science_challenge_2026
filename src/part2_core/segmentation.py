@@ -161,17 +161,33 @@ def compare_segmentation_masks(
             raise ValueError(f"Mask shape {mask.shape} does not match raw shape {raw.shape}")
         if mask.dtype.kind not in "bui":
             raise TypeError(f"Mask dtype must be boolean/integer, found {mask.dtype}")
-        foreground = sum(
-            int(np.count_nonzero(mask.array[start : min(start + chunk_depth, mask.shape[0])]))
-            for start in range(0, mask.shape[0], chunk_depth)
-        )
+        foreground = 0
+        expected_foreground = 0
+        mismatched = 0
+        false_positive = 0
+        false_negative = 0
+        for start in range(0, mask.shape[0], chunk_depth):
+            end = min(start + chunk_depth, mask.shape[0])
+            actual = np.asarray(mask.array[start:end] != 0, dtype=bool)
+            expected = np.asarray(raw.array[start:end] >= threshold, dtype=bool)
+            foreground += int(np.count_nonzero(actual))
+            expected_foreground += int(np.count_nonzero(expected))
+            mismatch = actual != expected
+            mismatched += int(np.count_nonzero(mismatch))
+            false_positive += int(np.count_nonzero(actual & ~expected))
+            false_negative += int(np.count_nonzero(~actual & expected))
         item = {
             "threshold": float(threshold),
             "path": portable(mask.path),
             "dtype": str(mask.dtype),
             "foreground_voxels": foreground,
+            "expected_foreground_voxels": expected_foreground,
             "total_voxels": int(mask.array.size),
             "foreground_percent": 100.0 * foreground / int(mask.array.size),
+            "mismatched_voxels": mismatched,
+            "false_positive_voxels": false_positive,
+            "false_negative_voxels": false_negative,
+            "exact_threshold_match": mismatched == 0,
             "sha256": sha256_file(mask.path),
         }
         candidates.append(item)
@@ -186,6 +202,7 @@ def compare_segmentation_masks(
     config_hash = sha256_json(
         {"thresholds": thresholds, "registration_mode": registration_mode, "chunk_depth": chunk_depth}
     )
+    all_exact = all(item["exact_threshold_match"] for item in candidates)
     result = {
         "status": "ok",
         "raw_path": portable(raw.path),
@@ -193,6 +210,7 @@ def compare_segmentation_masks(
         "candidates": candidates,
         "registration_mode": registration_mode,
         "config_sha256": config_hash,
+        "overall_pass": all_exact,
     }
     if output_report_path is not None:
         artifact = write_json_atomic(output_report_path, result, overwrite=overwrite)
@@ -202,11 +220,15 @@ def compare_segmentation_masks(
             "retention": "committed",
         }
     return {
-        "gate": "pass",
+        "gate": "pass" if all_exact else "halt",
         "result": result,
         "artifacts": artifacts,
         "hashes": {"raw_sha256": sha256_file(raw.path), "config_sha256": config_hash},
-        "warnings": [],
+        "warnings": (
+            []
+            if all_exact
+            else ["one or more masks do not exactly match raw >= threshold"]
+        ),
     }
 
 

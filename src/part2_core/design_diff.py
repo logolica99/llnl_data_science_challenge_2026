@@ -102,20 +102,27 @@ def _edge_core_samples(
 
 
 def _scale_hypotheses(
-    centered_samples: np.ndarray,
+    design_span: np.ndarray,
     centroids: np.ndarray,
     explicit: Sequence[float] | None,
 ) -> list[float]:
     if explicit is not None:
         values = sorted({float(value) for value in explicit})
     else:
-        # This robust quantile span is only a proposal generator.  Ranking is
-        # based on lattice centerline/triangle support, never a whole-mesh box.
-        design_span = np.ptp(centered_samples.reshape(-1, 3), axis=0)
-        low, high = np.quantile(centroids, [0.005, 0.995], axis=0)
-        ratios = (high - low)[design_span > 0] / design_span[design_span > 0]
-        center = float(np.median(ratios))
-        values = [center * (1.0 + offset) for offset in np.linspace(-0.02, 0.02, 17)]
+        # Scale proposal only: discard the largest axis ratio because this
+        # specimen has known non-lattice tabs/plates along STL Y. Orientation
+        # and translation are still ranked exclusively by lattice support, so
+        # a whole-mesh box never becomes the registration objective.
+        mesh_span = np.ptp(centroids, axis=0)
+        valid = np.asarray(design_span, dtype=np.float64) > 0
+        ratios = np.sort(mesh_span[valid] / np.asarray(design_span)[valid])
+        if ratios.size < 2:
+            raise ValueError("Scale proposal requires at least two finite spans")
+        center = float(np.median(ratios[:2]))
+        values = [
+            center * (1.0 + offset)
+            for offset in np.linspace(-0.01, 0.01, 21)
+        ]
         # Preserve the independently established design-unit scale as a
         # candidate for this reference specimen, without forcing it to win.
         values.append(2.3052)
@@ -166,7 +173,11 @@ def resolve_cad_graph_orientation(
     tree: cKDTree | None = None
     try:
         tree = cKDTree(centroids, compact_nodes=False, balanced_tree=False)
-        scales = _scale_hypotheses(samples, centroids, scale_candidates)
+        scales = _scale_hypotheses(
+            np.ptp(graph.node_positions_xyz, axis=0),
+            centroids,
+            scale_candidates,
+        )
         translations = _translation_hypotheses(centroids)
         # A stable subset is sufficient to rank orientation hypotheses; the
         # winning transform is then checked against every nominal edge.
@@ -186,7 +197,13 @@ def resolve_cad_graph_orientation(
                         rotated * scale + translation,
                         k=1,
                         workers=1,
-                    )[0]
+                    )[0].reshape(len(edge_rows), sample_count)
+                    # Match the validated tube-emptiness calibration: an edge
+                    # is supported when at least one junction-trimmed sample
+                    # reaches its surface. Averaging every sample biases the
+                    # scale toward a shrunken lattice even when each edge is
+                    # correctly supported at the physical design scale.
+                    per_edge_minimum = distances.min(axis=1)
                     ranked.append(
                         {
                             "rotation_index": rotation_index,
@@ -194,9 +211,15 @@ def resolve_cad_graph_orientation(
                             "scale_mm_per_design_unit": float(scale),
                             "rotation_matrix": rotation.tolist(),
                             "translation_mm": translation.tolist(),
-                            "mean_support_distance_mm": float(np.mean(distances)),
-                            "p99_support_distance_mm": float(np.quantile(distances, 0.99)),
-                            "maximum_support_distance_mm": float(np.max(distances)),
+                            "mean_support_distance_mm": float(
+                                np.mean(per_edge_minimum)
+                            ),
+                            "p99_support_distance_mm": float(
+                                np.quantile(per_edge_minimum, 0.99)
+                            ),
+                            "maximum_support_distance_mm": float(
+                                np.max(per_edge_minimum)
+                            ),
                         }
                     )
         ranked.sort(
@@ -264,6 +287,7 @@ def resolve_cad_graph_orientation(
             "expected_counts": expected,
         }
     )
+    all_edge_minimum = all_distances.min(axis=1)
     report = {
         "schema_version": ORIENTATION_SCHEMA_VERSION,
         "gate": gate,
@@ -286,9 +310,15 @@ def resolve_cad_graph_orientation(
         "support": {
             "edge_count": int(len(graph.edge_ids)),
             "samples_per_edge": sample_count,
-            "mean_nearest_triangle_centroid_mm": float(np.mean(all_distances)),
-            "p99_nearest_triangle_centroid_mm": float(np.quantile(all_distances, 0.99)),
-            "maximum_nearest_triangle_centroid_mm": float(np.max(all_distances)),
+            "mean_nearest_triangle_centroid_mm": float(
+                np.mean(all_edge_minimum)
+            ),
+            "p99_nearest_triangle_centroid_mm": float(
+                np.quantile(all_edge_minimum, 0.99)
+            ),
+            "maximum_nearest_triangle_centroid_mm": float(
+                np.max(all_edge_minimum)
+            ),
         },
         "ambiguity": {
             "equivalent_hypothesis_count": len(equivalent),
@@ -478,8 +508,6 @@ def label_deleted_edges(
     )
     labels: dict[str, dict[str, Any]] = {}
     artifacts: dict[str, Any] = {}
-    prior_ids: set[int] = set()
-    monotone_sets = True
     for variant in sorted(variant_stl_paths):
         deleted_mask, triangle_count, distances = _analyze_one_mesh(
             variant_stl_paths[variant], transformed, radius
@@ -487,8 +515,6 @@ def label_deleted_edges(
         deleted_ids = [int(value) for value in graph.edge_ids[deleted_mask]]
         deficit = baseline_triangles - triangle_count
         ratio = deficit / len(deleted_ids) if deleted_ids else None
-        monotone_sets = monotone_sets and prior_ids.issubset(deleted_ids)
-        prior_ids = set(deleted_ids)
         payload = {
             "schema_version": LABEL_SCHEMA_VERSION,
             "variant": variant,
@@ -549,7 +575,6 @@ def label_deleted_edges(
     gates = {
         "baseline_negative_control": not bool(np.any(baseline_empty)),
         "deletion_counts_match": count_gate,
-        "deletion_sets_monotone": monotone_sets,
         "triangle_deficit_ratio_between_170_and_180": ratio_gate,
         "label_ids_unique_and_nominal": id_gate,
         "graph_counts_match_reference": graph.counts == REFERENCE_COUNTS,

@@ -18,7 +18,7 @@ from .lattice import load_lattice_json, positions_in_volume
 from .sampling import sample_corridor
 from .volume import AXIS_MAPPING, load_volume
 
-REGISTRATION_QA_SCHEMA_VERSION = "part2-registration-qa/1.0.0"
+REGISTRATION_QA_SCHEMA_VERSION = "part2-registration-qa/1.1.0"
 DEFAULT_QA_CONFIG: dict[str, Any] = {
     "junction_patch_radius_voxels": 2,
     "corridor_axial_samples": 9,
@@ -49,8 +49,6 @@ def compute_registration_qa(
     *,
     threshold: float,
     registration_mode: str,
-    local_search_radius_voxels: float,
-    registration_uncertainty_voxels: float,
     localization_report_path: str | Path | None = None,
     slice_output_path: str | Path | None = None,
     bias_output_path: str | Path | None = None,
@@ -151,13 +149,25 @@ def compute_registration_qa(
     localization_graph_hash_matches = False
     localization_gate = "unknown"
     localization_hash = None
+    localization_records: list[dict[str, Any]] = []
+    local_search_radius_voxels = None
+    capture_displacement_p95_voxels = None
+    stability_uncertainty_p95_voxels = None
+    absolute_registration_uncertainty_voxels = None
+    absolute_registration_uncertainty_source = "unavailable"
     if localization_report_path is not None:
         localization = read_json_object(localization_report_path)
+        localization_summary = localization.get("localization", {})
+        localization_records = [
+            record
+            for record in localization.get("records", [])
+            if isinstance(record, dict)
+        ]
         independent_positions = bool(
-            localization.get("localization", {}).get(
+            localization_summary.get(
                 "independent_positions_retained", False
             )
-            and not localization.get("localization", {}).get(
+            and not localization_summary.get(
                 "global_refit_performed", True
             )
         )
@@ -167,10 +177,31 @@ def compute_registration_qa(
         )
         localization_gate = str(localization.get("gate", "unknown"))
         localization_hash = sha256_file(localization_report_path)
+        local_search_radius_voxels = localization_summary.get("search_radius_voxels")
+        capture_displacement_p95_voxels = localization_summary.get(
+            "accepted_shift_voxels", {}
+        ).get("p95")
+        stability_uncertainty_p95_voxels = localization_summary.get(
+            "stability_uncertainty_voxels", {}
+        ).get("p95")
+        absolute_registration_uncertainty_voxels = localization_summary.get(
+            "absolute_registration_uncertainty_voxels"
+        )
+        absolute_registration_uncertainty_source = str(
+            localization_summary.get(
+                "absolute_registration_uncertainty_source", "unavailable"
+            )
+        )
+    numeric_capture = (
+        isinstance(local_search_radius_voxels, (int, float))
+        and isinstance(capture_displacement_p95_voxels, (int, float))
+    )
     roi_fraction = float(np.mean(roi_contained))
     coarse_gates = {
-        "uncertainty_within_local_capture_radius": bool(
-            registration_uncertainty_voxels <= local_search_radius_voxels
+        "accepted_displacement_within_local_capture_radius": bool(
+            numeric_capture
+            and float(capture_displacement_p95_voxels)
+            <= float(local_search_radius_voxels)
         ),
         "independent_node_positions_retained": independent_positions,
         "localization_graph_hash_matches": localization_graph_hash_matches,
@@ -181,13 +212,25 @@ def compute_registration_qa(
             roi_fraction >= float(merged["minimum_roi_in_bounds_fraction"])
         ),
     }
+    numeric_absolute_uncertainty = isinstance(
+        absolute_registration_uncertainty_voxels, (int, float)
+    )
+    metrology_uncertainty = (
+        float(absolute_registration_uncertainty_voxels)
+        + float(stability_uncertainty_p95_voxels or 0.0)
+        if numeric_absolute_uncertainty
+        else None
+    )
     metrology_ratio_value = (
-        registration_uncertainty_voxels / measured_radius
-        if measured_radius > 0
+        metrology_uncertainty / measured_radius
+        if metrology_uncertainty is not None and measured_radius > 0
         else None
     )
     metrology_gates = {
         "measured_radius_positive": bool(measured_radius > 0),
+        "absolute_registration_uncertainty_available": bool(
+            numeric_absolute_uncertainty
+        ),
         "uncertainty_within_measured_radius": bool(
             metrology_ratio_value is not None
             and metrology_ratio_value
@@ -238,16 +281,43 @@ def compute_registration_qa(
             figure, axes = plt.subplots(figsize=(8, 8))
             try:
                 axes.imshow(np.asarray(volume.array[int(slice_index)]), cmap="gray")
-                near = np.abs(graph.node_positions_xyz[:, 2] - int(slice_index)) <= 2.0
-                axes.scatter(
-                    graph.node_positions_xyz[near, 0],
-                    graph.node_positions_xyz[near, 1],
-                    s=8,
-                    facecolors="none",
-                    edgecolors="#ff3b30",
-                    linewidths=0.7,
-                )
-                axes.set_title(f"Localized junction overlay, z={slice_index}")
+                record_by_id = {
+                    int(record["node_id"]): record
+                    for record in localization_records
+                    if isinstance(record.get("node_id"), int)
+                }
+                styles = {
+                    "localized": ("#34c759", "localized"),
+                    "stable_coarse": ("#ffcc00", "stable coarse"),
+                    "fallback": ("#ff3b30", "fallback/review"),
+                }
+                for status, (color, label) in styles.items():
+                    rows = np.asarray(
+                        [
+                            row
+                            for row, node_id in enumerate(graph.node_ids)
+                            if abs(graph.node_positions_xyz[row, 2] - int(slice_index))
+                            <= 2.0
+                            and record_by_id.get(int(node_id), {}).get(
+                                "localization_status", "fallback"
+                            )
+                            == status
+                        ],
+                        dtype=np.int64,
+                    )
+                    if rows.size:
+                        axes.scatter(
+                            graph.node_positions_xyz[rows, 0],
+                            graph.node_positions_xyz[rows, 1],
+                            s=11,
+                            facecolors="none",
+                            edgecolors=color,
+                            linewidths=0.9,
+                            label=label,
+                        )
+                if localization_records:
+                    axes.legend(loc="lower right", fontsize=7, framealpha=0.8)
+                axes.set_title(f"CT-only localization status, z={slice_index}")
                 axes.axis("off")
                 figure.tight_layout()
                 figure.savefig(path, dpi=150, bbox_inches="tight", metadata={"Software": "part2-core"})
@@ -283,6 +353,12 @@ def compute_registration_qa(
             "retention": "committed",
         }
 
+    persistent_figure_artifacts = {
+        name: {
+            key: value for key, value in metadata.items() if key != "changed"
+        }
+        for name, metadata in figure_artifacts.items()
+    }
     report = {
         "schema_version": REGISTRATION_QA_SCHEMA_VERSION,
         "gate": gate,
@@ -310,8 +386,9 @@ def compute_registration_qa(
             "overall_pass": bool(all(image_gates.values())),
         },
         "coarse_capture": {
-            "registration_uncertainty_voxels": float(registration_uncertainty_voxels),
-            "local_search_radius_voxels": float(local_search_radius_voxels),
+            "accepted_displacement_p95_voxels": capture_displacement_p95_voxels,
+            "local_search_radius_voxels": local_search_radius_voxels,
+            "estimator_stability_p95_voxels": stability_uncertainty_p95_voxels,
             "localization_report_gate": localization_gate,
             "gates": coarse_gates,
             "overall_pass": bool(all(coarse_gates.values())),
@@ -323,7 +400,14 @@ def compute_registration_qa(
             "overall_pass": bool(all(roi_gates.values())),
         },
         "metrology": {
-            "registration_uncertainty_voxels": float(registration_uncertainty_voxels),
+            "absolute_registration_uncertainty_voxels": (
+                absolute_registration_uncertainty_voxels
+            ),
+            "absolute_registration_uncertainty_source": (
+                absolute_registration_uncertainty_source
+            ),
+            "estimator_stability_p95_voxels": stability_uncertainty_p95_voxels,
+            "combined_metrology_uncertainty_voxels": metrology_uncertainty,
             "measured_strut_radius_voxels": measured_radius,
             "uncertainty_to_measured_radius_ratio": metrology_ratio_value,
             "direct_narrow_corridor_allowed": bool(all(metrology_gates.values())),
@@ -335,7 +419,7 @@ def compute_registration_qa(
             "gates": metrology_gates,
             "overall_pass": bool(all(metrology_gates.values())),
         },
-        "artifacts": figure_artifacts,
+        "artifacts": persistent_figure_artifacts,
         "hashes": {
             "ct_sha256": sha256_file(volume.path),
             "localized_graph_sha256": graph.source_sha256,
@@ -370,5 +454,7 @@ def compute_registration_qa(
         "role": "registration_qa",
         "retention": "committed",
     }
+    for name, metadata in figure_artifacts.items():
+        report["artifacts"][name]["changed"] = metadata["changed"]
     report["hashes"]["registration_qa_sha256"] = artifact["sha256"]
     return report

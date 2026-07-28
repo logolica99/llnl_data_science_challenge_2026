@@ -8,7 +8,12 @@ Required `segmentation-tools` interfaces:
 - `compare_segmentation_masks`: bounded aligned-mask statistics and persisted report.
 - `visualize_slice`: bounded PNG artifact without voxel payloads.
 - `register_lattice_to_ct`: challenge validation or isolated autonomous-v2 fit.
-- `localize_lattice_nodes`: independent per-node local positions and ambiguity evidence.
-- `compute_registration_qa`: all-node/all-edge support, separate capture/metrology gates, slice and bias figures.
+- `localize_lattice_nodes`: topology-supported deterministic multistart
+  mean-shift positions, stable-coarse decisions, CT-support comparisons,
+  convergence repeatability, and bounded fallbacks without label access.
+- `compute_registration_qa`: all-node/all-edge support, localization-report
+  derived displacement/repeatability, artifact-backed absolute uncertainty
+  when available, separate capture/metrology gates, and status/bias figures.
+  Its MCP schema must not accept a caller-supplied uncertainty scalar.
 
 Every call must return `part2-mcp-response/1.0.0`, an explicit gate, repository-relative artifacts with SHA-256, compact counts, warnings, and a structured error on failure.

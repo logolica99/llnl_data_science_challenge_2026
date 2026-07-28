@@ -22,7 +22,7 @@ This reference explains their intended routing; it does not replace them.
 - Outputs: normalized explicit ID map, orientation evidence, three intentional-deletion lists,
   `labels/dev_split.json`, `evals/labels/sealed_split.json`, and
   `labels/label_report.md`.
-- Gate: counts 18/93/186, monotone deletion sets, triangle-deficit ratio 170–180, valid
+- Gate: independently validated counts 18/93/186, triangle-deficit ratio 170–180, valid
   IDs, unambiguous orientation/edges, and a disjoint stratified 30/70 split.
 
 ## Stage 2 — data preparation

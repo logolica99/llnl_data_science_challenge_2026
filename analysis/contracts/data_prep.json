@@ -312,6 +312,10 @@
     "autonomous_fit_artifacts_frozen_before_optional_reference_access",
     "independent_node_positions_retained",
     "global_refit_not_performed_after_localization",
+    "localization_uses_label_blind_deterministic_multistart",
+    "localization_incident_support_uses_robust_aggregation",
+    "localization_support_non_degrading_or_coarse_position_retained",
+    "qa_uncertainty_derived_from_hashed_artifacts_not_agent_scalar",
     "coarse_capture_gate_passed",
     "padded_roi_gate_passed",
     "metrology_gate_recorded_separately",
@@ -331,7 +335,8 @@
   },
   "manual_review_conditions": [
     "metrology_gate_failed_but_coarse_capture_and_padded_roi_gates_passed",
-    "bounded_localization_ambiguity_with_preserved_coarse_coordinates"
+    "bounded_localization_instability_or_insufficient_ct_support_with_preserved_coarse_coordinates",
+    "absolute_registration_uncertainty_unavailable_for_direct_metrology"
   ],
   "halt_conditions": [
     "missing_or_schema_incompatible_dependency",

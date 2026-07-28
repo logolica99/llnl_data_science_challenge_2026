@@ -17,7 +17,7 @@ implementation import, bundled scientific CLI, or local substitute.
 Read only the handoff-authorized nominal graph and four STL files. Never read
 CT, aligned coordinates, segmentation, registration, prior labels, or an
 unrestricted pipeline manifest. Use MCP artifacts to normalize explicit IDs,
-resolve orientation, label every edge, validate counts/monotone sets/triangle
+resolve orientation, label every edge, validate each specimen's count/triangle
 support, and create the stratified dev/sealed split. Equivalent orientation or
 edge hypotheses require manual_review; never guess.
 

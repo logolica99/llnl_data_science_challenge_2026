@@ -125,7 +125,6 @@ class SyntheticFixture(unittest.TestCase):
             registration_mode="challenge_aligned_json",
             registration_report_path=registration_report,
             config={
-                "maximum_second_to_first_peak_ratio": 1.0,
                 "minimum_accepted_fraction": 0.75,
                 "maximum_ambiguous_fraction": 1.0,
             },
@@ -137,6 +136,94 @@ class SyntheticFixture(unittest.TestCase):
 
 
 class ProductionPipelineTests(SyntheticFixture):
+    def test_multibranch_junction_uses_stable_ct_center_not_competing_edt_peaks(
+        self,
+    ) -> None:
+        true_center = np.asarray([24.0, 24.0, 24.0])
+        offsets = 12.0 * np.asarray(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [-1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, -1.0, 0.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, -1.0],
+            ]
+        )
+        true_positions = true_center + offsets
+        coarse_positions = true_positions + np.asarray([1.5, -1.0, 1.0])
+        node_ids = [100 + index for index in range(len(true_positions))]
+        star_graph = self.root / "star-registered.json"
+        star_graph.write_text(
+            json.dumps(
+                {
+                    "junctions": [
+                        {"id": identifier, "position": position.tolist()}
+                        for identifier, position in zip(node_ids, coarse_positions)
+                    ],
+                    "struts": [
+                        {"id": 200 + index, "junction0": node_ids[0], "junction1": node_ids[index]}
+                        for index in range(1, len(node_ids))
+                    ],
+                    "unit_cells": [
+                        {
+                            "id": 300,
+                            "indices": [0, 0, 0],
+                            "struts": [200 + index for index in range(1, len(node_ids))],
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        zz, yy, xx = np.indices((49, 49, 49))
+        points = np.stack((xx, yy, zz), axis=-1).astype(float)
+        foreground = np.sum((points - true_center) ** 2, axis=-1) <= 4.0**2
+        for endpoint in true_positions[1:]:
+            direction = endpoint - true_center
+            length_squared = float(np.dot(direction, direction))
+            t = np.clip(
+                np.sum((points - true_center) * direction, axis=-1)
+                / length_squared,
+                0.0,
+                1.0,
+            )
+            closest = true_center + t[..., None] * direction
+            foreground |= np.sum((points - closest) ** 2, axis=-1) <= 2.5**2
+        star_ct = self.root / "star-ct.npy"
+        np.save(star_ct, np.where(foreground, 1000, 0).astype(np.uint16))
+
+        report = localize_lattice_nodes(
+            star_ct,
+            star_graph,
+            self.root / "star-localized.json",
+            self.root / "star-localization.json",
+            threshold=500,
+            registration_mode="challenge_aligned_json",
+            config={
+                "minimum_accepted_fraction": 0.5,
+                "maximum_ambiguous_fraction": 0.5,
+            },
+        )
+        center_record = next(
+            record for record in report["records"] if record["node_id"] == node_ids[0]
+        )
+        self.assertTrue(center_record["accepted"], center_record)
+        self.assertNotIn("unstable_multistart", center_record["reason"])
+        self.assertGreaterEqual(center_record["seed_consensus_fraction"], 0.7)
+        self.assertLess(
+            np.linalg.norm(
+                np.asarray(center_record["localized_xyz"]) - true_center
+            ),
+            np.linalg.norm(coarse_positions[0] - true_center),
+        )
+        self.assertFalse(
+            report["localization"]["stability_uncertainty_voxels"][
+                "absolute_registration_accuracy_claimed"
+            ]
+        )
+
     def test_challenge_metrics_classification_evidence_lookup_and_scoring(self) -> None:
         localized, localization_report = self._register_and_localize()
         qa_path = self.root / "qa.json"
@@ -146,8 +233,6 @@ class ProductionPipelineTests(SyntheticFixture):
             qa_path,
             threshold=500,
             registration_mode="challenge_aligned_json",
-            local_search_radius_voxels=8.0,
-            registration_uncertainty_voxels=3.0,
             localization_report_path=localization_report,
             config={
                 "minimum_mean_junction_foreground_fraction": 0.1,
@@ -160,6 +245,14 @@ class ProductionPipelineTests(SyntheticFixture):
         self.assertEqual("manual_review", qa["gate"])
         self.assertTrue(qa["coarse_capture"]["overall_pass"])
         self.assertFalse(qa["metrology"]["overall_pass"])
+        self.assertIsNone(
+            qa["metrology"]["absolute_registration_uncertainty_voxels"]
+        )
+        self.assertFalse(
+            qa["metrology"]["gates"][
+                "absolute_registration_uncertainty_available"
+            ]
+        )
 
         metrics_path = self.root / "metrics.csv"
         profiles_path = self.root / "profiles.json"

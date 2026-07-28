@@ -62,6 +62,17 @@ class ProductionMCPTests(unittest.IsolatedAsyncioTestCase):
                     "aligned_graph_filepath": str(self.aligned),
                 },
             )
+            replay = await client.call_tool(
+                "register_lattice_to_ct",
+                {
+                    "nominal_graph_filepath": str(self.nominal),
+                    "output_graph_filepath": str(self.root / "registered.json"),
+                    "output_report_filepath": str(self.root / "report.json"),
+                    "registration_mode": "challenge_aligned_json",
+                    "ct_filepath": str(self.volume),
+                    "aligned_graph_filepath": str(self.aligned),
+                },
+            )
         self.assertFalse(call.is_error)
         result = call.structured_content
         self.assertEqual("ok", result["status"])
@@ -74,6 +85,13 @@ class ProductionMCPTests(unittest.IsolatedAsyncioTestCase):
             Path(result["artifacts"]["registered_graph"]["path"]).is_absolute()
         )
         self.assertEqual(64, len(result["hashes"]["registered_graph_sha256"]))
+        self.assertEqual("pass", replay.structured_content["gate"])
+        self.assertFalse(
+            replay.structured_content["artifacts"]["registered_graph"]["changed"]
+        )
+        self.assertFalse(
+            replay.structured_content["artifacts"]["registration_report"]["changed"]
+        )
 
     async def test_autonomous_mode_rejects_aligned_json_fail_closed(self) -> None:
         async with Client(mcp) as client:
