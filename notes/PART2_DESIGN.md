@@ -149,35 +149,50 @@ and its review screenshot is
 
 ### 3.2 Subagents and contracts
 
-Every subagent gets a bounded contract with exact inputs, a never-touch list,
-enumerated output artifacts, iteration/failure limits, and mandatory
-self-verification. The implemented `specimen_ingest.toml` is the Stage 0
-scientist-facing contract; the archived
-`DEPRECATED/agents/segmentation_agent.toml` remains historical context and must
-not be reused because it references retired script/fallback behavior. The
-roster is deliberately lean everywhere
-**except Stage 4**, which is the scientific heart of the pipeline: there, a
-dedicated `defect_lead` agent runs one subagent per defect class, so each
-class's detection logic, cutoffs, and justification are owned by a specialist
-with a narrow contract (and the classes' very different supervision situations
-— §5.2 — stay cleanly separated). Elsewhere, agents exist only where there is
-judgment to exercise; deterministic stages are MCP calls or allowlisted intake
-cores sequenced by the orchestrator.
+Every production agent gets an immutable, attempt-scoped hand-off with exact
+inputs, a never-touch list, enumerated output artifacts, iteration/failure
+limits, and mandatory self-verification. An agent result is not accepted merely
+because the agent returned: the orchestrator must build and apply the
+attempt-bound completion receipt, rehash every declared artifact, and verify
+the predecessor receipt, frozen config, contract, hand-off, and terminal gate.
+
+`specimen_ingest.toml`, `orchestrator.toml`, `design_diff.toml`, and
+`data_prep.toml` are implemented production contracts. The archived
+`DEPRECATED/agents/segmentation_agent.toml` is historical context and must not
+be reused because it references retired script/fallback behavior. The Stage
+3–6 agent owners below remain planned even where their deterministic MCP
+primitives already exist.
+
+The roster is deliberately lean everywhere **except Stage 4**, the scientific
+judgment point. A dedicated `defect_lead` coordinates narrowly scoped class
+specialists, but receives the same development-blind shared hand-off as the
+thin, broken, and independent verifier roles. Only `missing_strut_agent`
+receives the separate development-label hand-off. No Stage 4 participant ever
+receives the sealed split. Deterministic calculation remains in MCP tools or
+the allowlisted intake/control-plane cores; agents own policy, bounded
+judgment, reconciliation, and explicit abstention.
 
 | Agent | Stage | Contract highlights |
 |---|---|---|
 | `specimen_ingest` | 0 | **Implemented bounded intake agent.** Accepts exactly one closed, self-hashed scientist request binding the specimen/design identity, requested scope, registration mode, declarations, and current CAD/graph/CT hashes, plus an optional authorized aligned graph. It invokes `$volume-metadata` → `inspect_volume_metadata` in authoritative header-only mode and halts if MCP is unavailable; it never substitutes a CLI or direct import. The MCP call writes `ct_metadata_response.json` and a separate `ct_metadata_mcp_call_receipt.json`, then the allowlisted intake and hand-off cores emit `ingest_request.json`, `specimen_manifest.json`, `ingest_receipt.json`, and `data_prep_handoff.json`. The receipt provides a closed integrity/lineage chain, not cryptographic authentication of process identity. The orchestrator semantically reopens all six outputs and anchors them to the scientist request before accepting Stage 0. The agent never reads labels, thresholds, masks, registration outputs, or another specimen manifest; after at most two correction attempts it returns a verified `ready` hand-off or explicit `halt`. |
-| `orchestrator` | all | Sequences stages strictly through file artifacts; verifies each stage's self-verification before unlocking the next; max 2 retries per *agent* stage (deterministic gates either pass or halt — no retry thrash); maintains `analysis/manifest.json` (stage status + artifact hashes + config hash); owns the final presentation/demo assets |
-| `design_diff` | 1 | Works **only in design space**; bounding-box registration forbidden; must pass the count-consistency gate before labels propagate; flags (never guesses) ambiguous edges and reports them in `label_report.md` |
-| `data_prep` | 2 | Consumes only a verified `data_prep_handoff.json` from Stage 0, then owns the registration-mode selector and deterministic gates. **Challenge mode:** verifies the supplied graph schema/topology and uses it as the canonical coordinate graph. **Autonomous mode:** invokes v2 with nominal graph + CT only, freezes/hashes the coarse fit, then independently recenters nodes in local CT windows and retains the per-node positions; the aligned JSON remains unavailable until optional post-fit validation. Freezes `analysis/<specimen_id>/config/analysis_config.json`, including mode/provenance; recomputes exact-histogram Otsu (40054 / 58,653,410 here); runs all-edge QA and the coarse-capture gate; emits the X/Y/Z bias curves; never touches defect-label files. |
-| `strut_metrics` | 3 | Never sees the labels; runs the corridor-radius bootstrap, then `compute_strut_metrics`; verifies 18,468 rows |
-| `defect_lead` | 4 | **Dedicated defect-analysis agent** coordinating one subagent per defect class (below). Fans the per-strut metrics out to its subagents, adjudicates conflicts under a fixed precedence (**missing > broken > thin > present** — each strut gets exactly one label), merges the per-class findings into `classified_struts.json`, generates evidence packets for every non-present strut, and writes the merged `decision_log.md`. **Blind:** the team as a whole sees metrics + dev-split labels only; the lead never overrides a subagent silently — every adjudication is logged |
+| `orchestrator` | all | **Implemented control-plane agent.** Sequences stages strictly through the deterministic state CLI and immutable file hand-offs; maintains `analysis/<specimen_id>/manifest.json`; verifies every predecessor receipt, contract/config hash, input/output path, artifact hash, self-verification assertion, and terminal gate before unlocking the next stage. A `manual_review` stops automation and keeps downstream stages locked until an explicit, hashed same-stage resolution is recorded. Standalone or prior-run outputs cannot be borrowed without the exact hand-off and predecessor receipt. Agent/judgment work has at most two attempts; deterministic gate failures halt rather than retry. Owns the final presentation/demo assets but performs no scientific computation. |
+| `design_diff` | 1 | **Implemented design-only agent.** Invokes `$stl-design-diff` and the MCP sequence `load_lattice_graph` → `resolve_cad_graph_orientation` → `label_deleted_edges`. Reads only the nominal graph and the 0, 0.1, 0.5, and 1 percent STLs; CT, aligned coordinates, registration, and prior labels are forbidden. Bounding-box registration is forbidden. Requires unique IDs/topology, finite all-edge support, independent 18/93/186 deletion counts, and triangle-deficit support; it does **not** require deletion sets from different specimens to be nested. Symmetric geometry passes only with an intake-hashed transform declaration that independently verifies against the graph and STL; otherwise orientation ambiguity produces `manual_review` and the agent never guesses. Emits the normalized ID map, orientation evidence, label artifacts, deterministic development/sealed split, report, and receipt. |
+| `data_prep` | 2 | **Implemented label-blind agent.** Consumes the immutable Stage 2 hand-off, verified Stage 0 `data_prep_handoff.json`, and passing Stage 1 predecessor receipt. Invokes `$ct-registration`, which owns `volume_info` → `replay_exact_otsu` → `segment_ct_dataset` → `compare_segmentation_masks` → `verify_canonical_segmentation` → declared-mode registration → independent node localization → all-node/all-edge QA. `$ct-threshold-optimizer` is optional exploratory support and is not on the production critical path. **Challenge mode:** verifies the authorized aligned graph without claiming autonomous fit. **Autonomous mode:** fits from nominal graph + CT only, freezes/hashes the CT-only fit before optional aligned validation, then independently recenters nodes without a later global refit. It reproduces exact Otsu (40054 / 58,653,410 here), publishes a canonical uint8 ZYX mask, preserves primary/stable-coarse/fallback/ambiguous/rejected/boundary quality, and emits registration/localization/QA artifacts. A hash-bound `roi_screening` request may pass when every ROI gate passes while metrology is explicitly `not_authorized`; `direct_metrology` requires artifact-backed absolute uncertainty or returns `manual_review`. Defect, development, sealed, and ground-truth files are forbidden. |
+| `strut_metrics` | 3 | **Planned agent; MCP primitive implemented.** Receives no label artifact; runs the corridor-radius bootstrap and `compute_strut_metrics`, then verifies exactly 18,468 artifact-backed rows. |
+| `defect_lead` | 4 | **Planned dedicated defect-analysis agent** coordinating the specialists below. Receives metrics and a development-blind shared hand-off; it never receives development or sealed labels. Adjudicates conflicts under fixed precedence (**missing > broken > thin > present**), merges findings into `classified_struts.json`, generates evidence for every non-present strut, and writes `decision_log.md`. It never overrides a specialist silently: every adjudication is logged. |
 | ├ `missing_strut_agent` | 4a | Sole subagent allowed to read `dev_split.json`. Calibrates the missing/present occupancy boundary on the ~28 dev positives; outputs `findings_missing.json` + its own decision log; forbidden to touch thin/broken cutoffs |
 | ├ `thin_strut_agent` | 4b | **No labels exist for these classes** — owns **thin** and **bent** (both purely geometric, distribution-derived, no sealed ground truth, triage-only per §5.2). Thin: percentiles of median/min EDT radius vs the Stage 3 empirical nominal radius. Bent: percentile of the centerline-curvature RMS (§2.1) — a present-but-deformed strut, so it never overrides missing/broken. Outputs `findings_thin.json` + `findings_bent.json` with justification; forbidden to read any label file |
 | ├ `broken_strut_agent` | 4c | Owns broken **and disconnected-at-joint** (the Tran et al. class): max-axial-gap profile + corridor-local connectivity with junction spheres masked out; distribution-derived cutoffs; outputs `findings_broken.json`; forbidden to read any label file |
-| ├ `classifier_verifier` | 4d | **Independent process check on the whole defect team, run last, before the one-shot sealed scoring.** Sees only metrics, per-class findings, evidence packets, `decision_log.md`, `thresholds.json`, and the dev split — sealed split forbidden; did not participate in any classification decision. Verifies that (a) each non-present call's evidence packet actually supports it (e.g. a "broken" call shows an axial gap in its occupancy profile), (b) each subagent's cutoffs follow from the dev-split / population distributions as claimed, not post-hoc cherry-picks, (c) the lead's merge respected the fixed precedence and every adjudication is logged, and (d) `decision_log.md` matches what `classify_struts` executed. Writes `struts/verifier_report.json` with its own self-verification JSON; the orchestrator gates Stage 4 → 5 on it (same 2-retry bound). Stage 4 is the only stage with a dedicated verifier because it is the only place where subjective judgment feeds directly into the unrepeatable sealed evaluation (§5.4) |
-| `eval_agent` | 5 | **Sole owner of the sealed split.** Scores sealed recall (one shot, §5.4), produces the final intentional-vs-unintentional attribution table, runs judge triage on candidate unintentional defects |
-| `report_agent` | 6 | Computes spatial statistics via `compute_spatial_stats` (seeded), renders the 3D defect visualization, then compiles the report. **Report text is recompute-free: every number cited from a committed artifact**; the number-crosscheck script runs before the judge rubric |
+| ├ `classifier_verifier` | 4d | **Planned independent process check, run last before one-shot sealed scoring.** Sees only metrics, per-class findings, evidence packets, `decision_log.md`, and `thresholds.json`; development and sealed labels are forbidden, and it did not participate in classification. Verifies evidence support, label-free cutoff provenance, fixed precedence, logged adjudications, and agreement with `classify_struts`. Writes `struts/verifier_report.json` plus self-verification; Stage 5 remains locked until this receipt passes. |
+| `eval_agent` | 5 | **Planned sole owner of the sealed split.** Stage 5 is reserved/consumed before disclosure and runs once for the frozen configuration, even if scoring fails or reports low/zero recall. Scores sealed recall, produces the intentional-vs-unintentional attribution table, and runs judge triage; raw sealed labels never flow to Stage 6. |
+| `report_agent` | 6 | **Planned report agent.** Consumes committed Stage 5 attribution/scoring artifacts but no raw development or sealed labels. Computes seeded spatial statistics and rendering through declared MCP tools, and compiles a recompute-free report whose numbers come from committed artifacts. The artifact-backed number crosscheck runs before the judge rubric. |
+
+Across all stages, `pass`, `manual_review`, and `halt` are control-plane states,
+not prose suggestions. `manual_review` preserves attempt evidence and locks the
+current/downstream stages; resumption requires an explicit resolution artifact
+and a legal same-stage transition. `halt` is terminal. An exact replay of an
+already accepted receipt is an idempotent no-op and must not change artifacts,
+attempts, timestamps, events, or downstream state.
 
 ### 3.3 MCP server v2 (`src/mcp_server.py` extended)
 

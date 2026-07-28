@@ -1,138 +1,85 @@
 # CT lattice segmentation report
 
-## Input and metadata
+## Input
 
-- Input path: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/9x9x9_octet_lattice.tif`
-- Shape (axis 0, 1, 2): `(761, 815, 837)`
-- Input dtype: `>u2`
-- Total voxels: 519119955
-- Ground truth: not inspected or used.
+- Path: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/9x9x9_octet_lattice.tif`
+- Shape (ZYX): `761 × 815 × 837`
+- Data type: `uint16`
+- Total voxels: `519,119,955`
+- Required review plane: axis-0 slice `380` (present)
+
+The source TIFF was read only. No ground-truth image was inspected or used.
 
 ## Final method and parameters
 
-A global high-density mask was initialized by Otsu thresholding on a regular 3-D intensity sample. Lower, MAD-scaled candidate thresholds were admitted only if a downsampled 3-D continuity/noise score improved while foreground stayed within 5% of the Otsu baseline. No morphology was applied, avoiding erosion or artificial thickening of thin struts.
+The final mask uses a global Triangle threshold derived from the exact streamed
+uint16 intensity histogram. Foreground is `input >= 34,963`; background is below
+that threshold. TIFF pages were decoded and thresholded incrementally, and the
+binary `uint8` result was written with zlib compression. The estimated uncompressed
+output size is below the classic TIFF limit, so BigTIFF was not required.
 
-- Final threshold rule: `input >= 40129`
-- Parameters: `{"connectivity_sample_strides": [8, 8, 8], "final_threshold": 40129, "foreground_guard_relative_to_otsu": 1.05, "histogram_sample_strides": [24, 4, 4], "refinement_step": 192, "sample_mad": 766.0, "sample_median": 32402.0, "sampled_otsu_threshold": 40705}`
+The choice used quantitative and visual evidence together. At 4× downsampling in
+all three axes, 99.979999% of foreground occupied the largest 26-connected
+component and only 0.020001% belonged to components smaller than 27 sampled
+voxels. On slice 380, the largest 8-connected component held 60.935851% of
+foreground. The visual preview retained appreciably more oblique struts than
+Otsu without turning broad background texture into foreground.
 
-## Final exact voxel statistics
+## Final voxel statistics
 
-- Foreground voxels: 58324474 (11.235259%)
-- Background voxels: 460795481 (88.764741%)
+- Foreground: `100,399,672` voxels (`19.3403607457%`)
+- Background: `418,720,283` voxels (`80.6596392543%`)
+- Sum: `519,119,955` voxels (`100%`)
+
+These are segmentation statistics, not accuracy measurements.
 
 ## Iteration history
 
-### Iteration 1
-
-- Method: global high-density threshold; sampled Otsu followed by MAD-scaled continuity refinement
-- Threshold: 40705
-- Sampled foreground: 0.112200
-- Sampled 3-D components: 753
-- Largest sampled 3-D component / sampled foreground: 0.986486
-- Small sampled 3-D component burden: 0.008417
-- Slice 380 components: 250
-- Largest slice component / slice foreground: 0.056006
-- Continuity/noise score: 0.978069
-- Decision/failure: accepted as Otsu baseline
-- Feedback: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations/iteration_01.png`
-
-### Iteration 2
-
-- Method: global high-density threshold; sampled Otsu followed by MAD-scaled continuity refinement
-- Threshold: 40513
-- Sampled foreground: 0.113725
-- Sampled 3-D components: 723
-- Largest sampled 3-D component / sampled foreground: 0.987651
-- Small sampled 3-D component burden: 0.007877
-- Slice 380 components: 249
-- Largest slice component / slice foreground: 0.056344
-- Continuity/noise score: 0.979774
-- Decision/failure: accepted: continuity/noise score improved within 5% foreground guard
-- Feedback: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations/iteration_02.png`
-
-### Iteration 3
-
-- Method: global high-density threshold; sampled Otsu followed by MAD-scaled continuity refinement
-- Threshold: 40321
-- Sampled foreground: 0.115290
-- Sampled 3-D components: 708
-- Largest sampled 3-D component / sampled foreground: 0.987793
-- Small sampled 3-D component burden: 0.007584
-- Slice 380 components: 251
-- Largest slice component / slice foreground: 0.058495
-- Continuity/noise score: 0.980209
-- Decision/failure: accepted: continuity/noise score improved within 5% foreground guard
-- Feedback: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations/iteration_03.png`
-
-### Iteration 4
-
-- Method: global high-density threshold; sampled Otsu followed by MAD-scaled continuity refinement
-- Threshold: 40129
-- Sampled foreground: 0.116813
-- Sampled 3-D components: 679
-- Largest sampled 3-D component / sampled foreground: 0.989217
-- Small sampled 3-D component burden: 0.007260
-- Slice 380 components: 256
-- Largest slice component / slice foreground: 0.058397
-- Continuity/noise score: 0.981957
-- Decision/failure: accepted: continuity/noise score improved within 5% foreground guard
-- Feedback: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations/iteration_04.png`
-
-### Iteration 5
-
-- Method: global high-density threshold; sampled Otsu followed by MAD-scaled continuity refinement
-- Threshold: 39937
-- Sampled foreground: 0.118502
-- Sampled 3-D components: 647
-- Largest sampled 3-D component / sampled foreground: 0.990553
-- Small sampled 3-D component burden: 0.006500
-- Slice 380 components: 250
-- Largest slice component / slice foreground: 0.058389
-- Continuity/noise score: 0.984053
-- Decision/failure: rejected: foreground increase exceeded 5% guard
-- Feedback: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations/iteration_05.png`
-
-### Iteration 6
-
-- Method: global high-density threshold; sampled Otsu followed by MAD-scaled continuity refinement
-- Threshold: 39745
-- Sampled foreground: 0.120193
-- Sampled 3-D components: 615
-- Largest sampled 3-D component / sampled foreground: 0.991795
-- Small sampled 3-D component burden: 0.005907
-- Slice 380 components: 250
-- Largest slice component / slice foreground: 0.066728
-- Continuity/noise score: 0.985887
-- Decision/failure: rejected: foreground increase exceeded 5% guard
-- Feedback: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations/iteration_06.png`
-
-### Iteration 7
-
-- Method: global high-density threshold; sampled Otsu followed by MAD-scaled continuity refinement
-- Threshold: 39553
-- Sampled foreground: 0.121952
-- Sampled 3-D components: 586
-- Largest sampled 3-D component / sampled foreground: 0.992822
-- Small sampled 3-D component burden: 0.005567
-- Slice 380 components: 247
-- Largest slice component / slice foreground: 0.066596
-- Continuity/noise score: 0.987255
-- Decision/failure: rejected: foreground increase exceeded 5% guard
-- Feedback: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations/iteration_07.png`
+1. **Environment probe — failed.** The default Python lacked `tifffile`. This
+   failed command counted as an attempt. Decision: use the project's existing
+   `dssi_env`; the input was untouched.
+2. **Exact-histogram Otsu — successful, provisional.** Threshold `40,049`;
+   foreground `58,675,274` (`11.302835%`); slice-380 foreground `4.946530%`;
+   255 slice components, largest-component share `5.850102%`; sampled 3D largest-
+   component share `99.929555%`, small-component share `0.070445%`. Visual review
+   showed clean background but visibly thinned or missing oblique struts.
+3. **Triangle through scikit-image histogram API — failed.** The installed
+   `threshold_triangle` did not accept a `hist` argument. The failure counted as
+   an attempt. Decision: implement the published Triangle geometry directly on
+   the same exact histogram, preserving memory-aware operation.
+4. **Exact-histogram Triangle — successful, selected.** Threshold `34,963`;
+   foreground `100,399,672` (`19.340361%`); slice-380 foreground `11.115362%`;
+   207 slice components, largest-component share `60.935851%`; sampled 3D largest-
+   component share `99.979999%`, small-component share `0.020001%`. Connectivity
+   and visual strut preservation improved over Otsu while background remained
+   largely suppressed.
+5. **Exact-histogram Yen — successful command, rejected result.** Threshold
+   `65,514`; foreground only `2` voxels (`0.0000003853%`) and no foreground on
+   slice 380 or in the downsampled 3D sample. This clearly destroyed the lattice.
 
 ## Stopping reason
 
-three consecutive failed attempts without improvement
+Converged after 5 bounded optimization attempts. Triangle was the best successful
+result among the data-derived criteria tested; Otsu lost visible struts and Yen
+collapsed the foreground. Further experimentation was not supported by the
+available evidence, so the selected result was materialized and optimization
+stopped before the 10-attempt cap (with no run of three consecutive failures).
 
 ## Limitations
 
-The result is unsupervised and is not an accuracy estimate. Component statistics use an 8-voxel regular subsample and can undercount diagonal or sub-resolution connections. Global thresholding may miss severe local attenuation changes; visual review of the saved slice and iteration feedback remains appropriate.
+- No ground truth was used, so accuracy, precision, recall, and boundary error
+  cannot be claimed.
+- The threshold is global; spatially varying beam-hardening or attenuation can
+  make faint struts less complete in some regions.
+- Full-resolution 3D connected-component labeling would require substantially
+  more working memory; connectivity diagnostics used a 4× sample, supplemented
+  by full-resolution slice-380 statistics and visual review.
+- The output intentionally contains no topology repair or learned prior; it
+  reflects only evidence available from this input volume.
 
 ## Artifacts
 
 - Program: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/segment_ct.py`
 - Binary mask: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/mask.tif`
-- Mask slice 380: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/slice_380.png`
+- Slice-380 visualization: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/slice_380.png`
 - Report: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/report.md`
-- Iteration feedback directory: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/iterations`
-- Verification record: `/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/9x9x9_octet_lattice/segmentation/verification.json`
