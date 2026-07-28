@@ -24,6 +24,9 @@
   },
   "required_inputs": [
     "verified_stage_2_receipt_hash_in_control_metadata",
+    "analysis_ready_specimen_manifest",
+    "data_prep_completion_receipt",
+    "requested_analysis_scope_and_authorized_outputs",
     "attempt_scoped_stage_3_handoff",
     "frozen_analysis_config",
     "ct_volume",
@@ -65,6 +68,20 @@
         "consumers": [
           "strut_metrics",
           "compute_strut_metrics"
+        ]
+      },
+      {
+        "role": "analysis_ready_specimen_manifest",
+        "path": "analysis/<specimen_id>/config/specimen_manifest.json",
+        "consumers": [
+          "strut_metrics"
+        ]
+      },
+      {
+        "role": "data_prep_completion_receipt",
+        "path": "analysis/<specimen_id>/config/data_prep_completion_receipt.json",
+        "consumers": [
+          "strut_metrics"
         ]
       },
       {
@@ -119,6 +136,8 @@
     ],
     "required_roles": [
       "stage_handoff",
+      "analysis_ready_specimen_manifest",
+      "data_prep_completion_receipt",
       "analysis_config",
       "ct_volume",
       "localized_graph",
@@ -181,6 +200,9 @@
     "contract_version_matches",
     "stage_2_receipt_hash_matches",
     "frozen_config_hash_matches",
+    "specimen_design_scope_and_stage_2_artifact_bindings_match",
+    "requested_output_is_present_in_stage_2_authorized_outputs",
+    "roi_screening_outputs_are_not_reported_as_absolute_or_direct_dimensional_metrology",
     "stage_handoff_excludes_all_label_roles_paths_and_hashes",
     "input_artifact_hashes_match",
     "output_artifact_hashes_match",

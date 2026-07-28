@@ -7,6 +7,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import numpy as np
@@ -16,9 +17,11 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
 from part2_core.evaluation import compute_detection_metrics  # noqa: E402
+from part2_core.artifacts import sha256_file, sha256_json  # noqa: E402
 from part2_core.evidence import render_strut_evidence  # noqa: E402
 from part2_core.lattice import load_lattice_json  # noqa: E402
 from part2_core.localization import localize_lattice_nodes  # noqa: E402
+from part2_core.otsu import replay_exact_otsu  # noqa: E402
 from part2_core.qa import compute_registration_qa  # noqa: E402
 from part2_core.registration import (  # noqa: E402
     SimilarityTransform,
@@ -100,9 +103,130 @@ class SyntheticFixture(unittest.TestCase):
                 tube &= ~((t > 0.40) & (t < 0.65))
             foreground |= tube
         self.volume = self.root / "ct.npy"
-        np.save(self.volume, np.where(foreground, 1_000, 0).astype(np.uint16))
+        background = (
+            100 + ((17 * zz + 11 * yy + 5 * xx) % 201)
+        ).astype(np.uint16)
+        np.save(
+            self.volume,
+            np.where(foreground, 1_000, background).astype(np.uint16),
+        )
+        self.otsu_result, _ = replay_exact_otsu(
+            self.volume,
+            recipe={"histogram_encoding": "native_uint16"},
+        )
+        self.threshold = float(self.otsu_result["threshold"])
+        self.roi_scope = self._write_scope_artifact(
+            "roi_screening", "challenge_aligned_json"
+        )
+        self.direct_scope = self._write_scope_artifact(
+            "direct_metrology", "challenge_aligned_json"
+        )
+        self.direct_autonomous_scope = self._write_scope_artifact(
+            "direct_metrology", "autonomous_v2"
+        )
 
-    def _register_and_localize(self) -> tuple[Path, Path]:
+    def _write_scope_artifact(self, scope: str, registration_mode: str) -> Path:
+        parameters = {
+            "requested_analysis_scope": scope,
+            "registration": {
+                "mode": registration_mode,
+                "local_recenter_required": True,
+            },
+            "segmentation": {
+                "method": "exact_histogram_otsu",
+                "method_version": "2.0.0",
+                "comparison": "value >= threshold",
+                "histogram_bins": 65536,
+                "histogram_encoding": "native_uint16",
+                "edge_slices_excluded": 0,
+                "chunk_depth": 8,
+                "coarse_bins": 1024,
+                "peak_smoothing_sigma_bins": 2.0,
+                "peak_prominence_fraction": 0.003,
+                "minimum_significant_peaks": 2,
+                "minimum_foreground_fraction": 0.01,
+                "maximum_foreground_fraction": 0.35,
+                "minimum_otsu_separability": 0.45,
+                "minimum_class_mean_separation_sigma": 0.75,
+            },
+            "localization_policy": {
+                "schema_version": "stage2-localization-policy/1.1.0",
+                "patch_radius_voxels": 10,
+                "search_radius_voxels": 8.0,
+                "maximum_shift_voxels": 8.0,
+                "smoothing_sigma_voxels": 1.25,
+                "mean_shift_bandwidth_voxels": 4.0,
+                "mean_shift_max_iterations": 12,
+                "mean_shift_tolerance_voxels": 0.05,
+                "seed_perturbation_voxels": 2.0,
+                "seed_cluster_radius_voxels": 2.0,
+                "minimum_seed_consensus_fraction": 0.7,
+                "minimum_candidate_support": 0.05,
+                "minimum_relative_support_improvement": 0.01,
+                "incident_sample_distances_voxels": [3.0, 5.0, 7.0],
+                "core_support_weight": 0.7,
+                "incident_support_weight": 0.3,
+                "minimum_primary_or_stable_coarse_fraction": 0.0,
+                "maximum_fallback_fraction": 1.0,
+                "maximum_ambiguous_fraction": 1.0,
+                "maximum_rejected_fraction": 1.0,
+                "maximum_boundary_limited_fraction": 1.0,
+            },
+            "qa_policy": {
+                "schema_version": "stage2-qa-policy/1.1.0",
+                "junction_patch_radius_voxels": 2,
+                "corridor_axial_samples": 9,
+                "corridor_radius_voxels": 6.0,
+                "corridor_angular_samples": 8,
+                "roi_padding_fraction": 0.2,
+                "spatial_bins_per_axis": 2,
+                "radial_foreground_probability": 0.5,
+                "minimum_mean_junction_foreground_fraction": 0.1,
+                "minimum_median_corridor_foreground_fraction": 0.01,
+                "maximum_spatial_bin_median_range": 1.0,
+                "minimum_roi_in_bounds_fraction": 0.5,
+                "maximum_uncertainty_to_radius_ratio": 1.0,
+            },
+            "artifact_schema_versions": {
+                "specimen_manifest": "2.1.0",
+                "node_localization": "1.2.0",
+                "registration_qa": "1.2.0",
+                "per_strut_metrics": "1.0.0",
+                "classified_struts": "1.0.0",
+                "nde_report": "1.0.0",
+            },
+        }
+        path = self.root / f"{scope}-{registration_mode}-specimen-manifest.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "2.1.0",
+                    "specimen_id": "synthetic_fixture",
+                    "design_id": "synthetic_design",
+                    "requested_analysis_scope": scope,
+                    "analysis_parameters": parameters,
+                    "analysis_parameters_sha256": sha256_json(parameters),
+                    "inputs": {
+                        "ct": {
+                            "path": str(self.volume),
+                            "sha256": sha256_file(self.volume),
+                            "role": "ct_volume",
+                            "retention": "external",
+                        }
+                    },
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def _register_and_localize(
+        self, scope: str = "roi_screening"
+    ) -> tuple[Path, Path]:
+        scope_artifact = (
+            self.roi_scope if scope == "roi_screening" else self.direct_scope
+        )
         registered = self.root / "registered.json"
         registration_report = self.root / "registration.json"
         registration = register_lattice_to_ct(
@@ -121,12 +245,16 @@ class SyntheticFixture(unittest.TestCase):
             registered,
             localized,
             localization_report,
-            threshold=500,
+            threshold=self.threshold,
             registration_mode="challenge_aligned_json",
+            analysis_policy_artifact_path=scope_artifact,
             registration_report_path=registration_report,
             config={
-                "minimum_accepted_fraction": 0.75,
+                "minimum_primary_or_stable_coarse_fraction": 0.0,
+                "maximum_fallback_fraction": 1.0,
                 "maximum_ambiguous_fraction": 1.0,
+                "maximum_rejected_fraction": 1.0,
+                "maximum_boundary_limited_fraction": 1.0,
             },
         )
         self.assertNotEqual("halt", localization["gate"])
@@ -136,6 +264,216 @@ class SyntheticFixture(unittest.TestCase):
 
 
 class ProductionPipelineTests(SyntheticFixture):
+    def test_localization_quantitative_fallback_gates_and_quality_propagation(
+        self,
+    ) -> None:
+        node_ids = [1000 + index for index in range(21)]
+        edge_ids = [2000 + index for index in range(20)]
+        graph_path = self.root / "quality-registered.json"
+        graph_path.write_text(
+            json.dumps(
+                {
+                    "junctions": [
+                        {"id": node_id, "position": [10 + index, 20, 20]}
+                        for index, node_id in enumerate(node_ids)
+                    ],
+                    "struts": [
+                        {
+                            "id": edge_id,
+                            "junction0": node_ids[index],
+                            "junction1": node_ids[index + 1],
+                        }
+                        for index, edge_id in enumerate(edge_ids)
+                    ],
+                    "unit_cells": [
+                        {"id": 3000, "indices": [0, 0, 0], "struts": edge_ids}
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        def localization_result(
+            prediction: np.ndarray,
+            match_class: str,
+            *,
+            boundary_limited: bool = False,
+        ) -> tuple[np.ndarray, dict[str, object]]:
+            accepted = match_class in {"localized", "stable_coarse"}
+            location = (
+                prediction + np.asarray([0.1, 0.0, 0.0])
+                if match_class == "localized"
+                else prediction.copy()
+            )
+            reason = {
+                "localized": "accepted",
+                "stable_coarse": "accepted",
+                "fallback": "insufficient_ct_support",
+                "ambiguous": "unstable_multistart",
+            }[match_class]
+            return location, {
+                "accepted": accepted,
+                "reason": reason,
+                "localization_status": match_class,
+                "seed_consensus_fraction": 1.0,
+                "stability_uncertainty_voxels": 0.01,
+                "coarse_support": 0.5,
+                "candidate_support": 0.6,
+                "selected_support": 0.6,
+                "relative_support_improvement": 0.2,
+                "shift_voxels": 0.1 if match_class == "localized" else 0.0,
+                "boundary_truncated": boundary_limited,
+            }
+
+        def bounded_fallback(
+            _volume: np.ndarray,
+            prediction: np.ndarray,
+            _directions: np.ndarray,
+            _threshold: float,
+            _config: dict[str, object],
+        ) -> tuple[np.ndarray, dict[str, object]]:
+            if prediction[0] == 30:
+                return localization_result(prediction, "fallback")
+            if prediction[0] == 29:
+                return localization_result(prediction, "stable_coarse")
+            return localization_result(prediction, "localized")
+
+        with mock.patch(
+            "part2_core.localization._localize_one", side_effect=bounded_fallback
+        ):
+            first = localize_lattice_nodes(
+                self.volume,
+                graph_path,
+                self.root / "quality-localized.json",
+                self.root / "quality-localization.json",
+                threshold=500,
+                registration_mode="challenge_aligned_json",
+            )
+            replay = localize_lattice_nodes(
+                self.volume,
+                graph_path,
+                self.root / "quality-localized-replay.json",
+                self.root / "quality-localization-replay.json",
+                threshold=500,
+                registration_mode="challenge_aligned_json",
+            )
+
+        self.assertEqual("pass", first["gate"], first)
+        self.assertEqual(19, first["counts"]["primary_nodes"])
+        self.assertEqual(1, first["counts"]["stable_coarse_nodes"])
+        self.assertEqual(1, first["counts"]["fallback_nodes"])
+        self.assertEqual(0, first["counts"]["ambiguous_nodes"])
+        self.assertTrue(first["gates"]["fallback_fraction_within_limit"])
+        fallback = next(
+            record for record in first["records"] if record["match_class"] == "fallback"
+        )
+        self.assertFalse(fallback["primary_match"])
+        self.assertTrue(fallback["fallback_provenance"]["used"])
+        self.assertEqual(
+            "registered_coarse",
+            fallback["fallback_provenance"]["coordinate_source"],
+        )
+        self.assertTrue(first["edge_quality_records"])
+        localized_document = json.loads(
+            (self.root / "quality-localized.json").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "part2_localization_quality", localized_document["junctions"][-1]
+        )
+        self.assertIn("part2_localization_quality", localized_document["struts"][-1])
+        self.assertEqual(
+            first["hashes"]["localized_graph_sha256"],
+            replay["hashes"]["localized_graph_sha256"],
+        )
+
+        def excessive_fallback(
+            _volume: np.ndarray,
+            prediction: np.ndarray,
+            _directions: np.ndarray,
+            _threshold: float,
+            _config: dict[str, object],
+        ) -> tuple[np.ndarray, dict[str, object]]:
+            return localization_result(
+                prediction,
+                "fallback" if prediction[0] >= 29 else "localized",
+            )
+
+        with mock.patch(
+            "part2_core.localization._localize_one", side_effect=excessive_fallback
+        ):
+            excessive = localize_lattice_nodes(
+                self.volume,
+                graph_path,
+                self.root / "excessive-fallback-graph.json",
+                self.root / "excessive-fallback-report.json",
+                threshold=500,
+                registration_mode="challenge_aligned_json",
+            )
+        self.assertEqual("manual_review", excessive["gate"])
+        self.assertFalse(excessive["gates"]["fallback_fraction_within_limit"])
+        self.assertTrue(excessive["gates"]["rejected_fraction_within_limit"])
+
+        def boundary_limited(
+            _volume: np.ndarray,
+            prediction: np.ndarray,
+            _directions: np.ndarray,
+            _threshold: float,
+            _config: dict[str, object],
+        ) -> tuple[np.ndarray, dict[str, object]]:
+            return localization_result(
+                prediction,
+                "localized",
+                boundary_limited=prediction[0] == 30,
+            )
+
+        with mock.patch(
+            "part2_core.localization._localize_one", side_effect=boundary_limited
+        ):
+            boundary = localize_lattice_nodes(
+                self.volume,
+                graph_path,
+                self.root / "boundary-graph.json",
+                self.root / "boundary-report.json",
+                threshold=500,
+                registration_mode="challenge_aligned_json",
+            )
+        self.assertEqual("manual_review", boundary["gate"])
+        self.assertFalse(
+            boundary["gates"]["boundary_limited_fraction_within_limit"]
+        )
+        boundary_record = next(
+            record for record in boundary["records"] if record["boundary_limited"]
+        )
+        self.assertFalse(boundary_record["primary_match"])
+        self.assertEqual("fallback", boundary_record["match_class"])
+
+        def excessive_ambiguity(
+            _volume: np.ndarray,
+            prediction: np.ndarray,
+            _directions: np.ndarray,
+            _threshold: float,
+            _config: dict[str, object],
+        ) -> tuple[np.ndarray, dict[str, object]]:
+            return localization_result(
+                prediction,
+                "ambiguous" if prediction[0] >= 29 else "localized",
+            )
+
+        with mock.patch(
+            "part2_core.localization._localize_one", side_effect=excessive_ambiguity
+        ):
+            ambiguous = localize_lattice_nodes(
+                self.volume,
+                graph_path,
+                self.root / "ambiguous-graph.json",
+                self.root / "ambiguous-report.json",
+                threshold=500,
+                registration_mode="challenge_aligned_json",
+            )
+        self.assertEqual("manual_review", ambiguous["gate"])
+        self.assertEqual(2, ambiguous["counts"]["ambiguous_nodes"])
+        self.assertFalse(ambiguous["gates"]["ambiguity_fraction_within_limit"])
+
     def test_multibranch_junction_uses_stable_ct_center_not_competing_edt_peaks(
         self,
     ) -> None:
@@ -199,10 +537,10 @@ class ProductionPipelineTests(SyntheticFixture):
             star_graph,
             self.root / "star-localized.json",
             self.root / "star-localization.json",
-            threshold=500,
+            threshold=self.threshold,
             registration_mode="challenge_aligned_json",
             config={
-                "minimum_accepted_fraction": 0.5,
+                "minimum_primary_or_stable_coarse_fraction": 0.5,
                 "maximum_ambiguous_fraction": 0.5,
             },
         )
@@ -225,14 +563,17 @@ class ProductionPipelineTests(SyntheticFixture):
         )
 
     def test_challenge_metrics_classification_evidence_lookup_and_scoring(self) -> None:
-        localized, localization_report = self._register_and_localize()
+        localized, localization_report = self._register_and_localize(
+            "direct_metrology"
+        )
         qa_path = self.root / "qa.json"
         qa = compute_registration_qa(
             self.volume,
             localized,
             qa_path,
-            threshold=500,
+            threshold=self.threshold,
             registration_mode="challenge_aligned_json",
+            analysis_scope_artifact_path=self.direct_scope,
             localization_report_path=localization_report,
             config={
                 "minimum_mean_junction_foreground_fraction": 0.1,
@@ -243,8 +584,11 @@ class ProductionPipelineTests(SyntheticFixture):
             },
         )
         self.assertEqual("manual_review", qa["gate"])
+        self.assertEqual("direct_metrology", qa["requested_analysis_scope"])
         self.assertTrue(qa["coarse_capture"]["overall_pass"])
         self.assertFalse(qa["metrology"]["overall_pass"])
+        self.assertEqual("fail", qa["metrology"]["status"])
+        self.assertIn("METROLOGY_EVIDENCE_MISSING", qa["reason_codes"])
         self.assertIsNone(
             qa["metrology"]["absolute_registration_uncertainty_voxels"]
         )
@@ -307,7 +651,7 @@ class ProductionPipelineTests(SyntheticFixture):
                 profiles_path,
                 self.root / "evidence",
                 strut_id=303,
-                threshold=500,
+                threshold=self.threshold,
             )["artifacts"]["manifest"]["path"],
         )
         self.assertEqual("missing", report["class"])
@@ -324,6 +668,446 @@ class ProductionPipelineTests(SyntheticFixture):
         self.assertEqual(1.0, detection["strict_recall"]["value"])
         self.assertNotIn("precision", detection)
         self.assertTrue(detection["provenance"]["sealed_labels_read"])
+
+    def test_registration_qa_is_scope_aware_and_rejects_scope_tampering(self) -> None:
+        localized, localization_report = self._register_and_localize()
+        localization_document = json.loads(
+            localization_report.read_text(encoding="utf-8")
+        )
+        scope_document = json.loads(self.roi_scope.read_text(encoding="utf-8"))
+        self.assertEqual(
+            scope_document["analysis_parameters_sha256"],
+            localization_document["hashes"]["analysis_parameters_sha256"],
+        )
+        self.assertEqual(
+            "hashed_analysis_parameters",
+            localization_document["provenance"]["policy_binding"],
+        )
+        self.assertEqual("synthetic_fixture", localization_document["specimen_id"])
+        self.assertEqual("synthetic_design", localization_document["design_id"])
+        with self.assertRaisesRegex(ValueError, "conflicts with hashed policy"):
+            localize_lattice_nodes(
+                self.volume,
+                localized,
+                self.root / "conflicting-policy-graph.json",
+                self.root / "conflicting-policy-localization.json",
+                threshold=self.threshold,
+                registration_mode="challenge_aligned_json",
+                analysis_policy_artifact_path=self.roi_scope,
+                registration_report_path=self.root / "registration.json",
+                config={"maximum_fallback_fraction": 0.5},
+            )
+        qa_config = {
+            "minimum_mean_junction_foreground_fraction": 0.1,
+            "minimum_median_corridor_foreground_fraction": 0.01,
+            "maximum_spatial_bin_median_range": 1.0,
+            "minimum_roi_in_bounds_fraction": 0.5,
+            "spatial_bins_per_axis": 2,
+        }
+        roi = compute_registration_qa(
+            self.volume,
+            localized,
+            self.root / "roi-qa.json",
+            threshold=self.threshold,
+            registration_mode="challenge_aligned_json",
+            analysis_scope_artifact_path=self.roi_scope,
+            localization_report_path=localization_report,
+            config=qa_config,
+        )
+        self.assertEqual("pass", roi["gate"], roi)
+        self.assertEqual("synthetic_fixture", roi["specimen_id"])
+        self.assertEqual("synthetic_design", roi["design_id"])
+        self.assertEqual("roi_screening", roi["requested_analysis_scope"])
+        self.assertEqual("not_authorized", roi["metrology"]["status"])
+        self.assertIsNone(roi["metrology"]["overall_pass"])
+        self.assertTrue(roi["roi_gate_results"]["overall_pass"])
+        self.assertIn("coarse_region_screening", roi["authorized_outputs"])
+        self.assertIn("absolute_metrology", roi["unauthorized_outputs"])
+        self.assertIn("METROLOGY_NOT_AUTHORIZED", roi["reason_codes"])
+        self.assertEqual(
+            3,
+            roi["localization_quality_counts"]["fallback_nodes"],
+        )
+        self.assertEqual(
+            scope_document["analysis_parameters_sha256"],
+            roi["hashes"]["analysis_parameters_sha256"],
+        )
+        self.assertEqual(
+            sha256_json(scope_document["analysis_parameters"]["qa_policy"]),
+            roi["hashes"]["qa_policy_sha256"],
+        )
+        with self.assertRaisesRegex(ValueError, "conflicts with hashed policy"):
+            compute_registration_qa(
+                self.volume,
+                localized,
+                self.root / "conflicting-policy-qa.json",
+                threshold=self.threshold,
+                registration_mode="challenge_aligned_json",
+                analysis_scope_artifact_path=self.roi_scope,
+                localization_report_path=localization_report,
+                config={
+                    **qa_config,
+                    "maximum_uncertainty_to_radius_ratio": 0.5,
+                },
+            )
+
+        binding_mutations = {
+            "wrong-scope": lambda value: value.__setitem__(
+                "requested_analysis_scope", "direct_metrology"
+            ),
+            "wrong-mode": lambda value: value.__setitem__(
+                "registration_mode", "autonomous_v2"
+            ),
+            "wrong-ct": lambda value: value["hashes"].__setitem__(
+                "ct_sha256", "0" * 64
+            ),
+            "wrong-graph": lambda value: value["hashes"].__setitem__(
+                "localized_graph_sha256", "0" * 64
+            ),
+            "stale-analysis": lambda value: value["hashes"].__setitem__(
+                "analysis_parameters_sha256", "0" * 64
+            ),
+            "wrong-policy-hash": lambda value: value["hashes"].__setitem__(
+                "localization_policy_sha256", "0" * 64
+            ),
+            "looser-policy": lambda value: value["quantitative_policy"].__setitem__(
+                "maximum_fallback_fraction", 0.5
+            ),
+        }
+        for case, mutate in binding_mutations.items():
+            with self.subTest(localization_binding=case):
+                tampered_localization = json.loads(
+                    localization_report.read_text(encoding="utf-8")
+                )
+                mutate(tampered_localization)
+                tampered_localization_path = self.root / f"{case}-localization.json"
+                tampered_localization_path.write_text(
+                    json.dumps(tampered_localization, sort_keys=True),
+                    encoding="utf-8",
+                )
+                rejected = compute_registration_qa(
+                    self.volume,
+                    localized,
+                    self.root / f"{case}-qa.json",
+                    threshold=self.threshold,
+                    registration_mode="challenge_aligned_json",
+                    analysis_scope_artifact_path=self.roi_scope,
+                    localization_report_path=tampered_localization_path,
+                    config=qa_config,
+                )
+                self.assertEqual("halt", rejected["gate"], rejected)
+                self.assertFalse(rejected["localization_binding"]["overall_pass"])
+                self.assertTrue(
+                    any(
+                        code.startswith("LOCALIZATION_BINDING_FAILED_")
+                        for code in rejected["reason_codes"]
+                    )
+                )
+
+        direct_registration_path = self.root / "direct-registration.json"
+        direct_registration_path.write_text(
+            json.dumps(
+                {
+                    "schema_version": "part2-registration/1.0.0",
+                    "mode": "autonomous_v2",
+                    "gate": "pass",
+                    "hashes": {
+                        "ct_sha256": sha256_file(self.volume),
+                        "registered_graph_sha256": sha256_file(localized),
+                    },
+                    "mode_details": {
+                        "bounded_robustness": {
+                            "p95_prediction_spread_voxels": 0.1,
+                            "overall_pass": True,
+                        }
+                    },
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        direct_localized_path = self.root / "direct-localized.json"
+        direct_localization_path = self.root / "direct-localization.json"
+        direct_localization = localize_lattice_nodes(
+            self.volume,
+            localized,
+            direct_localized_path,
+            direct_localization_path,
+            threshold=self.threshold,
+            registration_mode="autonomous_v2",
+            analysis_policy_artifact_path=self.direct_autonomous_scope,
+            registration_report_path=direct_registration_path,
+            config={
+                "minimum_primary_or_stable_coarse_fraction": 0.0,
+                "maximum_fallback_fraction": 1.0,
+                "maximum_ambiguous_fraction": 1.0,
+                "maximum_rejected_fraction": 1.0,
+                "maximum_boundary_limited_fraction": 1.0,
+            },
+        )
+        self.assertEqual("pass", direct_localization["gate"])
+        direct = compute_registration_qa(
+            self.volume,
+            direct_localized_path,
+            self.root / "direct-qa.json",
+            threshold=self.threshold,
+            registration_mode="autonomous_v2",
+            analysis_scope_artifact_path=self.direct_autonomous_scope,
+            localization_report_path=direct_localization_path,
+            config=qa_config,
+        )
+        self.assertEqual("pass", direct["gate"], direct)
+        self.assertEqual("pass", direct["metrology"]["status"])
+        self.assertIn(
+            "direct_dimensional_measurement", direct["authorized_outputs"]
+        )
+
+        tampered_registration = json.loads(
+            direct_registration_path.read_text(encoding="utf-8")
+        )
+        tampered_registration["mode_details"]["bounded_robustness"][
+            "p95_prediction_spread_voxels"
+        ] = 0.2
+        direct_registration_path.write_text(
+            json.dumps(tampered_registration, sort_keys=True), encoding="utf-8"
+        )
+        tampered_direct = compute_registration_qa(
+            self.volume,
+            direct_localized_path,
+            self.root / "tampered-direct-qa.json",
+            threshold=self.threshold,
+            registration_mode="autonomous_v2",
+            analysis_scope_artifact_path=self.direct_autonomous_scope,
+            localization_report_path=direct_localization_path,
+            config=qa_config,
+        )
+        self.assertEqual("halt", tampered_direct["gate"])
+        self.assertFalse(
+            tampered_direct["metrology"]["gates"][
+                "absolute_registration_uncertainty_artifact_backed"
+            ]
+        )
+
+        tampered_scope = self.root / "tampered-scope.json"
+        tampered_scope_document = json.loads(
+            self.roi_scope.read_text(encoding="utf-8")
+        )
+        tampered_scope_document["requested_analysis_scope"] = "direct_metrology"
+        tampered_scope_document["analysis_parameters"][
+            "requested_analysis_scope"
+        ] = "direct_metrology"
+        tampered_scope.write_text(
+            json.dumps(tampered_scope_document),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "analysis_parameters_sha256"):
+            compute_registration_qa(
+                self.volume,
+                localized,
+                self.root / "tampered-qa.json",
+                threshold=self.threshold,
+                registration_mode="challenge_aligned_json",
+                analysis_scope_artifact_path=tampered_scope,
+                localization_report_path=localization_report,
+                config=qa_config,
+            )
+
+    def test_hashed_stage2_policy_and_exact_otsu_bindings_are_closed(self) -> None:
+        localized, localization_report = self._register_and_localize()
+
+        def mutated_scope(
+            name: str,
+            mutate: object,
+        ) -> Path:
+            document = json.loads(self.roi_scope.read_text(encoding="utf-8"))
+            mutate(document["analysis_parameters"])
+            document["analysis_parameters_sha256"] = sha256_json(
+                document["analysis_parameters"]
+            )
+            path = self.root / f"{name}-scope.json"
+            path.write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
+            return path
+
+        invalid_policies = (
+            (
+                "wrong-policy-version",
+                lambda parameters: parameters["localization_policy"].__setitem__(
+                    "schema_version", "stage2-localization-policy/9.9.9"
+                ),
+                "schema_version",
+            ),
+            (
+                "extra-localization-field",
+                lambda parameters: parameters["localization_policy"].__setitem__(
+                    "unhashed_safety_override", 1
+                ),
+                "closed schema",
+            ),
+            (
+                "weights-not-normalized",
+                lambda parameters: parameters["localization_policy"].__setitem__(
+                    "core_support_weight", 0.8
+                ),
+                "sum to 1",
+            ),
+            (
+                "duplicate-incident-distance",
+                lambda parameters: parameters["localization_policy"].__setitem__(
+                    "incident_sample_distances_voxels", [3.0, 3.0, 7.0]
+                ),
+                "strictly increasing",
+            ),
+            (
+                "extra-segmentation-field",
+                lambda parameters: parameters["segmentation"].__setitem__(
+                    "unhashed_threshold_adjustment", 1
+                ),
+                "closed schema",
+            ),
+            (
+                "extra-artifact-version",
+                lambda parameters: parameters["artifact_schema_versions"].__setitem__(
+                    "unrecognized_report", "1.0.0"
+                ),
+                "artifact_schema_versions",
+            ),
+        )
+        for name, mutate, pattern in invalid_policies:
+            with self.subTest(policy=name):
+                scope_path = mutated_scope(name, mutate)
+                with self.assertRaisesRegex(ValueError, pattern):
+                    localize_lattice_nodes(
+                        self.volume,
+                        self.aligned,
+                        self.root / f"{name}-graph.json",
+                        self.root / f"{name}-report.json",
+                        threshold=self.threshold,
+                        registration_mode="challenge_aligned_json",
+                        analysis_policy_artifact_path=scope_path,
+                    )
+
+        qa_extra = mutated_scope(
+            "extra-qa-field",
+            lambda parameters: parameters["qa_policy"].__setitem__(
+                "unhashed_safety_override", 1
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "closed schema"):
+            compute_registration_qa(
+                self.volume,
+                localized,
+                self.root / "extra-qa-field-report.json",
+                threshold=self.threshold,
+                registration_mode="challenge_aligned_json",
+                analysis_scope_artifact_path=qa_extra,
+                localization_report_path=localization_report,
+            )
+
+        with self.assertRaisesRegex(ValueError, "outside the closed hashed policy"):
+            localize_lattice_nodes(
+                self.volume,
+                self.aligned,
+                self.root / "legacy-override-graph.json",
+                self.root / "legacy-override-report.json",
+                threshold=self.threshold,
+                registration_mode="challenge_aligned_json",
+                analysis_policy_artifact_path=self.roi_scope,
+                registration_report_path=self.root / "registration.json",
+                config={"minimum_accepted_fraction": 0.0},
+            )
+        with self.assertRaisesRegex(ValueError, "outside the closed hashed policy"):
+            compute_registration_qa(
+                self.volume,
+                localized,
+                self.root / "unknown-qa-config.json",
+                threshold=self.threshold,
+                registration_mode="challenge_aligned_json",
+                analysis_scope_artifact_path=self.roi_scope,
+                localization_report_path=localization_report,
+                config={"unhashed_safety_override": 1},
+            )
+        with self.assertRaisesRegex(ValueError, "exact Otsu replay"):
+            localize_lattice_nodes(
+                self.volume,
+                self.aligned,
+                self.root / "wrong-threshold-graph.json",
+                self.root / "wrong-threshold-localization.json",
+                threshold=self.threshold + 1.0,
+                registration_mode="challenge_aligned_json",
+                analysis_policy_artifact_path=self.roi_scope,
+                registration_report_path=self.root / "registration.json",
+            )
+        wrong_threshold_qa = compute_registration_qa(
+            self.volume,
+            localized,
+            self.root / "wrong-threshold-qa.json",
+            threshold=self.threshold + 1.0,
+            registration_mode="challenge_aligned_json",
+            analysis_scope_artifact_path=self.roi_scope,
+            localization_report_path=localization_report,
+        )
+        self.assertEqual("halt", wrong_threshold_qa["gate"])
+        self.assertFalse(
+            wrong_threshold_qa["segmentation_binding"]["overall_pass"]
+        )
+        with self.assertRaisesRegex(ValueError, "registration_mode"):
+            localize_lattice_nodes(
+                self.volume,
+                self.aligned,
+                self.root / "wrong-mode-graph.json",
+                self.root / "wrong-mode-localization.json",
+                threshold=self.threshold,
+                registration_mode="autonomous_v2",
+                analysis_policy_artifact_path=self.roi_scope,
+                registration_report_path=self.root / "registration.json",
+            )
+
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=REPOSITORY_ROOT,
+            prefix=".escaped-registration-",
+            suffix=".json",
+            delete=False,
+        ) as stream:
+            escaped_registration = Path(stream.name)
+            stream.write((self.root / "registration.json").read_bytes())
+        self.addCleanup(escaped_registration.unlink, missing_ok=True)
+        with self.assertRaisesRegex(ValueError, "must share the bounded"):
+            localize_lattice_nodes(
+                self.volume,
+                self.aligned,
+                self.root / "escaped-registration-graph.json",
+                self.root / "escaped-registration-localization.json",
+                threshold=self.threshold,
+                registration_mode="challenge_aligned_json",
+                analysis_policy_artifact_path=self.roi_scope,
+                registration_report_path=escaped_registration,
+            )
+        escaped_localization = json.loads(
+            localization_report.read_text(encoding="utf-8")
+        )
+        escaped_localization["artifacts"]["registration_report"]["path"] = str(
+            escaped_registration
+        )
+        escaped_localization_path = self.root / "escaped-embedded-localization.json"
+        escaped_localization_path.write_text(
+            json.dumps(escaped_localization, sort_keys=True), encoding="utf-8"
+        )
+        escaped_qa = compute_registration_qa(
+            self.volume,
+            localized,
+            self.root / "escaped-embedded-qa.json",
+            threshold=self.threshold,
+            registration_mode="challenge_aligned_json",
+            analysis_scope_artifact_path=self.roi_scope,
+            localization_report_path=escaped_localization_path,
+        )
+        self.assertEqual("halt", escaped_qa["gate"])
+        self.assertFalse(
+            escaped_qa["localization_binding"]["gates"][
+                "registration_report_path_within_run_root"
+            ]
+        )
 
     def test_empty_ct_localization_halts_with_structured_gate(self) -> None:
         empty = self.root / "empty.npy"

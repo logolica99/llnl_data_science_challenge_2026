@@ -8,6 +8,9 @@ description: Prepare one CT scan for strut analysis with exact 65,536-bin Otsu s
 Consume only the immutable Stage 2 handoff and its verified Stage 0 data-prep
 handoff. All volume, mask, registration, localization, QA, visualization, and
 comparison work belongs to the declared `segmentation-tools` MCP interfaces.
+The handoff's hash-bound `requested_analysis_scope`, localization policy, QA
+policy, specimen ID, and design ID are authoritative; never accept replacements
+from free-form agent arguments.
 
 ## Workflow
 
@@ -21,7 +24,12 @@ comparison work belongs to the declared `segmentation-tools` MCP interfaces.
    labels, or ground truth.
 3. Invoke `segment_ct_dataset` once at the accepted threshold to publish the
    canonical uint8 ZYX mask. Pin path, role, dtype, shape, retention, and hash;
-   verify it through bounded `compare_segmentation_masks`.
+   verify it through bounded `compare_segmentation_masks`, then invoke
+   `verify_canonical_segmentation`. Require its closed, atomically persisted
+   specimen-scoped evidence to bind the frozen manifest, CT, exact-Otsu report,
+   canonical mask, comparison report, normalized request, and every SHA-256.
+   The verifier independently replays exact Otsu and `raw >= threshold`; the
+   agent must not reproduce either computation locally.
 4. Follow exactly one registration mode:
 
    - `challenge_aligned_json`: validate the authorized Stage 0 aligned graph's
@@ -39,17 +47,26 @@ comparison work belongs to the declared `segmentation-tools` MCP interfaces.
    Treat the incident-edge score robustly so one missing strut cannot bias its
    junction. Retain a coarse coordinate when CT support does not improve and
    preserve a fallback when support is insufficient; never globally refit.
+   Keep primary, stable-coarse, fallback, ambiguous, rejected, and
+   boundary-limited classes distinct. Apply only the frozen aggregate
+   thresholds, and propagate each node's quality/provenance to incident edges.
+   Bounded fallback may pass; fallback, ambiguity, or rejection must never be
+   relabeled as a primary match.
 6. Invoke `compute_registration_qa` over every node and all 18,468 edges. Keep
    coarse capture, padded-ROI capture, and metrology as separate gates. Emit
    a color-coded slice 380 status overlay and XYZ bias figures. QA must derive
    displacement and repeatability from the hashed localization report; the
-   agent must not supply an uncertainty scalar. Challenge-aligned mode has no
-   CT-only absolute-registration uncertainty, so it cannot claim direct
-   metrology. If coarse and padded ROI pass but metrology fails, return
-   `manual_review` requiring explicit ROI-only authorization.
+   agent must not supply an uncertainty scalar. Under `roi_screening`, passing
+   segmentation/localization/image/coarse/padded-ROI gates yields `pass` while
+   metrology is explicitly `not_authorized`; direct dimensional outputs remain
+   forbidden. Under `direct_metrology`, require passing artifact-backed
+   absolute uncertainty; missing or excessive evidence yields `manual_review`.
 7. Publish the config, exact histogram/report, canonical mask/comparison,
+   persisted segmentation-verification MCP evidence,
    registered and localized graph/reports, QA and figures, data-prep result,
    completion receipt, and analysis-ready manifest replacement.
+   Each binds scope, authorization lists, ROI results, metrology status,
+   localization counts, reason codes, and report paths/hashes.
 
 ## Isolation and replay
 

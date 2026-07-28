@@ -11,6 +11,10 @@ path and SHA-256.
 - Exact per-scan Otsu provenance and diagnostics.
 - Independent local-node overlay and ambiguity/support evidence.
 - Coarse padded-ROI gate distinguished from the stricter metrology gate.
+- Requested analysis scope and authorized/unauthorized outputs shown; ROI-only
+  evidence is never presented as direct dimensional metrology.
+- Stage 1 orientation source disclosed as unambiguous geometry, verified
+  declaration, or honest manual review, including transform evidence hashes.
 - Stage 3 metrics/corridor calibration and worst-strut evidence views.
 - Stage 4 fixed precedence, separate bent attribute, and verifier sign-off.
 - Stage 5 one-shot protocol, strict/lenient recall with Wilson interval, and

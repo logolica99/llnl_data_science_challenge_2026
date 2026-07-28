@@ -185,3 +185,13 @@ poc/**/results/
 **/mask.tiff
 **/mask.npy
 **/exact_histogram_uint16.npy
+
+# Local runtime/evaluation output retained outside Git history.
+analysis/brian_tran_9x9x9_runtime_*/
+analysis/lawrence_registration/
+demo/part2-orchestrator/proof-evidence/
+demo/part2-orchestrator/runtime-evidence/
+data/missing_struts/failed_unwanted/
+data/missing_struts/reconstruction/
+.idea/
+.ruff_cache/

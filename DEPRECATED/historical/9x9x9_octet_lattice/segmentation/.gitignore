@@ -1,0 +1,3 @@
+# The generated mask is reproducible from segment_ct.py and is kept locally.
+# Avoid consuming repository or Git LFS storage with this 495 MB artifact.
+mask.tif

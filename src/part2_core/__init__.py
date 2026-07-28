@@ -8,7 +8,9 @@ from .evaluation import compute_detection_metrics, wilson_interval
 from .design_diff import (
     deterministic_stratified_split,
     label_deleted_edges,
+    load_production_stage1_policy,
     resolve_cad_graph_orientation,
+    validate_declared_transform_artifact,
 )
 from .evidence import render_strut_evidence
 from .graph import GraphNormalizationError, normalize_lattice_graph
@@ -88,6 +90,7 @@ __all__ = [
     "histogram_sha256",
     "iter_array_chunks",
     "label_deleted_edges",
+    "load_production_stage1_policy",
     "load_volume",
     "localize_lattice_nodes",
     "multistart_fit",
@@ -109,6 +112,7 @@ __all__ = [
     "trimmed_icp",
     "volume_metadata",
     "visualize_slice",
+    "validate_declared_transform_artifact",
     "wilson_interval",
     "write_otsu_artifacts",
     "xyz_to_zyx_indices",

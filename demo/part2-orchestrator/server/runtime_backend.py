@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import atexit
 from datetime import datetime, timezone
+import hashlib
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -47,6 +48,18 @@ def atomic_json(path: Path, value: object) -> None:
         json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     temporary.replace(path)
+
+
+def canonical_json_sha256(value: object) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 def compact(value: object, limit: int = 900) -> str:
@@ -489,24 +502,42 @@ return until the manifest is no longer `running`; keep Stages 1-6 locked.
     def _write_confirmed_request(self) -> dict[str, Any]:
         source = json.loads(SOURCE_CONFIG.read_text(encoding="utf-8"))
         assert self.run_id is not None
-        request = {
-            "schema_version": "part2-runtime-intake-request/1.0.0",
+        request_base = {
+            "schema_version": "part2-scientist-intake-request/1.0.0",
             "created_at": self.started_at,
             "specimen_id": self.run_id,
+            "design_id": source["design_id"],
+            "requested_analysis_scope": source["analysis_parameters"][
+                "requested_analysis_scope"
+            ],
             "association_confirmed": True,
             "registration_mode": "challenge_aligned_json",
             "aligned_graph_authorized": True,
-            "cad_units": "unknown",
-            "cad_provenance": "committed LLNL challenge specimen input",
-            "graph_axes": source["analysis_parameters"]["coordinates"]["graph_axes"],
-            "ct_array_axes": source["analysis_parameters"]["coordinates"]["array_axes"],
-            "aligned_graph_units": source["analysis_parameters"]["coordinates"]["aligned_graph_units"],
+            "declarations": {
+                "cad_units": "unknown",
+                "cad_units_provenance": "committed LLNL challenge specimen input",
+                "graph_axes": source["analysis_parameters"]["coordinates"][
+                    "graph_axes"
+                ],
+                "array_axes": source["analysis_parameters"]["coordinates"][
+                    "array_axes"
+                ],
+                "aligned_graph_units": source["analysis_parameters"][
+                    "coordinates"
+                ]["aligned_graph_units"],
+                "retention": "committed",
+            },
             "inputs": {
                 "cad": source["inputs"]["cad"],
                 "nominal_graph": source["inputs"]["design_graph"],
                 "ct": source["inputs"]["ct"],
                 "aligned_graph": source["inputs"]["aligned_graph"],
+                "design_transform_declaration": None,
             },
+        }
+        request = {
+            **request_base,
+            "canonical_request_sha256": canonical_json_sha256(request_base),
         }
         request_path = (
             REPOSITORY_ROOT / "analysis" / self.run_id / "config" / "runtime_request.json"

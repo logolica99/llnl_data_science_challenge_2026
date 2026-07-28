@@ -1,8 +1,8 @@
 """Deterministic challenge and autonomous-v2 lattice registration.
 
-The numerical routines in this module are promoted from
-``poc/ct_registration_v2/registration_core.py``.  No supplied aligned graph is
-opened on the autonomous path.
+The numerical routines in this module are promoted from the archived
+``DEPRECATED/poc/ct_registration_v2/registration_core.py``. No supplied aligned
+graph is opened on the autonomous path.
 """
 
 from __future__ import annotations

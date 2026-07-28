@@ -30,8 +30,9 @@ Use `src/part2_orchestration.py` through its checked-in CLI for every state
 change. Never edit the pipeline manifest, handoff, receipt, attempt counter, or
 one-shot marker by hand.
 
-1. Validate the manifest self-hash, frozen config hash, contract hashes, and
-   all active artifact hashes.
+1. Validate the manifest self-hash, specimen/design/run identity, requested
+   analysis scope, frozen config hash, contract hashes, and all active artifact
+   hashes.
 2. Start only the unique `ready` stage. Supply exact role/path/SHA-256 records;
    the control plane writes an attempt-scoped sanitized handoff.
 3. Dispatch only the contract owner and declared bounded subagents. Do not give
@@ -39,8 +40,9 @@ one-shot marker by hand.
    Stage 4 returns a dev-blind shared handoff plus a separate dev-label handoff
    that only `missing_strut_agent` may receive.
 4. Accept only a current, self-hashed completion receipt bound to the specimen,
-   stage, attempt token, contract, config, predecessor receipt, handoff, and
-   exact output hashes.
+   design, run, stage, attempt token, contract, scope, config, predecessor
+   receipt, handoff, and exact output paths/roles/hashes. Never borrow a
+   standalone or unrelated run's artifact.
 5. Let `pass` unlock the next numeric stage. Stop immediately on
    `manual_review` or `halt`.
 
@@ -55,7 +57,9 @@ never fabricate its artifact.
 ## Apply terminal-state policy
 
 - `pass`: verify receipt and every live artifact before unlocking the declared
-  next stage.
+  next stage. Stage 1 symmetry requires a verified declaration; Stage 2
+  `roi_screening` may pass with metrology `not_authorized`, while
+  `direct_metrology` requires metrology `pass`.
 - `manual_review`: stop automation, preserve the attempt handoff, receipt,
   outputs, and evidence. Resume only through an explicit hashed resolution.
 - `halt`: fail closed permanently for this run; never retry or unlock a

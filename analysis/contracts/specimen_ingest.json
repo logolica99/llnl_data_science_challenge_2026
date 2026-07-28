@@ -18,13 +18,15 @@
       {
         "server": "segmentation-tools",
         "name": "inspect_volume_metadata",
-        "response_schema_version": "volume-metadata/1.0.0"
+        "response_schema_version": "part2-mcp-response/1.0.0"
       }
     ]
   },
   "required_inputs": [
     "attempt_scoped_stage_0_handoff",
     "specimen_id",
+    "design_id",
+    "requested_analysis_scope",
     "cad_stl",
     "nominal_graph_json",
     "ct_volume",
@@ -35,10 +37,13 @@
     "aligned_graph_units"
   ],
   "optional_inputs": [
-    "challenge_aligned_json"
+    "challenge_aligned_json",
+    "immutable_graph_to_stl_transform_declaration"
   ],
   "required_outputs": [
     "analysis/<specimen_id>/config/ingest_request.json",
+    "analysis/<specimen_id>/config/ct_metadata_response.json",
+    "analysis/<specimen_id>/config/ct_metadata_mcp_call_receipt.json",
     "analysis/<specimen_id>/config/specimen_manifest.json",
     "analysis/<specimen_id>/config/ingest_receipt.json",
     "analysis/<specimen_id>/config/data_prep_handoff.json"
@@ -51,6 +56,7 @@
     "local_node_refinement",
     "defect_label_derivation",
     "scientific_qa",
+    "direct_volume_metadata_import_or_cli_fallback",
     "mcp_cli_or_direct_import_fallback"
   ],
   "input_artifacts": {
@@ -102,6 +108,24 @@
         ]
       },
       {
+        "role": "design_transform_declaration",
+        "path": "<scientist-authorized-graph-to-stl-transform-json>",
+        "consumers": [
+          "specimen_ingest",
+          "design_diff",
+          "resolve_cad_graph_orientation",
+          "label_deleted_edges"
+        ]
+      },
+      {
+        "role": "stage_1_policy",
+        "path": "analysis/contracts/stage1_design_diff_policy.json",
+        "sha256": "b88d13dfa2c7c38d71d62fbaaca4a8566bf482d2aa9855d9ac561f97f46b695f",
+        "consumers": [
+          "specimen_ingest"
+        ]
+      },
+      {
         "role": "specimen_manifest_schema",
         "path": "analysis/schema/specimen_manifest.schema.json",
         "consumers": [
@@ -122,6 +146,7 @@
       "cad_stl",
       "nominal_graph",
       "ct_volume",
+      "stage_1_policy",
       "specimen_manifest_schema",
       "volume_metadata_skill"
     ],
@@ -164,6 +189,14 @@
         "path": "analysis/<specimen_id>/config/ingest_request.json"
       },
       {
+        "role": "ct_metadata_mcp_response",
+        "path": "analysis/<specimen_id>/config/ct_metadata_response.json"
+      },
+      {
+        "role": "ct_metadata_mcp_call_receipt",
+        "path": "analysis/<specimen_id>/config/ct_metadata_mcp_call_receipt.json"
+      },
+      {
         "role": "specimen_manifest",
         "path": "analysis/<specimen_id>/config/specimen_manifest.json"
       },
@@ -178,6 +211,8 @@
     ],
     "required_roles": [
       "ingest_request",
+      "ct_metadata_mcp_response",
+      "ct_metadata_mcp_call_receipt",
       "specimen_manifest",
       "ingest_receipt",
       "data_prep_handoff"
@@ -188,6 +223,28 @@
     "association_explicit",
     "all_paths_repository_relative",
     "all_supplied_inputs_hashed",
+    "ct_metadata_mcp_integrity_chain_valid",
+    "ct_metadata_origin_not_cryptographically_authenticated",
+    "ct_metadata_response_closed_schema_valid",
+    "ct_metadata_response_artifact_path_and_sha256_match",
+    "ct_metadata_response_request_is_authoritative_header_only",
+    "ct_metadata_response_ct_path_sha256_and_dimensions_match",
+    "ct_metadata_mcp_call_receipt_closed_schema_valid",
+    "ct_metadata_mcp_call_receipt_path_and_sha256_match",
+    "ct_metadata_header_facts_bound_to_call_receipt",
+    "ct_metadata_evidence_and_call_receipt_are_stage_outputs_not_prestart_inputs",
+    "scientist_intake_request_closed_schema_valid",
+    "scientist_intake_request_canonical_hash_valid",
+    "scientist_intake_request_identity_scope_mode_and_input_hashes_match",
+    "direct_volume_metadata_inspector_not_imported_or_called",
+    "specimen_and_design_identifiers_recorded",
+    "requested_analysis_scope_recorded_in_hashed_analysis_parameters",
+    "optional_design_transform_declaration_hash_recorded",
+    "optional_design_transform_declaration_closed_schema_valid",
+    "optional_design_transform_declaration_self_hash_valid",
+    "optional_design_transform_declaration_graph_and_cad_hashes_match",
+    "optional_design_transform_declaration_reflection_policy_verified",
+    "stage_1_policy_path_and_hash_match_design_diff_contract",
     "manifest_schema_valid",
     "canonical_ingest_receipt_hash_valid",
     "analysis_parameters_sha256_preserved",
@@ -206,6 +263,8 @@
     "completion_receipt_verified": true,
     "matching_hashes_required": true,
     "frozen_config_hash_required": true,
+    "requested_analysis_scope_required": true,
+    "design_id_required": true,
     "next_stage_locked_until_verified": true
   },
   "manual_review_conditions": [
@@ -218,6 +277,9 @@
     "unresolved_required_identity_or_coordinate_fields_after_attempt_limit",
     "path_outside_configured_roots",
     "invalid_graph_cad_or_ct",
+    "missing_open_stale_non_authoritative_or_mismatched_ct_metadata_mcp_evidence_or_call_receipt",
+    "malformed_or_mismatched_transform_declaration",
+    "missing_or_invalid_requested_analysis_scope",
     "challenge_mode_without_aligned_json",
     "forbidden_input_access",
     "receipt_or_artifact_hash_mismatch",

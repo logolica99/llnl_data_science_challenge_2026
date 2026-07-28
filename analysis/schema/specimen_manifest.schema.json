@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "specimen_id",
+    "design_id",
     "lifecycle_state",
     "unresolved_fields",
     "inputs",
@@ -16,9 +17,13 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "2.0.0"
+      "const": "2.1.0"
     },
     "specimen_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "design_id": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9._-]*$"
     },
@@ -51,6 +56,9 @@
           "$ref": "#/$defs/artifact"
         },
         "design_graph": {
+          "$ref": "#/$defs/artifact"
+        },
+        "design_transform_declaration": {
           "$ref": "#/$defs/artifact"
         },
         "aligned_graph": {
@@ -122,13 +130,22 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "requested_analysis_scope",
         "registration",
         "coordinates",
         "segmentation",
+        "localization_policy",
+        "qa_policy",
         "budgets",
         "artifact_schema_versions"
       ],
       "properties": {
+        "requested_analysis_scope": {
+          "enum": [
+            "roi_screening",
+            "direct_metrology"
+          ]
+        },
         "registration": {
           "type": "object",
           "additionalProperties": false,
@@ -287,6 +304,210 @@
             }
           }
         },
+        "localization_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "patch_radius_voxels",
+            "search_radius_voxels",
+            "maximum_shift_voxels",
+            "smoothing_sigma_voxels",
+            "mean_shift_bandwidth_voxels",
+            "mean_shift_max_iterations",
+            "mean_shift_tolerance_voxels",
+            "seed_perturbation_voxels",
+            "seed_cluster_radius_voxels",
+            "minimum_seed_consensus_fraction",
+            "minimum_candidate_support",
+            "minimum_relative_support_improvement",
+            "incident_sample_distances_voxels",
+            "core_support_weight",
+            "incident_support_weight",
+            "minimum_primary_or_stable_coarse_fraction",
+            "maximum_fallback_fraction",
+            "maximum_ambiguous_fraction",
+            "maximum_rejected_fraction",
+            "maximum_boundary_limited_fraction"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "stage2-localization-policy/1.1.0"
+            },
+            "patch_radius_voxels": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "search_radius_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "maximum_shift_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "smoothing_sigma_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "mean_shift_bandwidth_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "mean_shift_max_iterations": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mean_shift_tolerance_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "seed_perturbation_voxels": {
+              "type": "number",
+              "minimum": 0
+            },
+            "seed_cluster_radius_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "minimum_seed_consensus_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_candidate_support": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_relative_support_improvement": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "incident_sample_distances_voxels": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "core_support_weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "incident_support_weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_primary_or_stable_coarse_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_fallback_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_ambiguous_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_rejected_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_boundary_limited_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "qa_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "junction_patch_radius_voxels",
+            "corridor_axial_samples",
+            "corridor_radius_voxels",
+            "corridor_angular_samples",
+            "roi_padding_fraction",
+            "spatial_bins_per_axis",
+            "radial_foreground_probability",
+            "minimum_mean_junction_foreground_fraction",
+            "minimum_median_corridor_foreground_fraction",
+            "maximum_spatial_bin_median_range",
+            "minimum_roi_in_bounds_fraction",
+            "maximum_uncertainty_to_radius_ratio"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "stage2-qa-policy/1.1.0"
+            },
+            "junction_patch_radius_voxels": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "corridor_axial_samples": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "corridor_radius_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "corridor_angular_samples": {
+              "type": "integer",
+              "minimum": 3
+            },
+            "roi_padding_fraction": {
+              "type": "number",
+              "minimum": 0
+            },
+            "spatial_bins_per_axis": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "radial_foreground_probability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_mean_junction_foreground_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_median_corridor_foreground_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_spatial_bin_median_range": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_roi_in_bounds_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_uncertainty_to_radius_ratio": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
         "budgets": {
           "type": "object",
           "additionalProperties": false,
@@ -333,6 +554,7 @@
       "additionalProperties": false,
       "properties": {
         "graph_summary": {
+          "unevaluatedProperties": false,
           "allOf": [
             {
               "$ref": "#/$defs/derivedRecord"
@@ -354,6 +576,7 @@
           ]
         },
         "voxel_spacing": {
+          "unevaluatedProperties": false,
           "allOf": [
             {
               "$ref": "#/$defs/derivedRecord"
@@ -411,6 +634,7 @@
           ]
         },
         "segmentation_result": {
+          "unevaluatedProperties": false,
           "allOf": [
             {
               "$ref": "#/$defs/derivedRecord"
@@ -488,6 +712,7 @@
           ]
         },
         "registration_result": {
+          "unevaluatedProperties": false,
           "allOf": [
             {
               "$ref": "#/$defs/derivedRecord"
@@ -502,18 +727,40 @@
                   "type": "object",
                   "additionalProperties": false,
                   "required": [
+                    "specimen_id",
+                    "design_id",
                     "aligned_graph_state",
+                    "requested_analysis_scope",
                     "overall_pass",
                     "local_recenter_complete",
                     "roi_gate_pass",
-                    "metrology_gate_pass"
+                    "metrology_gate_status",
+                    "authorized_outputs",
+                    "unauthorized_outputs",
+                    "roi_gate_results",
+                    "localization_quality_counts",
+                    "reason_codes"
                   ],
                   "properties": {
+                    "specimen_id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+                    },
+                    "design_id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+                    },
                     "aligned_graph_state": {
                       "enum": [
                         "input",
                         "pending",
                         "derived"
+                      ]
+                    },
+                    "requested_analysis_scope": {
+                      "enum": [
+                        "roi_screening",
+                        "direct_metrology"
                       ]
                     },
                     "overall_pass": {
@@ -525,8 +772,77 @@
                     "roi_gate_pass": {
                       "type": "boolean"
                     },
-                    "metrology_gate_pass": {
-                      "type": "boolean"
+                    "metrology_gate_status": {
+                      "enum": [
+                        "pass",
+                        "fail",
+                        "insufficient_evidence",
+                        "not_authorized"
+                      ]
+                    },
+                    "authorized_outputs": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "segmentation",
+                          "registration",
+                          "node_localization",
+                          "coarse_region_screening",
+                          "padded_roi_definition",
+                          "absolute_metrology",
+                          "direct_dimensional_measurement"
+                        ]
+                      }
+                    },
+                    "unauthorized_outputs": {
+                      "type": "array",
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "segmentation",
+                          "registration",
+                          "node_localization",
+                          "coarse_region_screening",
+                          "padded_roi_definition",
+                          "absolute_metrology",
+                          "direct_dimensional_measurement"
+                        ]
+                      }
+                    },
+                    "roi_gate_results": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/canonicalRoiGateResults"
+                        },
+                        {
+                          "$ref": "#/$defs/productionRoiGateResults"
+                        }
+                      ]
+                    },
+                    "localization_quality_counts": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/canonicalLocalizationQualityCounts"
+                        },
+                        {
+                          "$ref": "#/$defs/productionLocalizationQualityCounts"
+                        }
+                      ]
+                    },
+                    "reason_codes": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "ROI_GATES_PASS",
+                          "METROLOGY_NOT_AUTHORIZED",
+                          "METROLOGY_GATES_PASS"
+                        ]
+                      }
                     }
                   }
                 }
@@ -595,7 +911,8 @@
         "properties": {
           "inputs": {
             "required": [
-              "aligned_graph"
+              "aligned_graph",
+              "canonical_mask"
             ]
           },
           "derived": {
@@ -679,7 +996,27 @@
         },
         "provenance": {
           "type": "object",
-          "minProperties": 1
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "field",
+            "raw_value"
+          ],
+          "properties": {
+            "source": {
+              "type": ["string", "number"]
+            },
+            "field": {
+              "type": ["string", "number"]
+            },
+            "raw_value": {
+              "type": ["string", "number"]
+            },
+            "resolution_unit": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       }
     },
@@ -927,6 +1264,7 @@
             "design_graph",
             "aligned_graph",
             "derived_aligned_graph",
+            "design_transform_declaration",
             "cad"
           ]
         },
@@ -936,6 +1274,168 @@
             "external",
             "regenerable"
           ]
+        }
+      }
+    },
+    "canonicalRoiGateResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "image_support",
+        "localization_quality",
+        "coarse_region_support",
+        "padded_roi_in_bounds"
+      ],
+      "properties": {
+        "image_support": {
+          "type": "boolean"
+        },
+        "localization_quality": {
+          "type": "boolean"
+        },
+        "coarse_region_support": {
+          "type": "boolean"
+        },
+        "padded_roi_in_bounds": {
+          "type": "boolean"
+        }
+      }
+    },
+    "productionRoiGateResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "production_image_qa_pass",
+        "coarse_capture_pass",
+        "localization_binding_pass",
+        "localization_quantitative_gate_pass",
+        "padded_roi_capture_pass",
+        "overall_pass"
+      ],
+      "properties": {
+        "production_image_qa_pass": {
+          "type": "boolean"
+        },
+        "coarse_capture_pass": {
+          "type": "boolean"
+        },
+        "localization_binding_pass": {
+          "type": "boolean"
+        },
+        "localization_quantitative_gate_pass": {
+          "type": "boolean"
+        },
+        "padded_roi_capture_pass": {
+          "type": "boolean"
+        },
+        "overall_pass": {
+          "type": "boolean"
+        }
+      }
+    },
+    "canonicalLocalizationQualityCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary",
+        "stable_coarse",
+        "fallback",
+        "ambiguous",
+        "rejected",
+        "boundary_limited"
+      ],
+      "properties": {
+        "primary": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_coarse": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "boundary_limited": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "productionLocalizationQualityCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_nodes",
+        "stable_coarse_nodes",
+        "fallback_nodes",
+        "ambiguous_nodes",
+        "rejected_or_low_confidence_nodes",
+        "boundary_limited_nodes",
+        "primary_edges",
+        "stable_coarse_edges",
+        "fallback_edges",
+        "ambiguous_edges",
+        "roi_screening_usable_edges",
+        "direct_metrology_usable_edges"
+      ],
+      "properties": {
+        "primary_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_coarse_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected_or_low_confidence_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "boundary_limited_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "primary_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_coarse_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "roi_screening_usable_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "direct_metrology_usable_edges": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -964,7 +1464,7 @@
           "const": "canonical_segmentation_mask"
         },
         "retention": {
-          "enum": ["committed", "regenerable"]
+          "const": "committed"
         },
         "dtype": {
           "const": "uint8"

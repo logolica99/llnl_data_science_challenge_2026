@@ -10,6 +10,9 @@
   sensitive-path registries in orchestrator scope.
 - Re-hash handoff inputs, outputs, completion receipt, active prior artifacts,
   and verifier/freeze checkpoints before transition.
+- Bind specimen ID, design ID, run ID, requested scope, config hash, and exact
+  artifact paths/roles/hashes. Reject standalone or cross-run artifacts even if
+  their internal schema is valid.
 - Treat exact receipt replay as a byte-identical no-op, but still re-hash live
   artifacts. Reject a replay whose artifact was deleted or changed.
 - Reject absolute, escaping, symlink-aliased, duplicate, stale, or colliding
@@ -52,8 +55,17 @@ a label file does not declassify it.
 - Autonomous Stage 2: aligned JSON only in a supplemental post-freeze validator
   handoff tied to the CT-only freeze receipt.
 - Stage 2→3: bind the canonical mask's exact path, role, dtype, ZYX shape,
-  retention, and SHA-256 in both handoffs; neither handoff may contain any
-  label path, role, hash, count, or content.
+  retention, and SHA-256 in both handoffs, and require the closed persisted MCP
+  verifier artifact bound to the pre-finalization manifest, exact-Otsu report,
+  comparison report, CT, and mask hashes; neither handoff may contain any label
+  path, role, hash, count, or content.
+- Stage 1: only an intake-hashed declaration may resolve symmetric geometry;
+  its identity, source/provenance, graph/STL hashes, and verification report are
+  receipt-bound.
+- Stage 2: `roi_screening` unlocks only ROI/screening outputs and requires
+  metrology `not_authorized`; `direct_metrology` unlocks dimensional outputs
+  only when absolute-uncertainty gates pass. The analysis-ready manifest and
+  data-prep completion receipt are required Stage 2 outputs.
 
 ## Fail-closed dependency behavior
 

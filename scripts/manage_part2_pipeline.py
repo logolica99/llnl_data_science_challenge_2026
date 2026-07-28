@@ -107,6 +107,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     receipt.add_argument("--outputs", type=Path, required=True)
     receipt.add_argument("--assertions", type=Path, required=True)
+    receipt.add_argument(
+        "--stage-policy",
+        type=Path,
+        help="closed Stage 1/2 policy decision JSON (required by those stages)",
+    )
     receipt.add_argument("--failure-kind")
     receipt.add_argument("--error", type=Path)
     receipt.add_argument("--output", type=Path)
@@ -188,6 +193,9 @@ def _dispatch(args: argparse.Namespace) -> Any:
             terminal_state=args.terminal_state,
             output_artifacts=_array_file(args.outputs),
             assertions=_object_file(args.assertions),
+            stage_policy=(
+                _object_file(args.stage_policy) if args.stage_policy else None
+            ),
             failure_kind=args.failure_kind,
             error=_object_file(args.error) if args.error else None,
             repository_root=root,

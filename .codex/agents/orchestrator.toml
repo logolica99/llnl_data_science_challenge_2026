@@ -62,8 +62,9 @@ Exact replay of an already accepted receipt is an idempotent no-op; it must not
 change bytes, timestamps, events, attempts, or downstream state. Never
 overwrite an earlier attempt's handoff, receipt, or evidence.
 
-Freeze the scientist-confirmed registration mode and analysis/configuration
-hash when the pipeline manifest is created. Preserve that hash in every
+Freeze the scientist-confirmed registration mode, specimen ID, design ID,
+requested analysis scope, and analysis/configuration hash when the pipeline
+manifest is created. Preserve those bindings in every
 handoff, receipt, and artifact record. A changed configuration, contract, or
 source artifact invalidates stale work and halts the current run; never rewrite
 the frozen hash in place to make an old receipt appear current.
@@ -71,10 +72,18 @@ the frozen hash in place to make an old receipt appear current.
 Enforce contract input allowlists and forbidden inputs by resolved path,
 artifact role, and known hash, including renamed copies:
 
-- Stage 0 receives only the explicit confirmed specimen association and the
-  optional authorized challenge aligned graph.
+- Stage 0 receives only the explicit confirmed specimen association, immutable
+  requested scope, optional authorized challenge aligned graph, and optional
+  scientist-supplied transform declaration. It starts without CT metadata
+  evidence: `specimen_ingest` must create the closed metadata response and the
+  separate MCP call receipt as Stage 0 outputs. Before accepting `pass`, rehash
+  and semantically validate those two artifacts, the ingest request, manifest,
+  ingest receipt, and data-prep handoff as one specimen-scoped bundle; reject
+  opaque JSON, stale bindings, header/result disagreement, or cross-specimen
+  reuse even when the generic artifact envelope is valid.
 - Stage 1 receives design-space CAD/nominal-graph inputs only and no CT,
-  aligned graph, registration output, measurements, or prior defect labels.
+  aligned graph, registration output, measurements, or prior defect labels. It
+  may receive only the transform declaration already hashed at intake.
 - Stages 2 and 3 receive no defect label, dev-split, sealed-split, or
   classification artifact.
 - In `challenge_aligned_json` mode, Stage 2 may consume only the authorized
@@ -93,6 +102,15 @@ artifact role, and known hash, including renamed copies:
   must not receive its path, role, hash, or contents in their scoped handoffs.
 - Stage 6 consumes Stage 5's attributed and scored artifacts, never raw dev or
   sealed labels.
+
+Accept Stage 1 `pass` from symmetric geometry only when the receipt binds an
+independently verified authoritative declaration; otherwise preserve honest
+`manual_review`. Accept Stage 2 `pass` in `roi_screening` with metrology
+`not_authorized` only when every ROI/localization gate passes and downstream
+authorization excludes direct dimensional measurement. In `direct_metrology`,
+require metrology `pass`. Reject standalone artifacts and any cross-run,
+cross-specimen, cross-design, path, role, or hash mismatch even when the bytes
+are otherwise well formed.
 
 Stop automation immediately on `manual_review`; preserve all evidence and keep
 the current and downstream stages locked. Resume only after an explicit,

@@ -7,6 +7,12 @@
   "execution_kind": "hybrid",
   "maximum_attempts": 2,
   "one_shot": false,
+  "stage_policy": {
+    "path": "analysis/contracts/stage1_design_diff_policy.json",
+    "sha256": "b88d13dfa2c7c38d71d62fbaaca4a8566bf482d2aa9855d9ac561f97f46b695f",
+    "schema_version": "part2-stage1-design-diff-policy/1.0.0",
+    "policy_id": "llnl-part2-stage1-production-2026-07-28"
+  },
   "required_dependencies": {
     "agents": [
       {
@@ -36,13 +42,18 @@
     "verified_stage_0_receipt_hash_in_control_metadata",
     "attempt_scoped_stage_1_handoff",
     "frozen_analysis_parameters_sha256",
+    "fixed_hash_bound_stage_1_policy",
+    "specimen_id",
+    "design_id",
     "nominal_graph_json",
     "full_design_stl_0p0",
     "intentional_deletion_stl_0p1",
     "intentional_deletion_stl_0p5",
     "intentional_deletion_stl_1p0"
   ],
-  "optional_inputs": [],
+  "optional_inputs": [
+    "immutable_hashed_graph_to_stl_transform_declaration"
+  ],
   "required_outputs": [
     "analysis/<specimen_id>/labels/cad_graph_orientation.json",
     "analysis/<specimen_id>/design/normalized_nominal_graph.npz",
@@ -94,6 +105,25 @@
         ]
       },
       {
+        "role": "stage_1_policy",
+        "path": "analysis/contracts/stage1_design_diff_policy.json",
+        "sha256": "b88d13dfa2c7c38d71d62fbaaca4a8566bf482d2aa9855d9ac561f97f46b695f",
+        "consumers": [
+          "design_diff",
+          "resolve_cad_graph_orientation",
+          "label_deleted_edges"
+        ]
+      },
+      {
+        "role": "design_transform_declaration",
+        "path": "<manifest-declared-graph-to-stl-transform-json>",
+        "consumers": [
+          "design_diff",
+          "resolve_cad_graph_orientation",
+          "label_deleted_edges"
+        ]
+      },
+      {
         "role": "intentional_deletion_stl_0p1",
         "path": "data/missing_struts/stls/0.1.stl",
         "consumers": [
@@ -117,6 +147,7 @@
     ],
     "required_roles": [
       "stage_handoff",
+      "stage_1_policy",
       "nominal_graph",
       "full_design_stl",
       "intentional_deletion_stl_0p1",
@@ -221,11 +252,23 @@
     "contract_version_matches",
     "stage_0_receipt_hash_matches",
     "frozen_config_hash_matches",
+    "stage_1_policy_path_and_hash_match_contract",
     "stage_handoff_excludes_ct_aligned_registration_and_label_metadata",
     "input_artifact_hashes_match",
     "output_artifact_hashes_match",
     "design_space_only",
-    "cad_graph_orientation_unambiguous",
+    "cad_graph_orientation_unambiguous_or_authoritatively_declared",
+    "declared_transform_artifact_hash_and_self_hash_match",
+    "declared_transform_source_and_provenance_identifiers_present",
+    "declared_transform_specimen_and_design_identifiers_match",
+    "declared_transform_dimensions_and_values_are_finite",
+    "declared_transform_rotation_is_orthonormal",
+    "declared_transform_is_right_handed_unless_explicitly_permitted",
+    "declared_transform_scale_is_authoritative_2p28_mm_per_graph_unit",
+    "declared_transform_translation_and_edge_correspondence_pass_frozen_tolerances",
+    "all_sampled_edge_points_contribute_to_geometry_support",
+    "intake_declaration_artifact_hash_matches_orientation_binding",
+    "deleted_edge_labels_not_used_to_select_orientation",
     "deletion_counts_equal_18_93_186",
     "deletion_variants_validated_independently",
     "triangle_deficit_ratio_between_170_and_180",
@@ -246,7 +289,7 @@
     "next_stage_locked_until_verified": true
   },
   "manual_review_conditions": [
-    "equivalent_cad_graph_orientation_hypotheses",
+    "equivalent_cad_graph_orientation_hypotheses_without_valid_declaration",
     "ambiguous_edge_assignment_before_label_propagation"
   ],
   "halt_conditions": [
@@ -254,6 +297,9 @@
     "deterministic_count_consistency_gate_failure",
     "triangle_deficit_ratio_gate_failure",
     "invalid_or_duplicate_nominal_strut_id",
+    "malformed_nonfinite_wrong_handed_wrong_scale_or_wrong_translation_declaration",
+    "declaration_specimen_design_or_artifact_hash_mismatch",
+    "declared_transform_not_supported_by_independent_geometry_search",
     "ct_or_aligned_graph_access",
     "forbidden_input_access",
     "receipt_or_artifact_hash_mismatch",

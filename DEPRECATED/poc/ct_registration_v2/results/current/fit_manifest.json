@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "pipeline": "ct_registration_v2",
+  "fit_completed_before_ground_truth_access": true,
+  "ground_truth_used_for_fit": false,
+  "input_artifacts": {
+    "ct": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+      "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+      "bytes": 1038433319
+    },
+    "design": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/octet_truss_9x9x9.json",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+      "bytes": 3938777
+    },
+    "config": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/config.default.json",
+      "sha256": "83d03eab8520e597bd9ceab8e68a0520e30e0de3a1b9031f30901932b635eb2d",
+      "bytes": 3299
+    }
+  },
+  "per_scan_threshold": 40054,
+  "internal_gates": {
+    "histogram": true,
+    "synthetic_recovery": true,
+    "multistart": true,
+    "robustness": false,
+    "independent_image_validation": true,
+    "downstream_tolerance": false
+  },
+  "internal_pass": false,
+  "external_evidence": {
+    "path": null,
+    "present": false,
+    "overall_pass": false
+  },
+  "classification_allowed": false,
+  "trust_status": "internal_gates_failed",
+  "runtime": {
+    "python": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 21.0.0 (clang-2100.0.123.102)]",
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "elapsed_seconds": 40.73841774999164
+  },
+  "artifacts": [
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/config.snapshot.json",
+      "sha256": "7b7ab84d5b1a3f5ec974014d0ac4c014b093b8a09228a84bc70b07ade9762137",
+      "bytes": 3523
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/synthetic_recovery.json",
+      "sha256": "f24d94078c047711cc36b55c323982701cb83627ddcf5d61cb7af1d3bfe7e268",
+      "bytes": 22054
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/histogram_report.json",
+      "sha256": "0a0a0808152c1f614ec082aedf084ae4e832187a73d6cab517beb9a8b79c42a5",
+      "bytes": 782
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/exact_histogram_uint16.npy",
+      "sha256": "386e3270fa9756d0517de14776f05034514578b85ef75f6c4aeafd25a7eba282",
+      "bytes": 524416
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/detected_nodes.npy",
+      "sha256": "25844668b2a6957d6270ef5fe9fb82582433d7ee36cfafb8f8575486ebd855cc",
+      "bytes": 84728
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/fit_candidates.npy",
+      "sha256": "9abc91721ec31e70fc0f4529a5123c642ff65d6a0bd52d5e9e41a8ea70a7b0ca",
+      "bytes": 67808
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/holdout_candidates.npy",
+      "sha256": "53c7cfb36a97e18499014328ff745a9de161d5fe832ad307c3c1d8b4e882c5f3",
+      "bytes": 17048
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/detection_report.json",
+      "sha256": "add792221f7aa2f5c78092886d923e78cce73a2ac20383246570b28d9a356118",
+      "bytes": 969
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/multistart_report.json",
+      "sha256": "aa0f9162d93f726922bb33db7827c301b2bf2002d30c842247ba66b6d554d318",
+      "bytes": 36638
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/robustness_report.json",
+      "sha256": "59dbcf204f93fc419f09db3604906b399ab0a1fcd13e5084bfe6544c5099f566",
+      "bytes": 15339
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/fitted_transform.json",
+      "sha256": "aceedcfde6428c56c0e44674a1251f6283f4dbba5f4f07baa773e427215c1e82",
+      "bytes": 4090
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/our_registered.json",
+      "sha256": "f33d038f6609bdf829b27c67d985f2fd47979ceb93c39468f8b00481cb47bdee",
+      "bytes": 4958705
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/image_validation.json",
+      "sha256": "eb2bc44235258a9fe74cb6353b82f9bd754f76d051dde937524b42544234b7b7",
+      "bytes": 2185
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/edge_corridor_occupancy.npy",
+      "sha256": "6336cb3b42c59054e41b84144f85fe35a14da681cce40f2583e5e5acce6ed66e",
+      "bytes": 147872
+    },
+    {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/downstream_tolerance.json",
+      "sha256": "bff381ce71dd8fb6af3b459320ab408ea787c0396b1cd78858b3246d4ff1d8ff",
+      "bytes": 397
+    }
+  ]
+}

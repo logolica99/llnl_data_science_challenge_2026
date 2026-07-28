@@ -106,10 +106,14 @@ A ready hand-off allowlists exact input paths/hashes and the registration mode.
 A provisional hand-off is an explicit `halt` containing unresolved fields.
 Tampered or stale manifests/receipts cannot unlock `data_prep`.
 
-Stage 2 writes a `data-prep-result/1.0.0` envelope containing its aligned graph,
+Stage 2 writes a `data-prep-result/1.2.0` envelope containing its aligned graph,
 four derived records, and mandatory Otsu/registration/local-node/ROI/metrology
-self-verification. The boundary adapter atomically validates and advances the
-manifest:
+self-verification. It must bind the closed, specimen-scoped
+`segmentation_verification_mcp_response.json` produced by
+`verify_canonical_segmentation`; that MCP tool independently replays the frozen
+Otsu recipe and exact `raw >= threshold` comparison. The boundary adapter
+consumes that persisted path/SHA-bound evidence and atomically validates and
+advances the manifest:
 
 ```bash
 python scripts/apply_data_prep_result.py \

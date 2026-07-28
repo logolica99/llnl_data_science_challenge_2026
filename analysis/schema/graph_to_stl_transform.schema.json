@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.llnl.gov/schemas/graph_to_stl_transform.schema.json",
+  "title": "Immutable graph-to-STL transform declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "declaration_id",
+    "source_id",
+    "provenance_id",
+    "specimen_id",
+    "design_id",
+    "nominal_graph_sha256",
+    "full_design_stl_sha256",
+    "transform",
+    "canonical_declaration_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "part2-graph-to-stl-transform-declaration/1.0.0"
+    },
+    "declaration_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "source_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "provenance_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "specimen_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "design_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "nominal_graph_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "full_design_stl_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "convention",
+        "design_center",
+        "scale_mm_per_design_unit",
+        "rotation_matrix",
+        "translation_mm",
+        "reflection_permitted"
+      ],
+      "properties": {
+        "convention": {
+          "const": "stl_mm = scale * ((design_xyz - design_center) @ rotation.T) + translation_mm"
+        },
+        "design_center": {
+          "$ref": "#/$defs/vector3"
+        },
+        "scale_mm_per_design_unit": {
+          "const": 2.28
+        },
+        "rotation_matrix": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/vector3"
+          }
+        },
+        "translation_mm": {
+          "$ref": "#/$defs/vector3"
+        },
+        "reflection_permitted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "canonical_declaration_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    }
+  }
+}

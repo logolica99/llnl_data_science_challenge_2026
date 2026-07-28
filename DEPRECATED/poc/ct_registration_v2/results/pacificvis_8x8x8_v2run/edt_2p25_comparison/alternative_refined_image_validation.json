@@ -1,0 +1,78 @@
+{
+  "junctions": {
+    "record_count": 7168,
+    "mean_5x5x5_foreground_fraction": 1.0,
+    "median_5x5x5_foreground_fraction": 1.0,
+    "nodes_with_any_foreground_fraction": 1.0
+  },
+  "candidate_holdout": {
+    "candidate_count": 688,
+    "median_distance_to_predicted_unique_node_voxels": 1.8194372010799662,
+    "p95_distance_to_predicted_unique_node_voxels": 11.479031035124345
+  },
+  "corridors": {
+    "edge_count": 13056,
+    "axial_samples_per_edge": 9,
+    "maximum_sampled_radius_voxels": 10,
+    "median_foreground_fraction": 0.6419753086419753,
+    "p10_foreground_fraction": 0.6186556927297668,
+    "p90_foreground_fraction": 0.6556927297668038,
+    "edges_with_complete_axial_gap_fraction": 0.0,
+    "high_confidence_edge_threshold": 0.6488340192043895,
+    "high_confidence_edge_count": 3809,
+    "radial_foreground_probability": [
+      0.9998978758169934,
+      0.9999000034041394,
+      0.9999031947848583,
+      0.9998329844090414,
+      0.9868387459150327,
+      0.9234611162173203,
+      0.6997889433551199,
+      0.3504380701933551,
+      0.15241076899509803,
+      0.12423832380174292,
+      0.1162737013208061
+    ],
+    "measured_strut_radius_voxels": 6.0
+  },
+  "spatial_bias": {
+    "x": {
+      "bin_median_corridor_foreground_fraction": [
+        0.6433470507544582,
+        0.644718792866941,
+        0.6433470507544582,
+        0.6419753086419753,
+        0.6378600823045267
+      ],
+      "median_range": 0.006858710562414272
+    },
+    "y": {
+      "bin_median_corridor_foreground_fraction": [
+        0.6364883401920439,
+        0.6433470507544582,
+        0.6460905349794238,
+        0.6433470507544582,
+        0.6419753086419753
+      ],
+      "median_range": 0.009602194787379892
+    },
+    "z": {
+      "bin_median_corridor_foreground_fraction": [
+        0.6337448559670782,
+        0.6433470507544582,
+        0.6460905349794238,
+        0.6460905349794238,
+        0.6419753086419753
+      ],
+      "median_range": 0.012345679012345623
+    }
+  },
+  "gates": {
+    "junction_foreground_sufficient": true,
+    "corridor_foreground_sufficient": true,
+    "spatial_bias_within_limit": true,
+    "holdout_candidates_supported": true,
+    "measured_radius_positive": true
+  },
+  "overall_pass": true
+}

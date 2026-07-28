@@ -7,6 +7,7 @@ evaluation algorithms.
 
 from __future__ import annotations
 
+import ast
 from contextlib import contextmanager
 import copy
 import fcntl
@@ -17,17 +18,31 @@ import math
 import os
 from pathlib import Path
 import re
+import struct
 import tempfile
 from typing import Any, Callable, Iterator, Literal, Mapping, Sequence
+
+from data_prep_handoff import (
+    DataPrepHandoffError,
+    validate_data_prep_result_shape,
+    validate_stage0_artifact_bundle,
+)
+from specimen_manifest import (
+    ManifestValidationError as SpecimenManifestValidationError,
+    validate_manifest as validate_specimen_manifest,
+)
 
 
 PIPELINE_SCHEMA_VERSION = "part2-pipeline-manifest/1.0.0"
 HANDOFF_SCHEMA_VERSION = "part2-stage-handoff/1.0.0"
-RECEIPT_SCHEMA_VERSION = "part2-stage-receipt/1.0.0"
+RECEIPT_SCHEMA_VERSION = "part2-stage-receipt/1.1.0"
+STAGE_POLICY_SCHEMA_VERSION = "part2-stage-policy/1.0.0"
+OUTPUT_BINDING_SCHEMA_VERSION = "part2-stage-output-binding/1.0.0"
 REGISTRATION_FREEZE_SCHEMA_VERSION = "part2-registration-freeze/1.0.0"
 POST_FREEZE_HANDOFF_SCHEMA_VERSION = "part2-post-freeze-handoff/1.0.0"
 CONTRACT_SCHEMA_VERSION = "agent-stage-contract/1.0.0"
 MCP_RESPONSE_SCHEMA_VERSION = "part2-mcp-response/1.0.0"
+SCIENTIST_INTAKE_REQUEST_SCHEMA_VERSION = "part2-scientist-intake-request/1.0.0"
 STAGE_NUMBERS = tuple(range(7))
 STAGE_NAMES = (
     "specimen_ingest",
@@ -69,9 +84,400 @@ RECEIPT_FIELDS = frozenset(
         "supplemental_handoffs",
         "registration_freeze",
         "output_artifacts",
+        "stage_policy",
         "assertions",
         "error",
         "canonical_receipt_sha256",
+    }
+)
+STAGE_POLICY_FIELDS = frozenset(
+    {
+        "schema_version",
+        "stage_number",
+        "terminal_state",
+        "specimen_id",
+        "design_id",
+        "attempt",
+        "run_token",
+        "input_handoff_sha256",
+        "config_sha256",
+        "contract_sha256",
+        "source_hashes",
+        "requested_analysis_scope",
+        "authorized_outputs",
+        "unauthorized_outputs",
+        "roi_gate_summary",
+        "metrology_summary",
+        "localization_summary",
+        "reason_codes",
+        "mcp_response_bindings",
+        "output_hashes",
+    }
+)
+MCP_RESPONSE_BINDING_FIELDS = frozenset(
+    {
+        "tool_name",
+        "request_arguments",
+        "request_sha256",
+        "response",
+        "response_sha256",
+        "response_schema_version",
+        "output_artifacts",
+    }
+)
+MCP_BOUND_OUTPUT_FIELDS = frozenset({"role", "path", "sha256"})
+MCP_RESPONSE_FIELDS = frozenset(
+    {
+        "response_schema_version",
+        "tool",
+        "status",
+        "gate",
+        "summary",
+        "result",
+        "artifacts",
+        "hashes",
+        "warnings",
+        "error",
+    }
+)
+MCP_TOOL_ARGUMENT_FIELDS = {
+    "load_lattice_graph": frozenset(
+        {"input_filepath", "output_filepath", "overwrite"}
+    ),
+    "resolve_cad_graph_orientation": frozenset(
+        {
+            "nominal_graph_filepath",
+            "full_design_stl_filepath",
+            "output_filepath",
+            "specimen_id",
+            "design_id",
+            "declared_transform_filepath",
+            "declared_transform_sha256",
+            "overwrite",
+        }
+    ),
+    "label_deleted_edges": frozenset(
+        {
+            "nominal_graph_filepath",
+            "baseline_stl_filepath",
+            "variant_stl_filepaths",
+            "orientation_filepath",
+            "output_directory",
+            "specimen_id",
+            "design_id",
+            "development_split_filepath",
+            "sealed_split_filepath",
+            "label_report_filepath",
+            "overwrite",
+        }
+    ),
+    "volume_info": frozenset(
+        {"input_filepath", "include_sha256", "registration_mode"}
+    ),
+    "replay_exact_otsu": frozenset(
+        {
+            "input_filepath",
+            "output_directory",
+            "histogram_encoding",
+            "edge_slices_excluded",
+            "chunk_voxels",
+            "coarse_bins",
+            "peak_smoothing_sigma_bins",
+            "peak_prominence_fraction",
+            "minimum_significant_peaks",
+            "minimum_foreground_fraction",
+            "maximum_foreground_fraction",
+            "minimum_otsu_separability",
+            "minimum_class_mean_separation_sigma",
+            "registration_mode",
+            "enforce_reference_replay",
+            "reference_threshold",
+            "reference_foreground_voxels",
+            "overwrite",
+        }
+    ),
+    "segment_ct_dataset": frozenset(
+        {
+            "input_filepath",
+            "output_filepath",
+            "threshold",
+            "registration_mode",
+            "retention",
+            "chunk_depth",
+            "overwrite",
+        }
+    ),
+    "compare_segmentation_masks": frozenset(
+        {
+            "raw_filepath",
+            "mask_filepaths",
+            "thresholds",
+            "output_report_filepath",
+            "registration_mode",
+            "overwrite",
+        }
+    ),
+    "verify_canonical_segmentation": frozenset(
+        {
+            "specimen_id",
+            "design_id",
+            "analysis_policy_artifact_filepath",
+            "exact_otsu_report_filepath",
+            "canonical_mask_filepath",
+            "mask_comparison_report_filepath",
+            "output_filepath",
+            "registration_mode",
+            "overwrite",
+        }
+    ),
+    "visualize_slice": frozenset(
+        {
+            "input_filepath",
+            "output_filepath",
+            "slice_index",
+            "axis",
+            "registration_mode",
+            "overwrite",
+        }
+    ),
+    "register_lattice_to_ct": frozenset(
+        {
+            "nominal_graph_filepath",
+            "output_graph_filepath",
+            "output_report_filepath",
+            "registration_mode",
+            "ct_filepath",
+            "aligned_graph_filepath",
+            "threshold",
+            "config",
+            "analysis_config_filepath",
+            "freeze_receipt_filepath",
+            "overwrite",
+        }
+    ),
+    "localize_lattice_nodes": frozenset(
+        {
+            "ct_filepath",
+            "registered_graph_filepath",
+            "output_graph_filepath",
+            "output_report_filepath",
+            "threshold",
+            "registration_mode",
+            "analysis_policy_artifact_filepath",
+            "registration_report_filepath",
+            "config",
+            "overwrite",
+        }
+    ),
+    "compute_registration_qa": frozenset(
+        {
+            "ct_filepath",
+            "localized_graph_filepath",
+            "output_report_filepath",
+            "threshold",
+            "registration_mode",
+            "localization_report_filepath",
+            "analysis_scope_artifact_filepath",
+            "slice_output_filepath",
+            "bias_output_filepath",
+            "slice_index",
+            "config",
+            "overwrite",
+        }
+    ),
+}
+OUTPUT_BINDING_FIELDS = frozenset(
+    {
+        "schema_version",
+        "specimen_id",
+        "design_id",
+        "stage_number",
+        "attempt",
+        "run_token",
+        "input_handoff_sha256",
+        "config_sha256",
+        "contract_sha256",
+    }
+)
+STAGE2_ROI_GATE_FIELDS = frozenset(
+    {
+        "segmentation",
+        "registration",
+        "localization",
+        "image_qa",
+        "coarse_region",
+        "padded_roi",
+    }
+)
+STAGE2_METROLOGY_FIELDS = frozenset(
+    {
+        "status",
+        "absolute_uncertainty_available",
+        "uncertainty_within_limit",
+        "direct_metrology_authorized",
+    }
+)
+STAGE2_LOCALIZATION_FIELDS = frozenset(
+    {
+        "gate",
+        "total_nodes",
+        "primary_matches",
+        "stable_coarse_matches",
+        "fallback_matches",
+        "ambiguous_matches",
+        "rejected_or_low_confidence",
+        "boundary_limited",
+    }
+)
+STAGE2_OUTPUT_CAPABILITIES = frozenset(
+    {
+        "segmentation",
+        "registration",
+        "node_localization",
+        "coarse_region_screening",
+        "padded_roi_definition",
+        "absolute_metrology",
+        "direct_dimensional_measurement",
+    }
+)
+STAGE2_BASE_OUTPUT_CAPABILITIES = frozenset(
+    {
+        "segmentation",
+        "registration",
+        "node_localization",
+        "coarse_region_screening",
+        "padded_roi_definition",
+    }
+)
+STAGE2_METROLOGY_OUTPUT_CAPABILITIES = frozenset(
+    {"absolute_metrology", "direct_dimensional_measurement"}
+)
+STAGE1_UNAUTHORIZED_OUTPUTS = frozenset(
+    {
+        "segmentation",
+        "registration",
+        "node_localization",
+        "coarse_region_screening",
+        "padded_roi_definition",
+        "absolute_metrology",
+        "direct_dimensional_measurement",
+        "defect_classification",
+        "sealed_evaluation",
+    }
+)
+STAGE2_CONTROL_OUTPUT_ROLES = frozenset(
+    {
+        "data_prep_result",
+        "data_prep_completion_receipt",
+        "analysis_ready_specimen_manifest",
+    }
+)
+STAGE1_JSON_OUTPUT_SCHEMAS = {
+    "cad_graph_orientation": frozenset({"part2-cad-graph-orientation/1.0.0"}),
+    "intentional_deletions_0p1": frozenset({"part2-design-labels/1.0.0"}),
+    "intentional_deletions_0p5": frozenset({"part2-design-labels/1.0.0"}),
+    "intentional_deletions_1p0": frozenset({"part2-design-labels/1.0.0"}),
+    "development_labels": frozenset({"part2-label-split/1.0.0"}),
+    "sealed_labels": frozenset({"part2-label-split/1.0.0"}),
+}
+STAGE2_JSON_OUTPUT_SCHEMAS = {
+    "analysis_config": frozenset({"part2-analysis-config/1.0.0"}),
+    "otsu_report": frozenset({"exact-otsu-replay/1.0.0"}),
+    "segmentation_mask_comparison": frozenset(
+        {"part2-segmentation-mask-comparison/1.0.0"}
+    ),
+    "segmentation_verification_mcp_response": frozenset(
+        {"segmentation-verification-mcp-evidence/1.0.0"}
+    ),
+    "registered_graph": frozenset({"normalized-lattice-graph/1.0.0"}),
+    "registration_report": frozenset({"part2-registration/1.0.0"}),
+    "registration_fit_freeze": frozenset({REGISTRATION_FREEZE_SCHEMA_VERSION}),
+    "localized_graph": frozenset({"normalized-lattice-graph/1.0.0"}),
+    "localization_report": frozenset(
+        {"part2-node-localization/1.2.0"}
+    ),
+    "registration_qa": frozenset(
+        {"part2-registration-qa/1.2.0"}
+    ),
+    "data_prep_result": frozenset({"data-prep-result/1.2.0"}),
+    "data_prep_completion_receipt": frozenset({"data-prep-completion/1.2.0"}),
+    "analysis_ready_specimen_manifest": frozenset({"2.1.0"}),
+}
+SEGMENTATION_VERIFICATION_FIELDS = frozenset(
+    {
+        "schema_version",
+        "response_schema_version",
+        "tool",
+        "status",
+        "gate",
+        "summary",
+        "specimen_id",
+        "design_id",
+        "requested_analysis_scope",
+        "registration_mode",
+        "request",
+        "policy",
+        "result",
+        "bindings",
+        "hashes",
+        "warnings",
+        "error",
+    }
+)
+SEGMENTATION_VERIFICATION_REQUEST_FIELDS = frozenset(
+    {
+        "specimen_id",
+        "design_id",
+        "analysis_policy_artifact_filepath",
+        "exact_otsu_report_filepath",
+        "canonical_mask_filepath",
+        "mask_comparison_report_filepath",
+        "output_filepath",
+        "registration_mode",
+        "overwrite",
+    }
+)
+SEGMENTATION_VERIFICATION_RESULT_FIELDS = frozenset(
+    {
+        "threshold",
+        "threshold_comparison",
+        "shape",
+        "dtype",
+        "voxel_count",
+        "foreground_voxel_count",
+        "foreground_fraction",
+        "otsu_separability",
+        "background_mean",
+        "foreground_mean",
+        "class_mean_separation_sigma",
+        "significant_modes",
+        "histogram_sha256",
+        "mismatched_voxels",
+        "false_positive_voxels",
+        "false_negative_voxels",
+        "exact_threshold_match",
+        "overall_pass",
+    }
+)
+SEGMENTATION_VERIFICATION_BINDING_FIELDS = {
+    "analysis_policy_artifact": frozenset({"path", "sha256", "role"}),
+    "ct_volume": frozenset({"path", "sha256", "role"}),
+    "exact_otsu_report": frozenset({"path", "sha256", "role"}),
+    "canonical_mask": frozenset(
+        {"path", "sha256", "role", "dtype", "shape", "array_axes"}
+    ),
+    "mask_comparison_report": frozenset({"path", "sha256", "role"}),
+}
+SEGMENTATION_VERIFICATION_HASH_FIELDS = frozenset(
+    {
+        "request_sha256",
+        "analysis_policy_artifact_sha256",
+        "analysis_parameters_sha256",
+        "segmentation_policy_sha256",
+        "ct_sha256",
+        "exact_otsu_report_sha256",
+        "canonical_mask_sha256",
+        "mask_comparison_report_sha256",
     }
 )
 RECEIPT_FAILURE_KINDS = frozenset(
@@ -464,6 +870,148 @@ def _rule_matches(
     return True
 
 
+def _npy_file_metadata(path: Path) -> tuple[str, list[int]]:
+    """Read an NPY header without importing a scientific-computing runtime."""
+
+    try:
+        with path.open("rb") as stream:
+            if stream.read(6) != b"\x93NUMPY":
+                raise ValueError("missing NPY magic")
+            major, minor = stream.read(2)
+            if (major, minor) == (1, 0):
+                header_length = struct.unpack("<H", stream.read(2))[0]
+            elif major in {2, 3}:
+                header_length = struct.unpack("<I", stream.read(4))[0]
+            else:
+                raise ValueError(f"unsupported NPY version {major}.{minor}")
+            header = ast.literal_eval(stream.read(header_length).decode("latin1"))
+            payload_offset = stream.tell()
+    except (OSError, UnicodeError, ValueError, SyntaxError, struct.error) as exc:
+        raise ArtifactVerificationError(f"Invalid NPY artifact {path}: {exc}") from exc
+    if not isinstance(header, dict) or set(header) != {
+        "descr",
+        "fortran_order",
+        "shape",
+    }:
+        raise ArtifactVerificationError(f"Invalid NPY header fields for {path}")
+    descr = header["descr"]
+    shape = header["shape"]
+    if (
+        not isinstance(descr, str)
+        or not isinstance(shape, tuple)
+        or not shape
+        or any(type(dimension) is not int or dimension < 0 for dimension in shape)
+        or type(header["fortran_order"]) is not bool
+    ):
+        raise ArtifactVerificationError(f"Invalid NPY dtype/shape metadata for {path}")
+    match = re.fullmatch(r"[<>=|]?([buif])(1|2|4|8)", descr)
+    if match is None:
+        raise ArtifactVerificationError(f"Unsupported NPY dtype {descr!r} for {path}")
+    kind, width_text = match.groups()
+    item_size = int(width_text)
+    width = item_size * 8
+    dtype = {
+        "b": "bool",
+        "u": f"uint{width}",
+        "i": f"int{width}",
+        "f": f"float{width}",
+    }[kind]
+    expected_payload_size = item_size * math.prod(shape)
+    actual_payload_size = path.stat().st_size - payload_offset
+    if actual_payload_size != expected_payload_size:
+        raise ArtifactVerificationError(
+            f"NPY payload size mismatch for {path}: expected "
+            f"{expected_payload_size}, found {actual_payload_size}"
+        )
+    return dtype, list(shape)
+
+
+def _manifest_value_for_shape_source(
+    manifest: Mapping[str, Any],
+    repository_root: Path,
+    shape_source: str,
+) -> tuple[list[int], Any]:
+    prefix = "specimen_manifest."
+    if not shape_source.startswith(prefix):
+        raise ManifestValidationError(
+            f"Unsupported artifact shape_source {shape_source!r}"
+        )
+    candidates: list[str] = []
+    for stage in manifest.get("stages", {}).values():
+        for attempt in stage.get("attempts", []):
+            for artifact in attempt.get("input_artifacts", []):
+                if artifact.get("role") == "specimen_manifest":
+                    candidates.append(str(artifact.get("path")))
+    candidates.extend(
+        str(artifact.get("path"))
+        for artifact in _active_artifact_records(manifest)
+        if artifact.get("role")
+        in {"specimen_manifest", "analysis_ready_specimen_manifest"}
+    )
+    paths = sorted({path for path in candidates if path and path != "None"})
+    if len(paths) != 1:
+        raise ArtifactVerificationError(
+            "Artifact metadata contract requires exactly one specimen manifest path"
+        )
+    try:
+        value: Any = _read_object(repository_root / paths[0])
+        for part in shape_source[len(prefix) :].split("."):
+            if not isinstance(value, Mapping):
+                raise KeyError(part)
+            value = value[part]
+        axes = _read_object(repository_root / paths[0])["inputs"]["ct_metadata"][
+            "array_axes"
+        ]
+    except (KeyError, ManifestValidationError) as exc:
+        raise ArtifactVerificationError(
+            f"Cannot resolve artifact shape_source {shape_source!r}"
+        ) from exc
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(type(dimension) is not int or dimension <= 0 for dimension in value)
+    ):
+        raise ArtifactVerificationError(
+            f"Artifact shape_source {shape_source!r} is not a positive integer array"
+        )
+    return value, axes
+
+
+def _validate_declared_artifact_metadata(
+    manifest: Mapping[str, Any],
+    rule: Mapping[str, Any],
+    artifact: Mapping[str, Any],
+    repository_root: Path,
+) -> None:
+    """Enforce contract-declared binary dtype/shape/axis metadata exactly."""
+
+    declared_dtype = rule.get("dtype")
+    shape_source = rule.get("shape_source")
+    declared_axes = rule.get("array_axes")
+    if declared_dtype is None and shape_source is None and declared_axes is None:
+        return
+    resolved, _ = _relative_existing_file(
+        repository_root, str(artifact["path"]), reject_alias=True
+    )
+    actual_dtype, actual_shape = _npy_file_metadata(resolved)
+    if declared_dtype is not None and actual_dtype != declared_dtype:
+        raise ArtifactVerificationError(
+            f"Artifact {artifact['role']} dtype is {actual_dtype}, expected {declared_dtype}"
+        )
+    if shape_source is not None:
+        expected_shape, source_axes = _manifest_value_for_shape_source(
+            manifest, repository_root, str(shape_source)
+        )
+        if actual_shape != expected_shape:
+            raise ArtifactVerificationError(
+                f"Artifact {artifact['role']} shape is {actual_shape}, expected {expected_shape}"
+            )
+        if declared_axes is not None and source_axes != declared_axes:
+            raise ArtifactVerificationError(
+                f"Artifact {artifact['role']} axes do not match {shape_source}"
+            )
+
+
 def _contract_artifact_policy(
     contract: Mapping[str, Any],
     direction: Literal["input", "output"],
@@ -531,6 +1079,7 @@ def _validate_artifact_allowlist(
     *,
     direction: Literal["input", "output"],
     require_all: bool,
+    repository_root: Path | None = None,
 ) -> None:
     policy = _contract_artifact_policy(contract, direction)
     allowed = policy.get("allowed", [])
@@ -551,6 +1100,11 @@ def _validate_artifact_allowlist(
         matching_rules = [
             rule for rule in allowed if _rule_matches(rule, artifact, manifest)
         ]
+        if repository_root is not None:
+            for rule in matching_rules:
+                _validate_declared_artifact_metadata(
+                    manifest, rule, artifact, repository_root
+                )
         if direction == "input" and any(
             str(rule.get("path", "")).startswith("<manifest-declared-")
             for rule in matching_rules
@@ -1328,7 +1882,12 @@ def _verify_attempt_control_bindings(
     if attempt.get("run_token") != expected_run_token:
         raise ManifestValidationError(f"Stage {stage_number} run token is invalid")
     _validate_artifact_allowlist(
-        manifest, contract, inputs, direction="input", require_all=True
+        manifest,
+        contract,
+        inputs,
+        direction="input",
+        require_all=True,
+        repository_root=repository_root,
     )
     _enforce_sensitive_access(manifest, stage_number, inputs)
     if attempt.get("state") == "running":
@@ -1599,6 +2158,7 @@ def _verify_attempt_evidence(
                     authorized,
                     direction="input",
                     require_all=False,
+                    repository_root=repository_root,
                 )
                 _enforce_sensitive_access(manifest, 2, authorized)
             if attempt.get("registration_freeze") is not None:
@@ -1667,6 +2227,7 @@ def _verify_attempt_evidence(
                 "scoped_handoffs": attempt.get("scoped_handoffs", []),
                 "supplemental_handoffs": attempt["supplemental_handoffs"],
                 "registration_freeze": attempt["registration_freeze"],
+                "stage_policy": attempt.get("stage_policy"),
                 "terminal_state": attempt["reported_terminal_state"],
                 "completed_at": attempt["completed_at"],
             }
@@ -1691,6 +2252,41 @@ def _verify_attempt_evidence(
                 raise ReceiptValidationError(
                     f"Stage {number} receipt outputs differ from attempt history"
                 )
+            if number == 0:
+                # Stage 2 intentionally replaces the canonical specimen manifest.
+                # The complete Stage 0 bundle is revalidated until that accepted
+                # replacement; afterward the replacement chain and retained Stage 0
+                # artifacts are covered by the generic indexed-artifact checks.
+                stage_two_replaced_manifest = (
+                    manifest["stages"]["2"]["state"] == "pass"
+                )
+                if verify_artifact_contents and not stage_two_replaced_manifest:
+                    _validate_stage0_output_documents(
+                        terminal_state=receipt["terminal_state"],
+                        outputs=outputs,
+                        attempt=attempt,
+                        pipeline_manifest=manifest,
+                        repository_root=repository_root,
+                    )
+            elif number in {1, 2}:
+                policy = _validate_stage_policy(
+                    receipt.get("stage_policy"),
+                    manifest=manifest,
+                    contract=_load_stage_contract(manifest, number, repository_root),
+                    attempt=attempt,
+                    outputs=outputs,
+                    terminal_state=receipt["terminal_state"],
+                    repository_root=repository_root,
+                )
+                if verify_artifact_contents:
+                    _validate_stage_output_documents(
+                        stage_number=number,
+                        terminal_state=receipt["terminal_state"],
+                        outputs=outputs,
+                        policy=policy,
+                        pipeline_manifest=manifest,
+                        repository_root=repository_root,
+                    )
             if number == 2 and manifest["registration_mode"] == "autonomous_v2" and attempt.get("effective_terminal_state") == "pass":
                 _verify_registration_freeze(
                     manifest,
@@ -1769,6 +2365,7 @@ def _verify_attempt_evidence(
                 "supplemental_handoffs": [],
                 "registration_freeze": None,
                 "output_artifacts": [],
+                "stage_policy": None,
                 "assertions": {},
             }
             stale_dependency = [
@@ -2037,6 +2634,7 @@ def _record_dependency_halt(
         "supplemental_handoffs": [],
         "registration_freeze": None,
         "output_artifacts": [],
+        "stage_policy": None,
         "assertions": {},
         "error": {
             "code": "missing_or_incompatible_dependency",
@@ -2491,7 +3089,14 @@ def start_stage(
             normalized_inputs,
             direction="input",
             require_all=True,
+            repository_root=root,
         )
+        if stage_number == 0:
+            _validate_stage0_scientist_intake_request(
+                attempt={"input_artifacts": normalized_inputs},
+                pipeline_manifest=manifest,
+                repository_root=root,
+            )
         _enforce_artifact_lineage(manifest, normalized_inputs)
         _record_sensitive_hashes(manifest, contract, normalized_inputs)
         if (
@@ -2680,6 +3285,7 @@ def start_stage(
             "failure_kind": None,
             "input_artifacts": normalized_inputs,
             "output_artifacts": [],
+            "stage_policy": None,
         }
         stage["attempts"].append(attempt)
         stage["attempt_count"] = attempt_number
@@ -2762,16 +3368,2292 @@ def _validate_manual_review_outputs(
         f"analysis/{manifest['specimen_id']}/reviews/"
         f"stage_{stage_number}_attempt_{attempt_number}/"
     )
-    invalid = [
-        artifact["path"]
-        for artifact in outputs
-        if artifact["role"] != "manual_review_evidence"
-        or not artifact["path"].startswith(prefix)
-    ]
+    invalid: list[str] = []
+    for artifact in outputs:
+        role = artifact["role"]
+        if role == "manual_review_evidence":
+            if not artifact["path"].startswith(prefix):
+                invalid.append(artifact["path"])
+            continue
+        # Stage 2 may preserve deterministic segmentation, registration,
+        # localization, and QA evidence when direct metrology needs a human
+        # decision.  Completion envelopes and the analysis-ready manifest are
+        # still forbidden until the stage actually passes.
+        if stage_number == 2 and role not in STAGE2_CONTROL_OUTPUT_ROLES:
+            continue
+        invalid.append(artifact["path"])
     if invalid:
         raise ReceiptValidationError(
-            "manual_review outputs must be immutable attempt-scoped evidence under "
-            + prefix
+            "manual_review outputs are not authorized deterministic evidence: "
+            + ", ".join(sorted(invalid))
+        )
+
+
+def _is_sha256(value: Any) -> bool:
+    return bool(
+        isinstance(value, str)
+        and re.fullmatch(r"[0-9a-f]{64}", value)
+    )
+
+
+def _closed_string_list(value: Any, *, field: str) -> list[str]:
+    if (
+        not isinstance(value, list)
+        or any(
+            not isinstance(item, str)
+            or not item
+            or re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,95}", item) is None
+            for item in value
+        )
+        or value != sorted(set(value))
+    ):
+        raise ReceiptValidationError(
+            f"Stage policy {field} must be a sorted unique identifier array"
+        )
+    return value
+
+
+def _closed_mapping(
+    value: Any,
+    fields: frozenset[str],
+    *,
+    field: str,
+) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping) or set(value) != fields:
+        raise ReceiptValidationError(
+            f"Stage 2 {field} must be a closed object"
+        )
+    return value
+
+
+def _artifact_hashes_by_role(
+    artifacts: Sequence[Mapping[str, Any]],
+    *,
+    omit_roles: frozenset[str] = frozenset(),
+) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for artifact in artifacts:
+        role = artifact.get("role")
+        digest = artifact.get("sha256")
+        if role in omit_roles:
+            continue
+        if not isinstance(role, str) or not _is_sha256(digest):
+            raise ReceiptValidationError("Stage policy artifact bindings are malformed")
+        if role in result:
+            raise ReceiptValidationError(
+                f"Stage policy cannot bind duplicate artifact role {role!r}"
+            )
+        result[role] = digest
+    return dict(sorted(result.items()))
+
+
+def _mcp_tool_requirements(contract: Mapping[str, Any]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    dependencies = contract.get("required_dependencies", {})
+    tools = dependencies.get("mcp_tools", []) if isinstance(dependencies, Mapping) else []
+    if not isinstance(tools, list):
+        raise ReceiptValidationError("Stage contract MCP requirements are malformed")
+    for tool in tools:
+        if not isinstance(tool, Mapping):
+            raise ReceiptValidationError("Stage contract MCP requirement is malformed")
+        name = tool.get("name")
+        version = tool.get("response_schema_version")
+        if not isinstance(name, str) or not name or not isinstance(version, str):
+            raise ReceiptValidationError("Stage contract MCP requirement is malformed")
+        if name in result:
+            raise ReceiptValidationError(f"Duplicate MCP tool requirement {name!r}")
+        result[name] = version
+    return result
+
+
+def _mcp_request_binding_sha256(
+    policy: Mapping[str, Any],
+    tool_name: str,
+    request_arguments: Mapping[str, Any],
+) -> str:
+    return canonical_json_sha256(
+        {
+            "schema_version": "part2-mcp-request-binding/1.0.0",
+            "tool_name": tool_name,
+            "specimen_id": policy["specimen_id"],
+            "design_id": policy["design_id"],
+            "stage_number": policy["stage_number"],
+            "attempt": policy["attempt"],
+            "run_token": policy["run_token"],
+            "input_handoff_sha256": policy["input_handoff_sha256"],
+            "config_sha256": policy["config_sha256"],
+            "contract_sha256": policy["contract_sha256"],
+            "source_hashes": policy["source_hashes"],
+            "arguments": request_arguments,
+        }
+    )
+
+
+def _normalize_mcp_artifact_path(path_value: str, repository_root: Path) -> str:
+    candidate = Path(path_value)
+    if any(part in {".", ".."} for part in candidate.parts):
+        raise ReceiptValidationError("MCP response artifact path is non-canonical")
+    resolved = (
+        candidate.resolve()
+        if candidate.is_absolute()
+        else (repository_root / candidate).resolve()
+    )
+    try:
+        return resolved.relative_to(repository_root.resolve()).as_posix()
+    except ValueError as exc:
+        raise ReceiptValidationError("MCP response artifact escapes repository") from exc
+
+
+def _mcp_response_artifact_pairs(
+    value: Any,
+    repository_root: Path,
+) -> set[tuple[str, str]]:
+    """Collect every path/hash metadata pair from a structured MCP artifact tree."""
+
+    result: set[tuple[str, str]] = set()
+
+    def visit(item: Any) -> None:
+        if isinstance(item, Mapping):
+            has_path = "path" in item
+            has_hash = "sha256" in item
+            if has_hash and not has_path:
+                raise ReceiptValidationError(
+                    "MCP response artifact sha256 has no path"
+                )
+            if has_path:
+                if (
+                    not isinstance(item.get("path"), str)
+                    or (has_hash and not _is_sha256(item.get("sha256")))
+                ):
+                    raise ReceiptValidationError(
+                        "MCP response artifact metadata has an invalid path or sha256"
+                    )
+                normalized_path = _normalize_mcp_artifact_path(
+                    str(item["path"]), repository_root
+                )
+                if has_hash:
+                    result.add(
+                        (
+                            normalized_path,
+                            str(item["sha256"]),
+                        )
+                    )
+            for nested in item.values():
+                visit(nested)
+        elif isinstance(item, list):
+            for nested in item:
+                visit(nested)
+
+    visit(value)
+    return result
+
+
+def _validate_mcp_response(
+    binding: Mapping[str, Any],
+    *,
+    expected_schema: str,
+    terminal_state: str,
+    repository_root: Path,
+) -> set[tuple[str, str]]:
+    response = binding.get("response")
+    if not isinstance(response, Mapping) or set(response) != MCP_RESPONSE_FIELDS:
+        raise ReceiptValidationError("MCP binding requires a closed structured response")
+    name = binding["tool_name"]
+    if (
+        response.get("response_schema_version") != expected_schema
+        or response.get("response_schema_version")
+        != binding.get("response_schema_version")
+        or response.get("tool") != name
+        or response.get("status") not in {"ok", "error"}
+        or response.get("gate") not in TERMINAL_STATES
+        or not isinstance(response.get("summary"), str)
+        or not isinstance(response.get("result"), Mapping)
+        or not isinstance(response.get("artifacts"), Mapping)
+        or not isinstance(response.get("hashes"), Mapping)
+        or any(
+            not isinstance(key, str) or not _is_sha256(digest)
+            for key, digest in response.get("hashes", {}).items()
+        )
+        or not isinstance(response.get("warnings"), list)
+        or any(not isinstance(warning, str) for warning in response.get("warnings", []))
+    ):
+        raise ReceiptValidationError(f"MCP response envelope is malformed for {name}")
+    if response["status"] == "ok":
+        if response.get("error") is not None:
+            raise ReceiptValidationError(f"Successful MCP response has an error for {name}")
+    elif (
+        response.get("gate") != "halt"
+        or not isinstance(response.get("error"), Mapping)
+        or not response["error"]
+    ):
+        raise ReceiptValidationError(f"Failed MCP response is malformed for {name}")
+    if terminal_state == "pass" and (
+        response["status"] != "ok" or response["gate"] != "pass"
+    ):
+        raise ReceiptValidationError(
+            f"Pass policy contains a non-pass MCP response for {name}"
+        )
+    try:
+        actual_response_sha256 = canonical_json_sha256(response)
+    except (TypeError, ValueError) as exc:
+        raise ReceiptValidationError(
+            f"MCP response is not canonical JSON for {name}"
+        ) from exc
+    if binding.get("response_sha256") != actual_response_sha256:
+        raise ReceiptValidationError(f"MCP response hash is stale for {name}")
+    return _mcp_response_artifact_pairs(response["artifacts"], repository_root)
+
+
+def _mcp_bound_output_keys(policy: Mapping[str, Any]) -> set[tuple[str, str, str]]:
+    return {
+        (str(item["role"]), str(item["path"]), str(item["sha256"]))
+        for binding in policy.get("mcp_response_bindings", [])
+        for item in binding.get("output_artifacts", [])
+    }
+
+
+def _stage_identity_and_scope(
+    manifest: Mapping[str, Any],
+    stage_number: int,
+    repository_root: Path,
+    *,
+    attempt: Mapping[str, Any] | None = None,
+) -> tuple[str, str]:
+    """Read immutable identity/scope from intake or the Stage 1 receipt."""
+
+    if stage_number == 1:
+        recorded_policy = attempt.get("stage_policy") if attempt is not None else None
+        if isinstance(recorded_policy, Mapping):
+            design_id = recorded_policy.get("design_id")
+            scope = recorded_policy.get("requested_analysis_scope")
+        else:
+            candidates = [
+                artifact
+                for artifact in _active_artifact_records(manifest)
+                if artifact.get("role") == "specimen_manifest"
+            ]
+            if len(candidates) != 1:
+                raise ReceiptValidationError(
+                    "Stage 1 requires exactly one active specimen manifest"
+                )
+            artifact = candidates[0]
+            resolved, _ = _relative_existing_file(
+                repository_root, artifact["path"], reject_alias=True
+            )
+            if sha256_file(resolved) != artifact.get("sha256"):
+                raise ReceiptValidationError("Stage 1 specimen manifest hash is stale")
+            try:
+                intake = _read_object(resolved)
+            except ManifestValidationError as exc:
+                raise ReceiptValidationError(
+                    "Stage 1 specimen manifest is not valid JSON"
+                ) from exc
+            if intake.get("specimen_id") != manifest["specimen_id"]:
+                raise ReceiptValidationError("Stage 1 specimen identity is mismatched")
+            design_id = intake.get("design_id")
+            parameters = intake.get("analysis_parameters")
+            scope = (
+                parameters.get("requested_analysis_scope")
+                if isinstance(parameters, Mapping)
+                else intake.get("requested_analysis_scope")
+            )
+    elif stage_number == 2:
+        record = manifest["stages"]["1"].get("completion_receipt")
+        if not isinstance(record, Mapping):
+            raise ReceiptValidationError("Stage 2 has no verified Stage 1 receipt")
+        predecessor = _verify_hashed_json_record(
+            record,
+            repository_root,
+            canonical_field="canonical_receipt_sha256",
+        )
+        prior_policy = predecessor.get("stage_policy")
+        if not isinstance(prior_policy, Mapping):
+            raise ReceiptValidationError("Stage 1 receipt has no policy binding")
+        design_id = prior_policy.get("design_id")
+        scope = prior_policy.get("requested_analysis_scope")
+    else:
+        raise ReceiptValidationError("Stage identity policy applies only to Stages 1 and 2")
+    if (
+        not isinstance(design_id, str)
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", design_id) is None
+    ):
+        raise ReceiptValidationError("Stage policy design_id is unavailable or invalid")
+    if scope not in {"roi_screening", "direct_metrology"}:
+        raise ReceiptValidationError(
+            "Stage policy requested_analysis_scope is unavailable or invalid"
+        )
+    return design_id, scope
+
+
+def _validate_stage_policy_shape(
+    value: Any,
+    *,
+    stage_number: int,
+) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping) or set(value) != STAGE_POLICY_FIELDS:
+        raise ReceiptValidationError(
+            "Stage 1/2 receipt requires a closed stage_policy object"
+        )
+    if value.get("schema_version") != STAGE_POLICY_SCHEMA_VERSION:
+        raise ReceiptValidationError("Stage policy schema_version is invalid")
+    if value.get("stage_number") != stage_number:
+        raise ReceiptValidationError("Stage policy stage_number is mismatched")
+    if value.get("terminal_state") not in TERMINAL_STATES:
+        raise ReceiptValidationError("Stage policy terminal_state is invalid")
+    if (
+        not isinstance(value.get("specimen_id"), str)
+        or not isinstance(value.get("design_id"), str)
+        or type(value.get("attempt")) is not int
+        or value["attempt"] < 1
+        or not _is_sha256(value.get("run_token"))
+        or not _is_sha256(value.get("input_handoff_sha256"))
+        or not _is_sha256(value.get("config_sha256"))
+        or not _is_sha256(value.get("contract_sha256"))
+    ):
+        raise ReceiptValidationError("Stage policy execution binding is malformed")
+    for field in ("source_hashes", "output_hashes"):
+        hashes = value.get(field)
+        if (
+            not isinstance(hashes, Mapping)
+            or any(
+                not isinstance(role, str) or not role or not _is_sha256(digest)
+                for role, digest in hashes.items()
+            )
+        ):
+            raise ReceiptValidationError(f"Stage policy {field} is malformed")
+    authorized = _closed_string_list(
+        value.get("authorized_outputs"), field="authorized_outputs"
+    )
+    unauthorized = _closed_string_list(
+        value.get("unauthorized_outputs"), field="unauthorized_outputs"
+    )
+    if set(authorized) & set(unauthorized):
+        raise ReceiptValidationError(
+            "Stage policy authorized and unauthorized outputs overlap"
+        )
+    reasons = _closed_string_list(value.get("reason_codes"), field="reason_codes")
+    if not reasons:
+        raise ReceiptValidationError("Stage policy must contain a reason code")
+    bindings = value.get("mcp_response_bindings")
+    if not isinstance(bindings, list):
+        raise ReceiptValidationError("Stage policy MCP bindings must be an array")
+    for binding in bindings:
+        if (
+            not isinstance(binding, Mapping)
+            or set(binding) != MCP_RESPONSE_BINDING_FIELDS
+            or not isinstance(binding.get("tool_name"), str)
+            or not isinstance(binding.get("request_arguments"), Mapping)
+            or not _is_sha256(binding.get("request_sha256"))
+            or not isinstance(binding.get("response"), Mapping)
+            or not _is_sha256(binding.get("response_sha256"))
+            or not isinstance(binding.get("response_schema_version"), str)
+            or not isinstance(binding.get("output_artifacts"), list)
+            or any(
+                not isinstance(artifact, Mapping)
+                or set(artifact) != MCP_BOUND_OUTPUT_FIELDS
+                or not isinstance(artifact.get("role"), str)
+                or not artifact.get("role")
+                or not isinstance(artifact.get("path"), str)
+                or Path(str(artifact.get("path"))).is_absolute()
+                or not _is_sha256(artifact.get("sha256"))
+                for artifact in binding.get("output_artifacts", [])
+            )
+        ):
+            raise ReceiptValidationError("Stage policy MCP response binding is malformed")
+        try:
+            canonical_json_bytes(binding["request_arguments"])
+            canonical_json_bytes(binding["response"])
+        except (TypeError, ValueError) as exc:
+            raise ReceiptValidationError(
+                "Stage policy MCP binding contains non-canonical JSON"
+            ) from exc
+    return value
+
+
+def _validate_stage_policy(
+    policy_value: Any,
+    *,
+    manifest: Mapping[str, Any],
+    contract: Mapping[str, Any],
+    attempt: Mapping[str, Any],
+    outputs: Sequence[Mapping[str, Any]],
+    terminal_state: str,
+    repository_root: Path,
+) -> Mapping[str, Any]:
+    stage_number = int(contract["stage_number"])
+    policy = _validate_stage_policy_shape(policy_value, stage_number=stage_number)
+    design_id, requested_scope = _stage_identity_and_scope(
+        manifest, stage_number, repository_root, attempt=attempt
+    )
+    expected = {
+        "terminal_state": terminal_state,
+        "specimen_id": manifest["specimen_id"],
+        "design_id": design_id,
+        "attempt": attempt["attempt"],
+        "run_token": attempt["run_token"],
+        "input_handoff_sha256": attempt["handoff"]["canonical_sha256"],
+        "config_sha256": manifest["config"]["sha256"],
+        "contract_sha256": manifest["stages"][str(stage_number)]["contract"][
+            "sha256"
+        ],
+        "source_hashes": _artifact_hashes_by_role(attempt["input_artifacts"]),
+        "requested_analysis_scope": requested_scope,
+        "output_hashes": _artifact_hashes_by_role(
+            outputs, omit_roles=frozenset({"manual_review_evidence"})
+        ),
+    }
+    stale = [key for key, expected_value in expected.items() if policy.get(key) != expected_value]
+    if stale:
+        raise ReceiptValidationError(
+            "Stage policy is stale or misbound: " + ", ".join(stale)
+        )
+
+    bindings = policy["mcp_response_bindings"]
+    required_tools = _mcp_tool_requirements(contract)
+    seen_tools: set[str] = set()
+    bound_outputs: dict[str, tuple[str, str]] = {}
+    outputs_by_role = {str(output["role"]): output for output in outputs}
+    bindings_by_tool: dict[str, Mapping[str, Any]] = {}
+    for binding in bindings:
+        name = binding["tool_name"]
+        if name in seen_tools or name not in required_tools:
+            raise ReceiptValidationError(
+                f"Stage policy contains duplicate or unauthorized MCP tool {name!r}"
+            )
+        seen_tools.add(name)
+        if binding["response_schema_version"] != required_tools[name]:
+            raise ReceiptValidationError(
+                f"Stage policy MCP response schema is incompatible for {name}"
+            )
+        allowed_arguments = MCP_TOOL_ARGUMENT_FIELDS.get(name)
+        request_arguments = binding["request_arguments"]
+        if (
+            allowed_arguments is None
+            or any(not isinstance(key, str) for key in request_arguments)
+            or set(request_arguments) - allowed_arguments
+        ):
+            raise ReceiptValidationError(
+                f"Stage policy MCP request arguments are open or unsupported for {name}"
+            )
+        try:
+            expected_request_sha256 = _mcp_request_binding_sha256(
+                policy, name, request_arguments
+            )
+        except (TypeError, ValueError) as exc:
+            raise ReceiptValidationError(
+                f"Stage policy MCP request is not canonical JSON for {name}"
+            ) from exc
+        if binding["request_sha256"] != expected_request_sha256:
+            raise ReceiptValidationError(
+                f"Stage policy MCP request is not bound to this run for {name}"
+            )
+        response_artifacts = _validate_mcp_response(
+            binding,
+            expected_schema=required_tools[name],
+            terminal_state=terminal_state,
+            repository_root=repository_root,
+        )
+        output_artifacts = binding["output_artifacts"]
+        if output_artifacts != sorted(
+            output_artifacts,
+            key=lambda item: (item["role"], item["path"], item["sha256"]),
+        ):
+            raise ReceiptValidationError(
+                f"MCP bound outputs must be deterministically sorted for {name}"
+            )
+        for bound in output_artifacts:
+            role = str(bound["role"])
+            path = _normalize_mcp_artifact_path(
+                str(bound["path"]), repository_root
+            )
+            digest = str(bound["sha256"])
+            output = outputs_by_role.get(role)
+            if (
+                output is None
+                or output.get("path") != path
+                or output.get("sha256") != digest
+                or policy["output_hashes"].get(role) != digest
+                or role in bound_outputs
+                or role in STAGE2_CONTROL_OUTPUT_ROLES
+            ):
+                raise ReceiptValidationError(
+                    f"Stage policy MCP output binding is stale or duplicated for {role}"
+                )
+            if (path, digest) not in response_artifacts:
+                raise ReceiptValidationError(
+                    f"MCP response artifacts do not contain the bound output {role}"
+                )
+            bound_outputs[role] = (path, digest)
+        bindings_by_tool[name] = binding
+    if terminal_state == "pass" and seen_tools != set(required_tools):
+        raise ReceiptValidationError("Pass policy does not bind every required MCP response")
+    scientific_outputs = {
+        role: (str(outputs_by_role[role]["path"]), digest)
+        for role, digest in policy["output_hashes"].items()
+        if role not in STAGE2_CONTROL_OUTPUT_ROLES
+    }
+    if scientific_outputs and bound_outputs != scientific_outputs:
+        raise ReceiptValidationError(
+            "Stage policy MCP bindings do not cover every scientific output"
+        )
+
+    if stage_number == 1 and terminal_state == "pass":
+        inputs_by_role = {
+            str(item["role"]): item for item in attempt["input_artifacts"]
+        }
+
+        def require_argument_path(
+            tool_name: str, argument_name: str, source_role: str
+        ) -> None:
+            binding = bindings_by_tool.get(tool_name)
+            source = inputs_by_role.get(source_role)
+            if (
+                binding is None
+                or source is None
+                or binding["request_arguments"].get(argument_name)
+                != source.get("path")
+            ):
+                raise ReceiptValidationError(
+                    f"Stage 1 {tool_name} request is not bound to {source_role}"
+                )
+
+        require_argument_path("load_lattice_graph", "input_filepath", "nominal_graph")
+        if bindings_by_tool["load_lattice_graph"]["request_arguments"].get(
+            "output_filepath"
+        ) != outputs_by_role["normalized_nominal_graph"]["path"]:
+            raise ReceiptValidationError(
+                "Stage 1 graph normalization request has a stale output path"
+            )
+        require_argument_path(
+            "resolve_cad_graph_orientation",
+            "nominal_graph_filepath",
+            "nominal_graph",
+        )
+        require_argument_path(
+            "resolve_cad_graph_orientation",
+            "full_design_stl_filepath",
+            "full_design_stl",
+        )
+        declaration = inputs_by_role.get("design_transform_declaration")
+        orientation_arguments = bindings_by_tool[
+            "resolve_cad_graph_orientation"
+        ]["request_arguments"]
+        if orientation_arguments.get("output_filepath") != outputs_by_role[
+            "cad_graph_orientation"
+        ]["path"]:
+            raise ReceiptValidationError(
+                "Stage 1 orientation request has a stale output path"
+            )
+        if declaration is not None:
+            if (
+                orientation_arguments.get("declared_transform_filepath")
+                != declaration.get("path")
+                or orientation_arguments.get("declared_transform_sha256")
+                != declaration.get("sha256")
+                or orientation_arguments.get("specimen_id")
+                != policy["specimen_id"]
+                or orientation_arguments.get("design_id") != policy["design_id"]
+            ):
+                raise ReceiptValidationError(
+                    "Stage 1 orientation request is not bound to the declared transform"
+                )
+        elif orientation_arguments.get("declared_transform_filepath") is not None:
+            raise ReceiptValidationError(
+                "Stage 1 orientation request claims an undeclared transform"
+            )
+        require_argument_path(
+            "label_deleted_edges", "nominal_graph_filepath", "nominal_graph"
+        )
+        require_argument_path(
+            "label_deleted_edges", "baseline_stl_filepath", "full_design_stl"
+        )
+        label_arguments = bindings_by_tool["label_deleted_edges"][
+            "request_arguments"
+        ]
+        variants = label_arguments.get("variant_stl_filepaths")
+        expected_variants = {
+            "0p1": str(inputs_by_role["intentional_deletion_stl_0p1"]["path"]),
+            "0p5": str(inputs_by_role["intentional_deletion_stl_0p5"]["path"]),
+            "1p0": str(inputs_by_role["intentional_deletion_stl_1p0"]["path"]),
+        }
+        if (
+            not isinstance(variants, Mapping)
+            or dict(variants) != expected_variants
+            or label_arguments.get("specimen_id") != policy["specimen_id"]
+            or label_arguments.get("design_id") != policy["design_id"]
+            or label_arguments.get("orientation_filepath")
+            != outputs_by_role["cad_graph_orientation"]["path"]
+            or label_arguments.get("development_split_filepath")
+            != outputs_by_role["development_labels"]["path"]
+            or label_arguments.get("sealed_split_filepath")
+            != outputs_by_role["sealed_labels"]["path"]
+            or label_arguments.get("label_report_filepath")
+            != outputs_by_role["label_report"]["path"]
+        ):
+            raise ReceiptValidationError(
+                "Stage 1 label request is not bound to every declared variant"
+            )
+
+    if stage_number == 1:
+        if any(
+            policy.get(field) is not None
+            for field in (
+                "roi_gate_summary",
+                "metrology_summary",
+                "localization_summary",
+            )
+        ):
+            raise ReceiptValidationError("Stage 1 policy may not claim Stage 2 gates")
+        if set(policy["unauthorized_outputs"]) != STAGE1_UNAUTHORIZED_OUTPUTS:
+            raise ReceiptValidationError(
+                "Stage 1 policy must forbid CT-derived and downstream outputs"
+            )
+        if terminal_state == "pass" and set(policy["authorized_outputs"]) != set(
+            policy["output_hashes"]
+        ):
+            raise ReceiptValidationError(
+                "Stage 1 pass policy must authorize exactly its published outputs"
+            )
+        return policy
+
+    if terminal_state == "pass":
+        inputs_by_role = {
+            str(item["role"]): item for item in attempt["input_artifacts"]
+        }
+
+        def arguments(tool_name: str) -> Mapping[str, Any]:
+            binding = bindings_by_tool.get(tool_name)
+            if binding is None:
+                raise ReceiptValidationError(
+                    f"Stage 2 pass lacks MCP request arguments for {tool_name}"
+                )
+            return binding["request_arguments"]
+
+        def output_path(role: str) -> str:
+            output = outputs_by_role.get(role)
+            if output is None:
+                raise ReceiptValidationError(
+                    f"Stage 2 pass lacks output {role!r}"
+                )
+            return str(output["path"])
+
+        ct_path = str(inputs_by_role["ct_volume"]["path"])
+        nominal_path = str(inputs_by_role["nominal_graph"]["path"])
+        specimen_manifest_path = str(inputs_by_role["specimen_manifest"]["path"])
+        mode = manifest["registration_mode"]
+        replay_directory = str(Path(output_path("exact_histogram")).parent)
+        expected_argument_values = {
+            ("volume_info", "input_filepath"): ct_path,
+            ("replay_exact_otsu", "input_filepath"): ct_path,
+            ("replay_exact_otsu", "output_directory"): replay_directory,
+            ("segment_ct_dataset", "input_filepath"): ct_path,
+            ("segment_ct_dataset", "output_filepath"): output_path(
+                "canonical_segmentation_mask"
+            ),
+            ("compare_segmentation_masks", "raw_filepath"): ct_path,
+            (
+                "compare_segmentation_masks",
+                "output_report_filepath",
+            ): output_path("segmentation_mask_comparison"),
+            (
+                "verify_canonical_segmentation",
+                "analysis_policy_artifact_filepath",
+            ): specimen_manifest_path,
+            (
+                "verify_canonical_segmentation",
+                "exact_otsu_report_filepath",
+            ): output_path("otsu_report"),
+            (
+                "verify_canonical_segmentation",
+                "canonical_mask_filepath",
+            ): output_path("canonical_segmentation_mask"),
+            (
+                "verify_canonical_segmentation",
+                "mask_comparison_report_filepath",
+            ): output_path("segmentation_mask_comparison"),
+            (
+                "verify_canonical_segmentation",
+                "output_filepath",
+            ): output_path("segmentation_verification_mcp_response"),
+            ("visualize_slice", "input_filepath"): ct_path,
+            ("visualize_slice", "output_filepath"): output_path(
+                "junction_overlay"
+            ),
+            ("register_lattice_to_ct", "nominal_graph_filepath"): nominal_path,
+            ("register_lattice_to_ct", "ct_filepath"): ct_path,
+            ("register_lattice_to_ct", "output_graph_filepath"): output_path(
+                "registered_graph"
+            ),
+            ("register_lattice_to_ct", "output_report_filepath"): output_path(
+                "registration_report"
+            ),
+            ("register_lattice_to_ct", "analysis_config_filepath"): output_path(
+                "analysis_config"
+            ),
+            ("localize_lattice_nodes", "ct_filepath"): ct_path,
+            (
+                "localize_lattice_nodes",
+                "registered_graph_filepath",
+            ): output_path("registered_graph"),
+            ("localize_lattice_nodes", "output_graph_filepath"): output_path(
+                "localized_graph"
+            ),
+            ("localize_lattice_nodes", "output_report_filepath"): output_path(
+                "localization_report"
+            ),
+            (
+                "localize_lattice_nodes",
+                "registration_report_filepath",
+            ): output_path("registration_report"),
+            (
+                "localize_lattice_nodes",
+                "analysis_policy_artifact_filepath",
+            ): specimen_manifest_path,
+            ("compute_registration_qa", "ct_filepath"): ct_path,
+            (
+                "compute_registration_qa",
+                "localized_graph_filepath",
+            ): output_path("localized_graph"),
+            (
+                "compute_registration_qa",
+                "output_report_filepath",
+            ): output_path("registration_qa"),
+            (
+                "compute_registration_qa",
+                "localization_report_filepath",
+            ): output_path("localization_report"),
+            (
+                "compute_registration_qa",
+                "analysis_scope_artifact_filepath",
+            ): specimen_manifest_path,
+            (
+                "compute_registration_qa",
+                "bias_output_filepath",
+            ): output_path("spatial_bias_figure"),
+        }
+        if any(
+            arguments(tool_name).get(argument_name) != expected_value
+            for (tool_name, argument_name), expected_value in expected_argument_values.items()
+        ):
+            raise ReceiptValidationError(
+                "Stage 2 MCP request arguments are stale or misbound"
+            )
+        if (
+            arguments("compare_segmentation_masks").get("mask_filepaths")
+            != [output_path("canonical_segmentation_mask")]
+            or arguments("verify_canonical_segmentation").get("specimen_id")
+            != policy["specimen_id"]
+            or arguments("verify_canonical_segmentation").get("design_id")
+            != policy["design_id"]
+            or any(
+                arguments(tool_name).get("registration_mode") != mode
+                for tool_name in (
+                    "volume_info",
+                    "replay_exact_otsu",
+                    "segment_ct_dataset",
+                    "compare_segmentation_masks",
+                    "verify_canonical_segmentation",
+                    "visualize_slice",
+                    "register_lattice_to_ct",
+                    "localize_lattice_nodes",
+                    "compute_registration_qa",
+                )
+            )
+        ):
+            raise ReceiptValidationError(
+                "Stage 2 MCP request mode or mask binding is stale"
+            )
+        aligned_argument = arguments("register_lattice_to_ct").get(
+            "aligned_graph_filepath"
+        )
+        if mode == "challenge_aligned_json":
+            expected_aligned = inputs_by_role.get("challenge_aligned_graph", {}).get(
+                "path"
+            )
+            if aligned_argument != expected_aligned:
+                raise ReceiptValidationError(
+                    "Challenge registration request is not bound to its aligned graph"
+                )
+        elif aligned_argument is not None:
+            raise ReceiptValidationError(
+                "Autonomous registration request accessed an aligned graph before freeze"
+            )
+
+    if (
+        set(policy["authorized_outputs"]) - STAGE2_OUTPUT_CAPABILITIES
+        or set(policy["unauthorized_outputs"]) - STAGE2_OUTPUT_CAPABILITIES
+    ):
+        raise ReceiptValidationError("Stage 2 policy declares an unknown output capability")
+    roi = policy.get("roi_gate_summary")
+    if (
+        not isinstance(roi, Mapping)
+        or set(roi) != STAGE2_ROI_GATE_FIELDS
+        or any(value not in {"pass", "fail", "not_run"} for value in roi.values())
+    ):
+        raise ReceiptValidationError("Stage 2 ROI gate summary is malformed")
+    metrology = policy.get("metrology_summary")
+    if (
+        not isinstance(metrology, Mapping)
+        or set(metrology) != STAGE2_METROLOGY_FIELDS
+        or metrology.get("status")
+        not in {"pass", "fail", "manual_review", "not_authorized", "not_run"}
+        or type(metrology.get("absolute_uncertainty_available")) is not bool
+        or metrology.get("uncertainty_within_limit") not in {True, False, None}
+        or type(metrology.get("direct_metrology_authorized")) is not bool
+    ):
+        raise ReceiptValidationError("Stage 2 metrology summary is malformed")
+    localization = policy.get("localization_summary")
+    if localization is not None:
+        if (
+            not isinstance(localization, Mapping)
+            or set(localization) != STAGE2_LOCALIZATION_FIELDS
+            or localization.get("gate") not in {"pass", "fail", "not_run"}
+            or any(
+                type(localization.get(name)) is not int or localization[name] < 0
+                for name in STAGE2_LOCALIZATION_FIELDS - {"gate"}
+            )
+            or localization["total_nodes"]
+            != localization["primary_matches"]
+            + localization["stable_coarse_matches"]
+            + localization["fallback_matches"]
+            + localization["ambiguous_matches"]
+            or localization["rejected_or_low_confidence"]
+            > localization["total_nodes"]
+            or localization["boundary_limited"] > localization["total_nodes"]
+        ):
+            raise ReceiptValidationError("Stage 2 localization summary is malformed")
+
+    all_roi_pass = all(value == "pass" for value in roi.values())
+    authorized = set(policy["authorized_outputs"])
+    unauthorized = set(policy["unauthorized_outputs"])
+    if terminal_state == "pass":
+        if not all_roi_pass or localization is None or localization["gate"] != "pass":
+            raise ReceiptValidationError("Stage 2 pass requires every ROI/localization gate")
+        if not STAGE2_BASE_OUTPUT_CAPABILITIES <= authorized:
+            raise ReceiptValidationError("Stage 2 pass omits a base output capability")
+        if requested_scope == "roi_screening":
+            if (
+                metrology["status"] != "not_authorized"
+                or metrology["direct_metrology_authorized"] is not False
+                or not STAGE2_METROLOGY_OUTPUT_CAPABILITIES <= unauthorized
+            ):
+                raise ReceiptValidationError(
+                    "ROI screening policy must forbid direct metrology"
+                )
+        elif (
+            metrology["status"] != "pass"
+            or metrology["absolute_uncertainty_available"] is not True
+            or metrology["uncertainty_within_limit"] is not True
+            or metrology["direct_metrology_authorized"] is not True
+            or not STAGE2_METROLOGY_OUTPUT_CAPABILITIES <= authorized
+        ):
+            raise ReceiptValidationError(
+                "Direct metrology pass lacks a valid absolute-uncertainty gate"
+            )
+    elif terminal_state == "manual_review" and requested_scope == "direct_metrology":
+        if scientific_outputs and (
+            not all_roi_pass
+            or localization is None
+            or localization["gate"] != "pass"
+            or metrology["status"] not in {"manual_review", "fail"}
+            or metrology["direct_metrology_authorized"] is not False
+            or not STAGE2_METROLOGY_OUTPUT_CAPABILITIES <= unauthorized
+        ):
+            raise ReceiptValidationError(
+                "Direct-metrology manual review evidence has inconsistent gates"
+            )
+    return policy
+
+
+def _expected_output_binding(
+    policy: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema_version": OUTPUT_BINDING_SCHEMA_VERSION,
+        "specimen_id": policy["specimen_id"],
+        "design_id": policy["design_id"],
+        "stage_number": policy["stage_number"],
+        "attempt": policy["attempt"],
+        "run_token": policy["run_token"],
+        "input_handoff_sha256": policy["input_handoff_sha256"],
+        "config_sha256": policy["config_sha256"],
+        "contract_sha256": policy["contract_sha256"],
+    }
+
+
+def _localization_counts_match_policy(
+    counts: Any,
+    localization: Mapping[str, Any],
+) -> bool:
+    if not isinstance(counts, Mapping):
+        return False
+    expected = {
+        "primary_nodes": localization["primary_matches"],
+        "stable_coarse_nodes": localization["stable_coarse_matches"],
+        "fallback_nodes": localization["fallback_matches"],
+        "ambiguous_nodes": localization["ambiguous_matches"],
+        "rejected_or_low_confidence_nodes": localization[
+            "rejected_or_low_confidence"
+        ],
+        "boundary_limited_nodes": localization["boundary_limited"],
+    }
+    legacy_names = {
+        "primary_nodes": "primary",
+        "stable_coarse_nodes": "stable_coarse",
+        "fallback_nodes": "fallback",
+        "ambiguous_nodes": "ambiguous",
+        "rejected_or_low_confidence_nodes": "rejected_or_low_confidence",
+        "boundary_limited_nodes": "boundary_limited",
+    }
+    return all(
+        counts.get(name, counts.get(legacy_names[name])) == expected_value
+        for name, expected_value in expected.items()
+    )
+
+
+def _frozen_specimen_manifest_schema_path(
+    manifest: Mapping[str, Any], repository_root: Path
+) -> Path:
+    candidates = [
+        artifact
+        for attempt in manifest["stages"]["0"].get("attempts", [])
+        for artifact in attempt.get("input_artifacts", [])
+        if artifact.get("role") == "specimen_manifest_schema"
+    ]
+    normalized_candidates = [
+        _normalize_artifact(repository_root, candidate) for candidate in candidates
+    ]
+    unique_candidates = {
+        (candidate["path"], candidate["sha256"]): candidate
+        for candidate in normalized_candidates
+    }
+    if len(unique_candidates) != 1:
+        raise ReceiptValidationError(
+            "Stages 0/2 require one immutable specimen manifest schema"
+        )
+    normalized = next(iter(unique_candidates.values()))
+    return repository_root / str(normalized["path"])
+
+
+def _validate_stage0_scientist_intake_request(
+    *,
+    attempt: Mapping[str, Any],
+    pipeline_manifest: Mapping[str, Any],
+    repository_root: Path,
+) -> dict[str, Any]:
+    """Validate the immutable scientist request anchoring Stage 0 semantics."""
+
+    candidates = [
+        artifact
+        for artifact in attempt.get("input_artifacts", [])
+        if artifact.get("role") == "scientist_intake_request"
+    ]
+    if len(candidates) != 1:
+        raise ReceiptValidationError(
+            "Stage 0 requires exactly one frozen scientist intake request"
+        )
+    normalized_request_artifact = _normalize_artifact(
+        repository_root, candidates[0]
+    )
+    specimen_id = str(pipeline_manifest["specimen_id"])
+    expected_request_path = (
+        Path("analysis") / specimen_id / "config" / "runtime_request.json"
+    ).as_posix()
+    if normalized_request_artifact["path"] != expected_request_path:
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake request is not at its canonical path"
+        )
+    request = _read_object(repository_root / expected_request_path)
+    request_fields = {
+        "schema_version",
+        "created_at",
+        "specimen_id",
+        "design_id",
+        "requested_analysis_scope",
+        "registration_mode",
+        "association_confirmed",
+        "aligned_graph_authorized",
+        "declarations",
+        "inputs",
+        "canonical_request_sha256",
+    }
+    if set(request) != request_fields:
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake request is open or schema-incompatible"
+        )
+    canonical = canonical_json_sha256(
+        {
+            key: value
+            for key, value in request.items()
+            if key != "canonical_request_sha256"
+        }
+    )
+    if request.get("canonical_request_sha256") != canonical:
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake request canonical hash is invalid"
+        )
+    if request.get("schema_version") != SCIENTIST_INTAKE_REQUEST_SCHEMA_VERSION:
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake request schema is incompatible"
+        )
+    try:
+        _validate_timestamp_text(request.get("created_at"))
+    except OrchestrationError as exc:
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake request timestamp is invalid"
+        ) from exc
+    if (
+        request.get("specimen_id") != specimen_id
+        or request.get("registration_mode")
+        != pipeline_manifest["registration_mode"]
+        or request.get("association_confirmed") is not True
+        or not isinstance(request.get("design_id"), str)
+        or re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", request["design_id"]
+        )
+        is None
+        or request.get("requested_analysis_scope")
+        not in {"roi_screening", "direct_metrology"}
+    ):
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake request identity or scope is invalid"
+        )
+
+    declarations = request.get("declarations")
+    declaration_fields = {
+        "cad_units",
+        "cad_units_provenance",
+        "graph_axes",
+        "array_axes",
+        "aligned_graph_units",
+        "retention",
+    }
+    if (
+        not isinstance(declarations, Mapping)
+        or set(declarations) != declaration_fields
+        or not isinstance(declarations.get("cad_units"), str)
+        or not declarations["cad_units"]
+        or not isinstance(declarations.get("cad_units_provenance"), str)
+        or not declarations["cad_units_provenance"]
+        or declarations.get("graph_axes") not in (["x", "y", "z"], "unknown")
+        or declarations.get("array_axes") not in (["z", "y", "x"], "unknown")
+        or declarations.get("aligned_graph_units")
+        not in {"voxel", "simulation_voxel", "unknown"}
+        or declarations.get("retention")
+        not in {"committed", "external", "regenerable"}
+    ):
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake declarations are invalid"
+        )
+
+    inputs = request.get("inputs")
+    input_names = {
+        "cad",
+        "nominal_graph",
+        "ct",
+        "aligned_graph",
+        "design_transform_declaration",
+    }
+    if not isinstance(inputs, Mapping) or set(inputs) != input_names:
+        raise ReceiptValidationError(
+            "Stage 0 scientist intake input bindings are open or incomplete"
+        )
+    role_map = {
+        "cad": ("cad", "cad_stl"),
+        "nominal_graph": ("design_graph", "nominal_graph"),
+        "ct": ("ct_volume", "ct_volume"),
+        "aligned_graph": ("aligned_graph", "challenge_aligned_graph"),
+        "design_transform_declaration": (
+            "design_transform_declaration",
+            "design_transform_declaration",
+        ),
+    }
+    attempt_by_role: dict[str, list[Mapping[str, Any]]] = {}
+    for artifact in attempt.get("input_artifacts", []):
+        attempt_by_role.setdefault(str(artifact.get("role")), []).append(artifact)
+    for name, (document_role, attempt_role) in role_map.items():
+        binding = inputs[name]
+        matching_attempt = attempt_by_role.get(attempt_role, [])
+        if binding is None:
+            if matching_attempt:
+                raise ReceiptValidationError(
+                    f"Stage 0 scientist request omits authorized input {name}"
+                )
+            continue
+        if (
+            not isinstance(binding, Mapping)
+            or set(binding) != {"path", "sha256", "role", "retention"}
+            or binding.get("role") != document_role
+            or binding.get("retention") != declarations["retention"]
+            or not isinstance(binding.get("path"), str)
+            or Path(binding["path"]).is_absolute()
+            or ".." in Path(binding["path"]).parts
+            or re.fullmatch(r"[0-9a-f]{64}", str(binding.get("sha256", "")))
+            is None
+            or len(matching_attempt) != 1
+        ):
+            raise ReceiptValidationError(
+                f"Stage 0 scientist request has an invalid {name} binding"
+            )
+        normalized_source = _normalize_artifact(
+            repository_root, matching_attempt[0]
+        )
+        if (
+            binding["path"] != normalized_source["path"]
+            or binding["sha256"] != normalized_source["sha256"]
+        ):
+            raise ReceiptValidationError(
+                f"Stage 0 scientist request {name} differs from the attempt handoff"
+            )
+
+    challenge_mode = request["registration_mode"] == "challenge_aligned_json"
+    if (
+        request.get("aligned_graph_authorized") is not challenge_mode
+        or (inputs["aligned_graph"] is not None) is not challenge_mode
+    ):
+        raise ReceiptValidationError(
+            "Stage 0 scientist request aligned-graph authorization is inconsistent"
+        )
+    return dict(request)
+
+
+def _validate_stage0_output_documents(
+    *,
+    terminal_state: str,
+    outputs: Sequence[Mapping[str, Any]],
+    attempt: Mapping[str, Any],
+    pipeline_manifest: Mapping[str, Any],
+    repository_root: Path,
+) -> None:
+    """Validate the complete Stage 0 MCP/intake/handoff chain."""
+
+    if terminal_state != "pass":
+        return
+    by_role = {str(artifact["role"]): artifact for artifact in outputs}
+    required = {
+        "ingest_request",
+        "ct_metadata_mcp_response",
+        "ct_metadata_mcp_call_receipt",
+        "specimen_manifest",
+        "ingest_receipt",
+        "data_prep_handoff",
+    }
+    if set(by_role) != required:
+        raise ReceiptValidationError(
+            "Stage 0 pass requires exactly the closed MCP/intake/handoff bundle"
+        )
+    scientist_request = _validate_stage0_scientist_intake_request(
+        attempt=attempt,
+        pipeline_manifest=pipeline_manifest,
+        repository_root=repository_root,
+    )
+    try:
+        bundle = validate_stage0_artifact_bundle(
+            repository_root=repository_root,
+            manifest_path=repository_root
+            / str(by_role["specimen_manifest"]["path"]),
+            request_path=repository_root / str(by_role["ingest_request"]["path"]),
+            receipt_path=repository_root / str(by_role["ingest_receipt"]["path"]),
+            ct_metadata_response_path=repository_root
+            / str(by_role["ct_metadata_mcp_response"]["path"]),
+            ct_metadata_call_receipt_path=repository_root
+            / str(by_role["ct_metadata_mcp_call_receipt"]["path"]),
+            handoff_path=repository_root
+            / str(by_role["data_prep_handoff"]["path"]),
+            schema_path=_frozen_specimen_manifest_schema_path(
+                pipeline_manifest, repository_root
+            ),
+            expected_specimen_id=str(pipeline_manifest["specimen_id"]),
+            expected_design_id=scientist_request["design_id"],
+            expected_analysis_scope=scientist_request["requested_analysis_scope"],
+            expected_registration_mode=str(
+                pipeline_manifest["registration_mode"]
+            ),
+        )
+    except (DataPrepHandoffError, ManifestValidationError, OSError, ValueError) as exc:
+        raise ReceiptValidationError(
+            f"Stage 0 output bundle failed semantic validation: {exc}"
+        ) from exc
+
+    request_inputs = scientist_request["inputs"]
+    manifest_inputs = bundle["manifest"]["inputs"]
+    expected_manifest_inputs = {
+        "cad": request_inputs["cad"],
+        "design_graph": request_inputs["nominal_graph"],
+        "ct": request_inputs["ct"],
+        "aligned_graph": request_inputs["aligned_graph"],
+        "design_transform_declaration": request_inputs[
+            "design_transform_declaration"
+        ],
+    }
+    stale_sources = sorted(
+        name
+        for name, expected in expected_manifest_inputs.items()
+        if manifest_inputs.get(name) != expected
+    )
+    if stale_sources:
+        raise ReceiptValidationError(
+            "Stage 0 outputs differ from the frozen scientist input bindings: "
+            + ", ".join(stale_sources)
+        )
+    output_declarations = bundle["request"]["declared"]
+    stale_declarations = sorted(
+        name
+        for name, expected in scientist_request["declarations"].items()
+        if output_declarations.get(name) != expected
+    )
+    if stale_declarations:
+        raise ReceiptValidationError(
+            "Stage 0 outputs differ from the frozen scientist declarations: "
+            + ", ".join(stale_declarations)
+        )
+
+
+def _validate_stage_output_documents(
+    *,
+    stage_number: int,
+    terminal_state: str,
+    outputs: Sequence[Mapping[str, Any]],
+    policy: Mapping[str, Any],
+    pipeline_manifest: Mapping[str, Any],
+    repository_root: Path,
+) -> None:
+    schemas = (
+        STAGE1_JSON_OUTPUT_SCHEMAS
+        if stage_number == 1
+        else STAGE2_JSON_OUTPUT_SCHEMAS
+    )
+    expected_binding = _expected_output_binding(policy)
+    bound_output_keys = _mcp_bound_output_keys(policy)
+    by_role = {str(artifact["role"]): artifact for artifact in outputs}
+    documents: dict[str, Mapping[str, Any]] = {}
+    expected_deletions = {
+        "intentional_deletions_0p1": 18,
+        "intentional_deletions_0p5": 93,
+        "intentional_deletions_1p0": 186,
+    }
+    for artifact in outputs:
+        role = artifact["role"]
+        if (
+            role not in STAGE2_CONTROL_OUTPUT_ROLES
+            and role != "manual_review_evidence"
+            and (role, artifact["path"], artifact["sha256"])
+            not in bound_output_keys
+        ):
+            raise ReceiptValidationError(
+                f"Stage {stage_number} output {role} is standalone or cross-run"
+            )
+        if role not in schemas:
+            continue
+        resolved, _ = _relative_existing_file(
+            repository_root, artifact["path"], reject_alias=True
+        )
+        try:
+            document = _read_object(resolved)
+        except ManifestValidationError as exc:
+            raise ReceiptValidationError(
+                f"Stage {stage_number} output {role} is not a JSON object"
+            ) from exc
+        documents[role] = document
+        if (
+            role != "segmentation_mask_comparison"
+            and document.get("schema_version") not in schemas[role]
+        ) or (
+            role == "segmentation_mask_comparison"
+            and document.get("schema_version") is not None
+            and document.get("schema_version") not in schemas[role]
+        ):
+            raise ReceiptValidationError(
+                f"Stage {stage_number} output {role} has an incompatible schema"
+            )
+        if role == "data_prep_result":
+            try:
+                validate_data_prep_result_shape(document)
+            except DataPrepHandoffError as exc:
+                raise ReceiptValidationError(
+                    f"Stage 2 data-prep result is open or malformed: {exc}"
+                ) from exc
+        embedded_binding = document.get("orchestration_binding")
+        if embedded_binding is not None and (
+            not isinstance(embedded_binding, Mapping)
+            or set(embedded_binding) != OUTPUT_BINDING_FIELDS
+            or embedded_binding != expected_binding
+        ):
+            raise ReceiptValidationError(
+                f"Stage {stage_number} output {role} is standalone or cross-run"
+            )
+
+        if role == "segmentation_verification_mcp_response":
+            evidence = _closed_mapping(
+                document,
+                SEGMENTATION_VERIFICATION_FIELDS,
+                field="segmentation verification evidence",
+            )
+            _closed_mapping(
+                evidence.get("request"),
+                SEGMENTATION_VERIFICATION_REQUEST_FIELDS,
+                field="segmentation verification request",
+            )
+            evidence_policy = _closed_mapping(
+                evidence.get("policy"),
+                frozenset(
+                    {
+                        "analysis_parameters_sha256",
+                        "segmentation_policy_sha256",
+                    }
+                ),
+                field="segmentation verification policy",
+            )
+            _closed_mapping(
+                evidence.get("result"),
+                SEGMENTATION_VERIFICATION_RESULT_FIELDS,
+                field="segmentation verification result",
+            )
+            evidence_bindings = _closed_mapping(
+                evidence.get("bindings"),
+                frozenset(SEGMENTATION_VERIFICATION_BINDING_FIELDS),
+                field="segmentation verification bindings",
+            )
+            for binding_name, binding_fields in (
+                SEGMENTATION_VERIFICATION_BINDING_FIELDS.items()
+            ):
+                binding = _closed_mapping(
+                    evidence_bindings.get(binding_name),
+                    binding_fields,
+                    field=f"segmentation verification binding {binding_name}",
+                )
+                if not _is_sha256(binding.get("sha256")):
+                    raise ReceiptValidationError(
+                        "Stage 2 segmentation verification binding hash is malformed"
+                    )
+            evidence_hashes = _closed_mapping(
+                evidence.get("hashes"),
+                SEGMENTATION_VERIFICATION_HASH_FIELDS,
+                field="segmentation verification hashes",
+            )
+            if (
+                any(not _is_sha256(value) for value in evidence_policy.values())
+                or any(not _is_sha256(value) for value in evidence_hashes.values())
+                or evidence.get("response_schema_version")
+                != "part2-mcp-response/1.0.0"
+                or evidence.get("tool") != "verify_canonical_segmentation"
+                or evidence.get("status") != "ok"
+                or evidence.get("gate") != "pass"
+                or evidence.get("summary")
+                != "Persisted canonical segmentation verification"
+                or evidence.get("warnings") != []
+                or evidence.get("error") is not None
+            ):
+                raise ReceiptValidationError(
+                    "Stage 2 segmentation verification evidence is malformed"
+                )
+
+        if role == "cad_graph_orientation" and terminal_state == "pass":
+            hashes = document.get("hashes")
+            gates = document.get("gates")
+            provenance = document.get("provenance")
+            if (
+                document.get("gate") != "pass"
+                or document.get("overall_pass") is not True
+                or document.get("specimen_id") != policy["specimen_id"]
+                or document.get("design_id") != policy["design_id"]
+                or not isinstance(hashes, Mapping)
+                or not _is_sha256(hashes.get("config_sha256"))
+                or hashes.get("nominal_graph_sha256")
+                != policy["source_hashes"].get("nominal_graph")
+                or hashes.get("full_design_stl_sha256")
+                != policy["source_hashes"].get("full_design_stl")
+                or not isinstance(gates, Mapping)
+                or gates.get("orientation_resolved") is not True
+                or gates.get("scale_preserving_transform") is not True
+                or not isinstance(provenance, Mapping)
+                or provenance.get("design_space_only") is not True
+                or provenance.get("ct_accessed") is not False
+                or provenance.get("aligned_graph_accessed") is not False
+                or provenance.get("deleted_edge_labels_accessed") is not False
+            ):
+                raise ReceiptValidationError("Stage 1 orientation evidence did not pass")
+            declaration_hash = policy["source_hashes"].get(
+                "design_transform_declaration"
+            )
+            declaration = document.get("declared_transform")
+            if declaration_hash is not None:
+                declaration_path = declaration.get("artifact_path") if isinstance(
+                    declaration, Mapping
+                ) else None
+                try:
+                    normalized_declaration_path = (
+                        _normalize_mcp_artifact_path(
+                            declaration_path, repository_root
+                        )
+                        if isinstance(declaration_path, str)
+                        else None
+                    )
+                except ReceiptValidationError:
+                    normalized_declaration_path = None
+                source_record = next(
+                    (
+                        item
+                        for item in policy["source_hashes"]
+                        if item == "design_transform_declaration"
+                    ),
+                    None,
+                )
+                request_path = next(
+                    (
+                        binding["request_arguments"].get(
+                            "declared_transform_filepath"
+                        )
+                        for binding in policy["mcp_response_bindings"]
+                        if binding["tool_name"]
+                        == "resolve_cad_graph_orientation"
+                    ),
+                    None,
+                )
+                if (
+                    source_record is None
+                    or document.get("resolution_source") != "declared_transform"
+                    or not isinstance(declaration, Mapping)
+                    or declaration.get("present") is not True
+                    or declaration.get("artifact_sha256") != declaration_hash
+                    or declaration.get("expected_artifact_sha256")
+                    != declaration_hash
+                    or normalized_declaration_path != request_path
+                    or not isinstance(declaration.get("verification"), Mapping)
+                    or declaration["verification"].get("overall_pass") is not True
+                    or hashes.get("declared_transform_artifact_sha256")
+                    != declaration_hash
+                    or hashes.get("intake_declared_transform_artifact_sha256")
+                    != declaration_hash
+                    or gates.get("declared_transform_valid") is not True
+                    or gates.get("authoritative_transform_verified") is not True
+                ):
+                    raise ReceiptValidationError(
+                        "Stage 1 orientation declaration is stale or unverified"
+                    )
+            else:
+                ambiguity = document.get("ambiguity")
+                if (
+                    document.get("resolution_source") != "geometry_search"
+                    or not isinstance(ambiguity, Mapping)
+                    or ambiguity.get("equivalent_hypothesis_count") != 1
+                    or ambiguity.get("requires_scientist_review") is not False
+                    or gates.get("orientation_unambiguous") is not True
+                ):
+                    raise ReceiptValidationError(
+                        "Stage 1 orientation pass lacks an unambiguous source"
+                    )
+        if role in expected_deletions and terminal_state == "pass":
+            hashes = document.get("hashes")
+            deletion_provenance = document.get("provenance")
+            variant_role = {
+                "intentional_deletions_0p1": "intentional_deletion_stl_0p1",
+                "intentional_deletions_0p5": "intentional_deletion_stl_0p5",
+                "intentional_deletions_1p0": "intentional_deletion_stl_1p0",
+            }[role]
+            if (
+                document.get("deleted_count") != expected_deletions[role]
+                or document.get("specimen_id") != policy["specimen_id"]
+                or document.get("design_id") != policy["design_id"]
+                or not isinstance(hashes, Mapping)
+                or hashes.get("nominal_graph_sha256")
+                != policy["source_hashes"].get("nominal_graph")
+                or hashes.get("baseline_stl_sha256")
+                != policy["source_hashes"].get("full_design_stl")
+                or hashes.get("variant_stl_sha256")
+                != policy["source_hashes"].get(variant_role)
+                or hashes.get("orientation_sha256")
+                != policy["output_hashes"].get("cad_graph_orientation")
+                or not _is_sha256(hashes.get("config_sha256"))
+                or not isinstance(deletion_provenance, Mapping)
+                or deletion_provenance.get("design_space_only") is not True
+                or deletion_provenance.get("ct_accessed") is not False
+                or deletion_provenance.get("aligned_graph_accessed") is not False
+            ):
+                raise ReceiptValidationError(f"Stage 1 deletion evidence failed for {role}")
+        if role in {"development_labels", "sealed_labels"} and (
+            document.get("role") != role
+            or document.get("specimen_id") != policy["specimen_id"]
+            or document.get("design_id") != policy["design_id"]
+            or document.get("source_labels_sha256")
+            != policy["output_hashes"].get("intentional_deletions_0p5")
+            or not _is_sha256(document.get("config_sha256"))
+        ):
+            raise ReceiptValidationError(f"Stage 1 label split role is mismatched: {role}")
+        if terminal_state == "pass" and role in {
+            "otsu_report",
+            "segmentation_mask_comparison",
+            "registration_report",
+            "localization_report",
+            "registration_qa",
+        }:
+            if document.get("overall_pass") is not True:
+                raise ReceiptValidationError(f"Stage 2 evidence did not pass: {role}")
+            if role in {"registration_report", "localization_report", "registration_qa"} and document.get("gate") != "pass":
+                raise ReceiptValidationError(f"Stage 2 gate did not pass: {role}")
+        if role in {"data_prep_result", "data_prep_completion_receipt"}:
+            if (
+                document.get("specimen_id") != policy["specimen_id"]
+                or document.get("design_id") != policy["design_id"]
+                or document.get("requested_analysis_scope")
+                != policy["requested_analysis_scope"]
+                or document.get("authorized_outputs")
+                != policy["authorized_outputs"]
+                or document.get("unauthorized_outputs")
+                != policy["unauthorized_outputs"]
+                or document.get("reason_codes") != policy["reason_codes"]
+            ):
+                raise ReceiptValidationError(
+                    f"Stage 2 coordinator output is inconsistent with policy: {role}"
+                )
+
+    if stage_number == 1 and terminal_state == "pass":
+        development = documents.get("development_labels")
+        sealed = documents.get("sealed_labels")
+        if development is None or sealed is None:
+            raise ReceiptValidationError("Stage 1 pass lacks both label split documents")
+        development_ids = development.get("strut_ids")
+        sealed_ids = sealed.get("strut_ids")
+        source_labels = documents.get("intentional_deletions_0p5")
+        source_ids = source_labels.get("deleted_strut_ids") if source_labels else None
+        label_config_hashes = {
+            documents[role]["hashes"].get("config_sha256")
+            for role in expected_deletions
+        }
+        if (
+            not isinstance(development_ids, list)
+            or not isinstance(sealed_ids, list)
+            or not isinstance(source_ids, list)
+            or set(development_ids) & set(sealed_ids)
+            or set(development_ids) | set(sealed_ids) != set(source_ids)
+            or len(label_config_hashes) != 1
+            or development.get("config_sha256") not in label_config_hashes
+            or sealed.get("config_sha256") not in label_config_hashes
+        ):
+            raise ReceiptValidationError("Stage 1 label split is not disjoint/exhaustive")
+
+    if stage_number != 2:
+        return
+
+    analysis_manifest = documents.get("analysis_ready_specimen_manifest")
+    manifest_record = by_role.get("analysis_ready_specimen_manifest")
+    if analysis_manifest is None or manifest_record is None:
+        if terminal_state == "pass":
+            raise ReceiptValidationError("Stage 2 pass lacks an analysis-ready manifest")
+        return
+    try:
+        validate_specimen_manifest(
+            repository_root / str(manifest_record["path"]),
+            schema_path=_frozen_specimen_manifest_schema_path(
+                pipeline_manifest,
+                repository_root,
+            ),
+            repository_root=repository_root,
+            verify_files=False,
+            required_lifecycle="analysis_ready",
+        )
+    except (SpecimenManifestValidationError, OSError) as exc:
+        raise ReceiptValidationError(
+            f"Analysis-ready specimen manifest failed full validation: {exc}"
+        ) from exc
+    parameters = analysis_manifest["analysis_parameters"]
+    registration_values = analysis_manifest["derived"]["registration_result"][
+        "values"
+    ]
+    if (
+        analysis_manifest.get("specimen_id") != policy["specimen_id"]
+        or analysis_manifest.get("design_id") != policy["design_id"]
+        or parameters.get("requested_analysis_scope")
+        != policy["requested_analysis_scope"]
+        or manifest_record.get("replaces_sha256")
+        != policy["source_hashes"].get("specimen_manifest")
+        or registration_values.get("specimen_id") != policy["specimen_id"]
+        or registration_values.get("design_id") != policy["design_id"]
+        or registration_values.get("requested_analysis_scope")
+        != policy["requested_analysis_scope"]
+        or registration_values.get("authorized_outputs")
+        != policy["authorized_outputs"]
+        or registration_values.get("unauthorized_outputs")
+        != policy["unauthorized_outputs"]
+        or registration_values.get("reason_codes") != policy["reason_codes"]
+        or registration_values.get("metrology_gate_status")
+        != policy["metrology_summary"]["status"]
+    ):
+        raise ReceiptValidationError(
+            "Analysis-ready specimen manifest is stale or inconsistent with Stage 2"
+        )
+    mask_record = by_role.get("canonical_segmentation_mask")
+    canonical_mask = analysis_manifest["inputs"].get("canonical_mask")
+    if (
+        mask_record is None
+        or not isinstance(canonical_mask, Mapping)
+        or canonical_mask.get("path") != mask_record.get("path")
+        or canonical_mask.get("sha256") != mask_record.get("sha256")
+        or canonical_mask.get("dtype") != "uint8"
+        or canonical_mask.get("shape")
+        != analysis_manifest["inputs"]["ct_metadata"]["shape"]
+        or canonical_mask.get("array_axes") != ["z", "y", "x"]
+    ):
+        raise ReceiptValidationError(
+            "Analysis-ready manifest canonical mask binding is inconsistent"
+        )
+
+    output_hashes = policy["output_hashes"]
+    ct_hash = policy["source_hashes"].get("ct_volume")
+    analysis_parameters_sha256 = analysis_manifest["analysis_parameters_sha256"]
+    evidence_hash_requirements = {
+        "otsu_report": {"input_sha256": ct_hash},
+        "registration_report": {
+            "ct_sha256": ct_hash,
+            "nominal_graph_sha256": policy["source_hashes"].get("nominal_graph"),
+            "registered_graph_sha256": output_hashes.get("registered_graph"),
+        },
+        "localization_report": {
+            "ct_sha256": ct_hash,
+            "input_registered_graph_sha256": output_hashes.get("registered_graph"),
+            "localized_graph_sha256": output_hashes.get("localized_graph"),
+            "registration_report_sha256": output_hashes.get("registration_report"),
+            "analysis_parameters_sha256": analysis_parameters_sha256,
+        },
+        "registration_qa": {
+            "ct_sha256": ct_hash,
+            "localized_graph_sha256": output_hashes.get("localized_graph"),
+            "localization_report_sha256": output_hashes.get("localization_report"),
+            "analysis_parameters_sha256": analysis_parameters_sha256,
+        },
+    }
+    for role, required_hashes in evidence_hash_requirements.items():
+        document = documents.get(role)
+        hashes = document.get("hashes") if document is not None else None
+        if not isinstance(hashes, Mapping) or any(
+            hashes.get(name) != digest
+            for name, digest in required_hashes.items()
+            if digest is not None
+        ):
+            raise ReceiptValidationError(
+                f"Stage 2 evidence hashes are stale or incomplete: {role}"
+            )
+        if role in {"localization_report", "registration_qa"} and (
+            document.get("specimen_id") != policy["specimen_id"]
+            or document.get("design_id") != policy["design_id"]
+            or document.get("requested_analysis_scope")
+            != policy["requested_analysis_scope"]
+        ):
+            raise ReceiptValidationError(
+                f"Stage 2 evidence identity/scope is mismatched: {role}"
+            )
+
+    localization = policy.get("localization_summary")
+    if not isinstance(localization, Mapping):
+        raise ReceiptValidationError("Stage 2 pass lacks localization evidence")
+    localization_document = documents["localization_report"]
+    qa_document = documents["registration_qa"]
+    qa_metrology = qa_document.get("metrology")
+    if (
+        not _localization_counts_match_policy(
+            localization_document.get(
+                "counts", localization_document.get("localization_quality_counts")
+            ),
+            localization,
+        )
+        or localization_document.get("counts", {}).get(
+            "nodes", localization["total_nodes"]
+        )
+        != localization["total_nodes"]
+        or not _localization_counts_match_policy(
+            qa_document.get("localization_quality_counts"), localization
+        )
+        or qa_document.get("counts", {}).get("nodes", localization["total_nodes"])
+        != localization["total_nodes"]
+        or not _localization_counts_match_policy(
+            registration_values.get("localization_quality_counts"), localization
+        )
+        or qa_document.get("authorized_outputs") != policy["authorized_outputs"]
+        or qa_document.get("unauthorized_outputs")
+        != policy["unauthorized_outputs"]
+        or qa_document.get("reason_codes") != policy["reason_codes"]
+        or not isinstance(qa_metrology, Mapping)
+        or qa_metrology.get("status")
+        != policy["metrology_summary"]["status"]
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 localization/QA policy evidence is inconsistent"
+        )
+
+    analysis_config = documents.get("analysis_config")
+    analysis_input_hashes = (
+        analysis_config.get("input_hashes")
+        if isinstance(analysis_config, Mapping)
+        else None
+    )
+    if (
+        not isinstance(analysis_input_hashes, Mapping)
+        or analysis_input_hashes.get("ct_sha256") != ct_hash
+        or analysis_input_hashes.get("nominal_graph_sha256")
+        != policy["source_hashes"].get("nominal_graph")
+        or analysis_config.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or analysis_config.get("label_inputs_accessed") is not False
+    ):
+        raise ReceiptValidationError("Stage 2 analysis config is stale or unsafe")
+
+    bindings_by_tool = {
+        str(binding["tool_name"]): binding
+        for binding in policy["mcp_response_bindings"]
+    }
+
+    def response_for(tool_name: str) -> Mapping[str, Any]:
+        binding = bindings_by_tool.get(tool_name)
+        response = binding.get("response") if isinstance(binding, Mapping) else None
+        if not isinstance(response, Mapping):
+            raise ReceiptValidationError(
+                f"Stage 2 pass lacks a bound MCP response for {tool_name}"
+            )
+        return response
+
+    def arguments_for(tool_name: str) -> Mapping[str, Any]:
+        binding = bindings_by_tool.get(tool_name)
+        arguments = (
+            binding.get("request_arguments")
+            if isinstance(binding, Mapping)
+            else None
+        )
+        if not isinstance(arguments, Mapping):
+            raise ReceiptValidationError(
+                f"Stage 2 pass lacks bound MCP arguments for {tool_name}"
+            )
+        return arguments
+
+    def finite_number(value: Any) -> bool:
+        return (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and math.isfinite(float(value))
+        )
+
+    otsu_document = documents.get("otsu_report")
+    segmentation_parameters = parameters.get("segmentation")
+    segmentation_values = analysis_manifest["derived"]["segmentation_result"][
+        "values"
+    ]
+    if not isinstance(otsu_document, Mapping) or not isinstance(
+        segmentation_parameters, Mapping
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 exact Otsu result evidence is missing"
+        )
+    otsu_threshold = otsu_document.get("threshold")
+    otsu_result_fields = (
+        "voxel_count",
+        "foreground_voxel_count",
+        "foreground_fraction",
+        "histogram_sha256",
+        "overall_pass",
+    )
+
+    def matches_otsu_threshold(value: Any) -> bool:
+        return finite_number(value) and value == otsu_threshold
+
+    replay_response = response_for("replay_exact_otsu")
+    replay_result = replay_response.get("result")
+    replay_hashes = replay_response.get("hashes")
+    otsu_provenance = otsu_document.get("provenance")
+    ct_shape = analysis_manifest["inputs"]["ct_metadata"]["shape"]
+    expected_otsu_recipe = {
+        "histogram_encoding": segmentation_parameters.get(
+            "histogram_encoding"
+        ),
+        "edge_slices_excluded": segmentation_parameters.get(
+            "edge_slices_excluded"
+        ),
+        "chunk_voxels": int(segmentation_parameters.get("chunk_depth", 0))
+        * int(ct_shape[1])
+        * int(ct_shape[2]),
+        "coarse_bins": segmentation_parameters.get("coarse_bins"),
+        "peak_smoothing_sigma_bins": segmentation_parameters.get(
+            "peak_smoothing_sigma_bins"
+        ),
+        "peak_prominence_fraction": segmentation_parameters.get(
+            "peak_prominence_fraction"
+        ),
+        "minimum_significant_peaks": segmentation_parameters.get(
+            "minimum_significant_peaks"
+        ),
+        "minimum_foreground_fraction": segmentation_parameters.get(
+            "minimum_foreground_fraction"
+        ),
+        "maximum_foreground_fraction": segmentation_parameters.get(
+            "maximum_foreground_fraction"
+        ),
+        "minimum_otsu_separability": segmentation_parameters.get(
+            "minimum_otsu_separability"
+        ),
+        "minimum_class_mean_separation_sigma": segmentation_parameters.get(
+            "minimum_class_mean_separation_sigma"
+        ),
+    }
+    replay_arguments = arguments_for("replay_exact_otsu")
+    requested_otsu_recipe = {
+        field: replay_arguments.get(field) for field in expected_otsu_recipe
+    }
+    if (
+        not finite_number(otsu_threshold)
+        or replay_result != otsu_document
+        or otsu_document.get("method")
+        != segmentation_parameters.get("method")
+        or otsu_document.get("method_version")
+        != segmentation_parameters.get("method_version")
+        or otsu_document.get("threshold_comparison")
+        != segmentation_parameters.get("comparison")
+        or otsu_document.get("recipe") != expected_otsu_recipe
+        or requested_otsu_recipe != expected_otsu_recipe
+        or replay_arguments.get("enforce_reference_replay") is not False
+        or otsu_document.get("source_path")
+        != arguments_for("replay_exact_otsu").get("input_filepath")
+        or otsu_document.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or not _is_sha256(otsu_document.get("histogram_sha256"))
+        or not matches_otsu_threshold(segmentation_values.get("threshold"))
+        or any(
+            segmentation_values.get(field) != otsu_document.get(field)
+            for field in otsu_result_fields
+        )
+        or not isinstance(otsu_provenance, Mapping)
+        or otsu_provenance.get("threshold_selected_per_scan") is not True
+        or otsu_provenance.get("target_foreground_fraction_used") is not False
+        or otsu_provenance.get("defect_labels_read") is not False
+        or not isinstance(replay_hashes, Mapping)
+        or replay_hashes.get("input_sha256") != ct_hash
+        or replay_hashes.get("histogram_sha256")
+        != otsu_document.get("histogram_sha256")
+        or replay_hashes.get("histogram_artifact_sha256")
+        != output_hashes.get("exact_histogram")
+        or replay_hashes.get("report_artifact_sha256")
+        != output_hashes.get("otsu_report")
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 exact Otsu response/result artifact is inconsistent"
+        )
+
+    downstream_threshold_arguments = {
+        "segment_ct_dataset": arguments_for("segment_ct_dataset").get(
+            "threshold"
+        ),
+        "register_lattice_to_ct": arguments_for("register_lattice_to_ct").get(
+            "threshold"
+        ),
+        "localize_lattice_nodes": arguments_for("localize_lattice_nodes").get(
+            "threshold"
+        ),
+        "compute_registration_qa": arguments_for(
+            "compute_registration_qa"
+        ).get("threshold"),
+    }
+    comparison_thresholds = arguments_for("compare_segmentation_masks").get(
+        "thresholds"
+    )
+    if (
+        any(
+            not matches_otsu_threshold(value)
+            for value in downstream_threshold_arguments.values()
+        )
+        or not isinstance(comparison_thresholds, list)
+        or len(comparison_thresholds) != 1
+        or not matches_otsu_threshold(comparison_thresholds[0])
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 downstream MCP requests are not bound to the exact Otsu threshold"
+        )
+
+    segment_result = response_for("segment_ct_dataset").get("result")
+    if (
+        not isinstance(segment_result, Mapping)
+        or not matches_otsu_threshold(segment_result.get("threshold"))
+        or segment_result.get("threshold_comparison")
+        != otsu_document.get("threshold_comparison")
+        or segment_result.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or segment_result.get("shape")
+        != analysis_manifest["inputs"]["ct_metadata"]["shape"]
+        or segment_result.get("dtype") != "uint8"
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 segmentation response is not bound to the exact Otsu result"
+        )
+
+    comparison = documents.get("segmentation_mask_comparison")
+    candidates = comparison.get("candidates") if comparison is not None else None
+    if (
+        not isinstance(candidates, list)
+        or len(candidates) != 1
+        or not isinstance(candidates[0], Mapping)
+        or candidates[0].get("path") != mask_record["path"]
+        or candidates[0].get("sha256") != mask_record["sha256"]
+        or candidates[0].get("dtype") != "uint8"
+        or not matches_otsu_threshold(candidates[0].get("threshold"))
+        or candidates[0].get("exact_threshold_match") is not True
+        or comparison.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or response_for("compare_segmentation_masks").get("result")
+        != comparison
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 segmentation comparison is not bound to the canonical Otsu mask"
+        )
+
+    verification = documents.get("segmentation_verification_mcp_response")
+    if not isinstance(verification, Mapping):
+        raise ReceiptValidationError(
+            "Stage 2 pass lacks persisted segmentation verification evidence"
+        )
+    verification_request = verification["request"]
+    verification_policy = verification["policy"]
+    verification_bindings = verification["bindings"]
+    verification_hashes = verification["hashes"]
+    verification_result = verification["result"]
+    verification_arguments = arguments_for("verify_canonical_segmentation")
+    verification_output = by_role.get(
+        "segmentation_verification_mcp_response"
+    )
+    segmentation_policy_sha256 = canonical_json_sha256(
+        segmentation_parameters
+    )
+    expected_verification_bindings = {
+        "analysis_policy_artifact": {
+            "path": verification_arguments.get(
+                "analysis_policy_artifact_filepath"
+            ),
+            "sha256": policy["source_hashes"].get("specimen_manifest"),
+            "role": "specimen_manifest",
+        },
+        "ct_volume": {
+            "path": arguments_for("replay_exact_otsu").get("input_filepath"),
+            "sha256": ct_hash,
+            "role": "ct_volume",
+        },
+        "exact_otsu_report": {
+            "path": by_role["otsu_report"]["path"],
+            "sha256": by_role["otsu_report"]["sha256"],
+            "role": "otsu_report",
+        },
+        "canonical_mask": {
+            "path": mask_record["path"],
+            "sha256": mask_record["sha256"],
+            "role": "canonical_segmentation_mask",
+            "dtype": "uint8",
+            "shape": analysis_manifest["inputs"]["ct_metadata"]["shape"],
+            "array_axes": ["z", "y", "x"],
+        },
+        "mask_comparison_report": {
+            "path": by_role["segmentation_mask_comparison"]["path"],
+            "sha256": by_role["segmentation_mask_comparison"]["sha256"],
+            "role": "segmentation_mask_comparison",
+        },
+    }
+    expected_verification_hashes = {
+        "request_sha256": canonical_json_sha256(verification_request),
+        "analysis_policy_artifact_sha256": policy["source_hashes"].get(
+            "specimen_manifest"
+        ),
+        "analysis_parameters_sha256": analysis_parameters_sha256,
+        "segmentation_policy_sha256": segmentation_policy_sha256,
+        "ct_sha256": ct_hash,
+        "exact_otsu_report_sha256": by_role["otsu_report"]["sha256"],
+        "canonical_mask_sha256": mask_record["sha256"],
+        "mask_comparison_report_sha256": by_role[
+            "segmentation_mask_comparison"
+        ]["sha256"],
+    }
+    expected_verification_result = {
+        "threshold": otsu_document.get("threshold"),
+        "threshold_comparison": otsu_document.get("threshold_comparison"),
+        "shape": analysis_manifest["inputs"]["ct_metadata"]["shape"],
+        "dtype": "uint8",
+        "voxel_count": otsu_document.get("voxel_count"),
+        "foreground_voxel_count": otsu_document.get(
+            "foreground_voxel_count"
+        ),
+        "foreground_fraction": otsu_document.get("foreground_fraction"),
+        "otsu_separability": otsu_document.get("otsu_separability"),
+        "background_mean": otsu_document.get("background_mean"),
+        "foreground_mean": otsu_document.get("foreground_mean"),
+        "class_mean_separation_sigma": otsu_document.get(
+            "class_mean_separation_sigma"
+        ),
+        "significant_modes": otsu_document.get("significant_modes"),
+        "histogram_sha256": otsu_document.get("histogram_sha256"),
+        "mismatched_voxels": candidates[0].get("mismatched_voxels"),
+        "false_positive_voxels": candidates[0].get(
+            "false_positive_voxels"
+        ),
+        "false_negative_voxels": candidates[0].get(
+            "false_negative_voxels"
+        ),
+        "exact_threshold_match": candidates[0].get("exact_threshold_match"),
+        "overall_pass": True,
+    }
+    diagnostic_fields = (
+        "threshold",
+        "voxel_count",
+        "foreground_voxel_count",
+        "foreground_fraction",
+        "otsu_separability",
+        "background_mean",
+        "foreground_mean",
+        "class_mean_separation_sigma",
+        "significant_modes",
+        "histogram_sha256",
+        "overall_pass",
+    )
+    if (
+        verification_output is None
+        or verification.get("specimen_id") != policy["specimen_id"]
+        or verification.get("design_id") != policy["design_id"]
+        or verification.get("requested_analysis_scope")
+        != policy["requested_analysis_scope"]
+        or verification.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or verification_request != verification_arguments
+        or verification_request.get("overwrite") is not False
+        or verification_policy
+        != {
+            "analysis_parameters_sha256": analysis_parameters_sha256,
+            "segmentation_policy_sha256": segmentation_policy_sha256,
+        }
+        or verification_bindings != expected_verification_bindings
+        or verification_hashes != expected_verification_hashes
+        or verification_result != expected_verification_result
+        or any(
+            segmentation_values.get(field) != otsu_document.get(field)
+            for field in diagnostic_fields
+        )
+        or candidates[0].get("mismatched_voxels") != 0
+        or candidates[0].get("false_positive_voxels") != 0
+        or candidates[0].get("false_negative_voxels") != 0
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 persisted segmentation verification is stale or inconsistent"
+        )
+
+    verification_response = response_for("verify_canonical_segmentation")
+    expected_verification_response_result = {
+        "schema_version": verification["schema_version"],
+        "specimen_id": policy["specimen_id"],
+        "design_id": policy["design_id"],
+        "requested_analysis_scope": policy["requested_analysis_scope"],
+        "registration_mode": parameters["registration"]["mode"],
+        **expected_verification_result,
+    }
+    verification_response_artifacts = verification_response.get("artifacts")
+    response_verification_artifact = (
+        verification_response_artifacts.get("segmentation_verification")
+        if isinstance(verification_response_artifacts, Mapping)
+        else None
+    )
+    if (
+        verification_response.get("summary") != verification.get("summary")
+        or verification_response.get("result")
+        != expected_verification_response_result
+        or verification_response.get("hashes")
+        != {
+            **expected_verification_hashes,
+            "segmentation_verification_sha256": verification_output[
+                "sha256"
+            ],
+        }
+        or not isinstance(response_verification_artifact, Mapping)
+        or set(response_verification_artifact)
+        != {"path", "sha256", "changed", "role", "retention"}
+        or response_verification_artifact.get("path")
+        != verification_output["path"]
+        or response_verification_artifact.get("sha256")
+        != verification_output["sha256"]
+        or not isinstance(response_verification_artifact.get("changed"), bool)
+        or response_verification_artifact.get("role")
+        != "segmentation_verification_mcp_response"
+        or response_verification_artifact.get("retention") != "committed"
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 segmentation verifier response is not bound to persisted evidence"
+        )
+
+    registration_document = documents.get("registration_report")
+    registration_response_result = response_for("register_lattice_to_ct").get(
+        "result"
+    )
+    expected_registration_result = (
+        {
+            key: value
+            for key, value in registration_document.items()
+            if key not in {"artifacts", "hashes", "warnings"}
+        }
+        if isinstance(registration_document, Mapping)
+        else None
+    )
+    registration_mode_details = (
+        registration_document.get("mode_details")
+        if isinstance(registration_document, Mapping)
+        else None
+    )
+    if (
+        not matches_otsu_threshold(analysis_config.get("threshold"))
+        or not isinstance(registration_document, Mapping)
+        or registration_document.get("mode")
+        != parameters["registration"]["mode"]
+        or registration_response_result != expected_registration_result
+        or (
+            parameters["registration"]["mode"] == "autonomous_v2"
+            and (
+                not isinstance(registration_mode_details, Mapping)
+                or not matches_otsu_threshold(
+                    registration_mode_details.get("threshold")
+                )
+            )
+        )
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 registration response/result artifacts are not bound to the "
+            "exact Otsu threshold"
+        )
+
+    segmentation_policy_sha256 = canonical_json_sha256(segmentation_parameters)
+    expected_segmentation_binding = {
+        "method": otsu_document.get("method"),
+        "method_version": otsu_document.get("method_version"),
+        "threshold": otsu_threshold,
+        "threshold_comparison": otsu_document.get("threshold_comparison"),
+        "ct_sha256": ct_hash,
+        "segmentation_policy_sha256": segmentation_policy_sha256,
+        "overall_pass": True,
+    }
+    expected_qa_segmentation_binding = {
+        **expected_segmentation_binding,
+        "gates": {
+            "exact_otsu_replay_passed": True,
+            "threshold_matches_exact_otsu": True,
+        },
+    }
+    localization_response_result = response_for("localize_lattice_nodes").get(
+        "result"
+    )
+    expected_localization_response_result = {
+        key: value
+        for key, value in localization_document.items()
+        if key
+        not in {"artifacts", "hashes", "warnings", "records", "localization"}
+    }
+    observed_localization_response_result = (
+        {
+            key: value
+            for key, value in localization_response_result.items()
+            if key not in {"records", "localization"}
+        }
+        if isinstance(localization_response_result, Mapping)
+        else None
+    )
+    localization_segmentation_binding = localization_document.get(
+        "segmentation_binding"
+    )
+    if (
+        not matches_otsu_threshold(localization_document.get("threshold"))
+        or localization_document.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or not isinstance(localization_segmentation_binding, Mapping)
+        or not matches_otsu_threshold(
+            localization_segmentation_binding.get("threshold")
+        )
+        or localization_segmentation_binding
+        != expected_segmentation_binding
+        or observed_localization_response_result
+        != expected_localization_response_result
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 localization response/result artifact is not bound to the exact Otsu result"
+        )
+
+    qa_response_result = response_for("compute_registration_qa").get("result")
+    expected_qa_response_result = {
+        key: value
+        for key, value in qa_document.items()
+        if key not in {"artifacts", "hashes", "warnings"}
+    }
+    qa_segmentation_binding = qa_document.get("segmentation_binding")
+    if (
+        not matches_otsu_threshold(qa_document.get("threshold"))
+        or qa_document.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or not isinstance(qa_segmentation_binding, Mapping)
+        or not matches_otsu_threshold(qa_segmentation_binding.get("threshold"))
+        or qa_segmentation_binding != expected_qa_segmentation_binding
+        or qa_response_result != expected_qa_response_result
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 QA response/result artifact is not bound to the exact Otsu result"
+        )
+
+    result = documents.get("data_prep_result")
+    completion = documents.get("data_prep_completion_receipt")
+    if result is None or completion is None:
+        raise ReceiptValidationError("Stage 2 pass lacks coordinator result documents")
+    manifest_canonical_sha256 = canonical_json_sha256(analysis_manifest)
+    result_canonical_sha256 = canonical_json_sha256(result)
+    completion_base = {
+        key: value
+        for key, value in completion.items()
+        if key != "canonical_completion_sha256"
+    }
+    if (
+        not _is_sha256(result.get("input_manifest_sha256"))
+        or result.get("input_manifest_artifact_sha256")
+        != policy["source_hashes"].get("specimen_manifest")
+        or result.get("analysis_parameters_sha256")
+        != analysis_manifest["analysis_parameters_sha256"]
+        or result.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or result.get("canonical_mask") != canonical_mask
+        or result.get("derived") != analysis_manifest["derived"]
+        or completion.get("prior_manifest_sha256")
+        != result.get("input_manifest_sha256")
+        or completion.get("prior_manifest_artifact_sha256")
+        != result.get("input_manifest_artifact_sha256")
+        or completion.get("analysis_ready_manifest_sha256")
+        != manifest_canonical_sha256
+        or completion.get("data_prep_result_sha256")
+        != result_canonical_sha256
+        or completion.get("analysis_parameters_sha256")
+        != analysis_manifest["analysis_parameters_sha256"]
+        or completion.get("canonical_mask") != canonical_mask
+        or completion.get("lifecycle_state") != "analysis_ready"
+        or completion.get("registration_mode")
+        != parameters["registration"]["mode"]
+        or completion.get("canonical_completion_sha256")
+        != canonical_json_sha256(completion_base)
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 manifest/result/completion hash chain is inconsistent"
+        )
+    quality_counts = result.get("localization_quality_counts")
+    artifact_bindings = result.get("artifact_bindings")
+    if (
+        not _localization_counts_match_policy(quality_counts, localization)
+        or not isinstance(artifact_bindings, Mapping)
+        or completion.get("artifact_bindings") != artifact_bindings
+        or any(
+            artifact_bindings.get(role)
+            != {
+                "path": by_role[role]["path"],
+                "sha256": by_role[role]["sha256"],
+                "role": role,
+            }
+            for role in (
+                "segmentation_verification_mcp_response",
+                "localization_report",
+                "registration_qa",
+            )
+        )
+    ):
+        raise ReceiptValidationError(
+            "Stage 2 result localization counts or artifact bindings are stale"
         )
 
 
@@ -2787,6 +5669,8 @@ def _validate_stage_receipt_document(
         raise ReceiptValidationError(
             "Stage receipt has undeclared or missing root fields"
         )
+    if receipt.get("schema_version") != RECEIPT_SCHEMA_VERSION:
+        raise ReceiptValidationError("Stage receipt schema_version is invalid")
     terminal = receipt.get("terminal_state")
     if terminal not in TERMINAL_STATES:
         raise ReceiptValidationError("Stage receipt terminal_state is invalid")
@@ -2816,6 +5700,25 @@ def _validate_stage_receipt_document(
     ):
         raise ReceiptValidationError(
             "Stage receipt output artifact records are malformed"
+        )
+    stage_number = contract.get("stage_number")
+    stage_policy = receipt.get("stage_policy")
+    if dependency_halt:
+        if stage_policy is not None:
+            raise ReceiptValidationError(
+                "Dependency halt receipt may not claim an attempt policy"
+            )
+    elif stage_number in {1, 2}:
+        policy = _validate_stage_policy_shape(
+            stage_policy, stage_number=int(stage_number)
+        )
+        if policy.get("terminal_state") != terminal:
+            raise ReceiptValidationError(
+                "Stage receipt and stage_policy terminal states differ"
+            )
+    elif stage_policy is not None:
+        raise ReceiptValidationError(
+            "Only Stage 1/2 attempt receipts may carry stage_policy"
         )
     assertions = receipt.get("assertions")
     if not isinstance(assertions, Mapping) or any(
@@ -2910,6 +5813,7 @@ def build_stage_receipt(
     output_artifacts: Sequence[Mapping[str, Any]],
     assertions: Mapping[str, bool],
     repository_root: RepositoryPath,
+    stage_policy: Mapping[str, Any] | None = None,
     output_path: RepositoryPath | None = None,
     failure_kind: str | None = None,
     error: Mapping[str, Any] | None = None,
@@ -2942,6 +5846,7 @@ def build_stage_receipt(
             normalized_outputs,
             direction="output",
             require_all=terminal_state == "pass",
+            repository_root=root,
         )
         if terminal_state == "manual_review":
             _validate_manual_review_outputs(
@@ -2949,6 +5854,44 @@ def build_stage_receipt(
                 stage_number,
                 attempt["attempt"],
                 normalized_outputs,
+            )
+        validated_policy: Mapping[str, Any] | None = None
+        if stage_number == 0:
+            _validate_stage0_output_documents(
+                terminal_state=terminal_state,
+                outputs=normalized_outputs,
+                attempt=attempt,
+                pipeline_manifest=manifest,
+                repository_root=root,
+            )
+        elif stage_number in {1, 2}:
+            if terminal_state == "pass" and stage_number == 2 and not any(
+                artifact["role"] == "analysis_ready_specimen_manifest"
+                for artifact in normalized_outputs
+            ):
+                raise ReceiptValidationError(
+                    "Stage 2 pass requires an analysis-ready specimen manifest replacement"
+                )
+            validated_policy = _validate_stage_policy(
+                stage_policy,
+                manifest=manifest,
+                contract=contract,
+                attempt=attempt,
+                outputs=normalized_outputs,
+                terminal_state=terminal_state,
+                repository_root=root,
+            )
+            _validate_stage_output_documents(
+                stage_number=stage_number,
+                terminal_state=terminal_state,
+                outputs=normalized_outputs,
+                policy=validated_policy,
+                pipeline_manifest=manifest,
+                repository_root=root,
+            )
+        elif stage_policy is not None:
+            raise ReceiptValidationError(
+                "stage_policy is accepted only for Stage 1/2 receipts"
             )
         if failure_kind == "deterministic_gate" and terminal_state != "halt":
             raise ReceiptValidationError(
@@ -2982,6 +5925,7 @@ def build_stage_receipt(
             "supplemental_handoffs": attempt["supplemental_handoffs"],
             "registration_freeze": attempt["registration_freeze"],
             "output_artifacts": normalized_outputs,
+            "stage_policy": copy.deepcopy(validated_policy),
             "assertions": dict(assertions),
             "error": dict(error) if error is not None else None,
         }
@@ -3176,6 +6120,7 @@ def _verify_registration_freeze(
         artifacts,
         direction="output",
         require_all=False,
+        repository_root=repository_root,
     )
     if completion_outputs is not None:
         by_role = {item["role"]: item for item in completion_outputs}
@@ -3719,6 +6664,7 @@ def complete_stage(
             outputs,
             direction="output",
             require_all=terminal == "pass",
+            repository_root=root,
         )
         if terminal == "manual_review":
             _validate_manual_review_outputs(
@@ -3726,6 +6672,40 @@ def complete_stage(
                 stage_number,
                 attempt["attempt"],
                 outputs,
+            )
+        validated_policy: Mapping[str, Any] | None = None
+        if stage_number == 0:
+            _validate_stage0_output_documents(
+                terminal_state=terminal,
+                outputs=outputs,
+                attempt=attempt,
+                pipeline_manifest=manifest,
+                repository_root=root,
+            )
+        elif stage_number in {1, 2}:
+            if terminal == "pass" and stage_number == 2 and not any(
+                artifact["role"] == "analysis_ready_specimen_manifest"
+                for artifact in outputs
+            ):
+                raise ReceiptValidationError(
+                    "Stage 2 pass requires an analysis-ready specimen manifest replacement"
+                )
+            validated_policy = _validate_stage_policy(
+                receipt.get("stage_policy"),
+                manifest=manifest,
+                contract=contract,
+                attempt=attempt,
+                outputs=outputs,
+                terminal_state=terminal,
+                repository_root=root,
+            )
+            _validate_stage_output_documents(
+                stage_number=stage_number,
+                terminal_state=terminal,
+                outputs=outputs,
+                policy=validated_policy,
+                pipeline_manifest=manifest,
+                repository_root=root,
             )
         required_assertions = contract.get("required_receipt_assertions", [])
         if terminal == "pass":
@@ -3803,6 +6783,7 @@ def complete_stage(
         attempt["effective_terminal_state"] = effective
         attempt["failure_kind"] = receipt.get("failure_kind")
         attempt["output_artifacts"] = outputs
+        attempt["stage_policy"] = copy.deepcopy(validated_policy)
         stage["state"] = effective
         stage["completed_at"] = receipt["completed_at"]
         stage["completion_receipt"] = receipt_record
@@ -3986,6 +6967,7 @@ def record_autonomous_registration_freeze(
             artifacts,
             direction="output",
             require_all=False,
+            repository_root=root,
         )
         roles = [artifact["role"] for artifact in artifacts]
         if sorted(roles) != ["registered_graph", "registration_report"]:
@@ -4149,6 +7131,7 @@ def authorize_post_freeze_aligned_input(
             [artifact],
             direction="input",
             require_all=False,
+            repository_root=root,
         )
         _enforce_sensitive_access(manifest, 2, [artifact])
         _record_sensitive_hashes(manifest, contract, [artifact])

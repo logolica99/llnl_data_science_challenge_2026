@@ -1,0 +1,48 @@
+{
+  "schema_version": "part2-stage1-design-diff-policy/1.0.0",
+  "policy_id": "llnl-part2-stage1-production-2026-07-28",
+  "intended_use": "production",
+  "orientation_verification": {
+    "sample_count": 9,
+    "sample_start": 0.4,
+    "sample_end": 0.6,
+    "maximum_ranked_edges": 2048,
+    "scale_candidates_mm_per_design_unit": [
+      2.28
+    ],
+    "ambiguity_absolute_mm": 0.0001,
+    "ambiguity_relative_fraction": 0.001,
+    "reflection_authorized": false,
+    "expected_counts": {
+      "nodes": 10206,
+      "edges": 18468,
+      "cells": 729
+    },
+    "verification_tolerances": {
+      "scale_absolute_mm_per_design_unit": 0.000001,
+      "design_center_absolute_design_unit": 1e-09,
+      "rotation_orthonormal_absolute": 1e-08,
+      "rotation_determinant_absolute": 1e-08,
+      "translation_search_match_absolute_mm": 0.05,
+      "geometry_equivalence_absolute_mm": 0.01,
+      "maximum_edge_support_distance_mm": 0.5,
+      "maximum_edge_support_p99_minus_p01_mm": 0.05
+    }
+  },
+  "deletion_labeling": {
+    "sample_count": 9,
+    "sample_start": 0.4,
+    "sample_end": 0.6,
+    "radius_margin_mm": 0.03,
+    "radius_rounding_mm": 0.01,
+    "split_seed": 20260723,
+    "development_fraction": 0.3,
+    "x_bins": 5,
+    "z_shells": 3,
+    "expected_deletions": {
+      "0p1": 18,
+      "0p5": 93,
+      "1p0": 186
+    }
+  }
+}

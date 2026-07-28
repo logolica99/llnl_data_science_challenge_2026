@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "purpose": "No-ground-truth image-space discrimination between the baseline fit and a robustness alternative",
+  "inputs": {
+    "ct": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/pacificvis/8x8x8 octet lattice with defects/five_defects_1200_xray_recon.npy",
+      "sha256": "4c128eb1a08c50b2084bd37e9779ca459d5d0e879914575f31317fd76e360b96"
+    },
+    "design": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/octet_truss_8x8x8/octet_truss_8x8x8.json",
+      "sha256": "1699e3d736d2920c5a0ad9459d8b8c410b4df68016fb3a9d21f2ae4458b5edb9"
+    },
+    "ground_truth_registration": null,
+    "evaluation_holdout": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/pacificvis_8x8x8_v2run/holdout_candidates.npy"
+  },
+  "case": "edt_2.25",
+  "baseline": {
+    "transform": {
+      "scale": 49.939183993738666,
+      "rotation_matrix": [
+        [
+          0.99999999994972,
+          3.072351222114619e-06,
+          9.54566512363831e-06
+        ],
+        [
+          -3.068236794203312e-06,
+          0.9999999071165498,
+          -0.00043099591391961825
+        ],
+        [
+          -9.54698840781014e-06,
+          0.00043099588460941647,
+          0.9999999070756969
+        ]
+      ],
+      "translation": [
+        197.48430197193454,
+        196.34187575247245,
+        199.74558335934177
+      ],
+      "rotation_deg": 0.024700929947361245,
+      "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+    },
+    "image_metrics": {
+      "junction_mean_foreground_fraction": 1.0,
+      "junction_any_foreground_fraction": 1.0,
+      "holdout_candidate_median_distance_voxels": 1.7175686417583496,
+      "holdout_candidate_p95_distance_voxels": 10.859336463319488,
+      "corridor_median_foreground_fraction": 0.6460905349794238,
+      "corridor_p10_foreground_fraction": 0.6310013717421125,
+      "complete_corridor_gap_fraction": 0.0,
+      "measured_strut_radius_voxels": 6.0,
+      "spatial_bin_median_ranges": {
+        "x": 0.004115226337448541,
+        "y": 0.008230452674897193,
+        "z": 0.008230452674897193
+      },
+      "gates": {
+        "junction_foreground_sufficient": true,
+        "corridor_foreground_sufficient": true,
+        "spatial_bias_within_limit": true,
+        "holdout_candidates_supported": true,
+        "measured_radius_positive": true
+      },
+      "overall_pass": true
+    }
+  },
+  "alternative_raw": {
+    "transform": {
+      "scale": 48.6996887309776,
+      "rotation_matrix": [
+        [
+          0.9999992968485125,
+          -0.0010258471836171166,
+          -0.0005949285990507998
+        ],
+        [
+          0.0010255063784754914,
+          0.9999993100764161,
+          -0.0005728728998954657
+        ],
+        [
+          0.0005955158686459233,
+          0.0005722623940060561,
+          0.9999996589382432
+        ]
+      ],
+      "translation": [
+        205.01361777643638,
+        209.8834388219271,
+        212.8875979614582
+      ],
+      "rotation_deg": 0.07545088609912391,
+      "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+    },
+    "difference_from_baseline": {
+      "median_voxels": 11.707506170835833,
+      "p95_voxels": 17.972484994483214,
+      "maximum_voxels": 23.289989600276673
+    },
+    "image_metrics": {
+      "junction_mean_foreground_fraction": 0.8294330357142857,
+      "junction_any_foreground_fraction": 0.9754464285714286,
+      "holdout_candidate_median_distance_voxels": 11.952952298650153,
+      "holdout_candidate_p95_distance_voxels": 20.281198404341378,
+      "corridor_median_foreground_fraction": 0.31412894375857336,
+      "corridor_p10_foreground_fraction": 0.15912208504801098,
+      "complete_corridor_gap_fraction": 0.0,
+      "measured_strut_radius_voxels": 0.0,
+      "spatial_bin_median_ranges": {
+        "x": 0.19753086419753088,
+        "y": 0.1755829903978052,
+        "z": 0.17421124828532236
+      },
+      "gates": {
+        "junction_foreground_sufficient": false,
+        "corridor_foreground_sufficient": true,
+        "spatial_bias_within_limit": true,
+        "holdout_candidates_supported": false,
+        "measured_radius_positive": false
+      },
+      "overall_pass": false
+    }
+  },
+  "alternative_refined": {
+    "transform": {
+      "scale": 49.81109110254197,
+      "rotation_matrix": [
+        [
+          0.9999999609965002,
+          -0.0002583501123595011,
+          -0.00010612359417864253
+        ],
+        [
+          0.0002583177071703871,
+          0.9999999200460994,
+          -0.0003052535935928706
+        ],
+        [
+          0.00010620244799389583,
+          0.00030522616808293903,
+          0.999999947779012
+        ]
+      ],
+      "translation": [
+        198.48113775591867,
+        197.40736120811687,
+        201.04165654035194
+      ],
+      "rotation_deg": 0.023705389857282495,
+      "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+    },
+    "refinement_history": [
+      {
+        "pass": 0,
+        "valid_localizations": 1740,
+        "kept_localizations": 1392,
+        "shift_cutoff_voxels": 7.403489005553573,
+        "median_shift_voxels": 7.185589693385014,
+        "p95_shift_voxels": 7.476326885684308,
+        "transform": {
+          "scale": 49.24969778880904,
+          "rotation_matrix": [
+            [
+              0.9999997658977823,
+              -0.00045383800565315755,
+              -0.0005120892932656747
+            ],
+            [
+              0.00045370402388857415,
+              0.9999998628267648,
+              -0.000261723345742829
+            ],
+            [
+              0.0005122080030220168,
+              0.0002614909474998061,
+              0.9999998346327091
+            ]
+          ],
+          "translation": [
+            201.20876816322175,
+            204.05223688562484,
+            207.29668358032677
+          ],
+          "rotation_deg": 0.041972542054780085,
+          "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+        }
+      },
+      {
+        "pass": 1,
+        "valid_localizations": 2095,
+        "kept_localizations": 1676,
+        "shift_cutoff_voxels": 7.2471750954378695,
+        "median_shift_voxels": 6.454555231311854,
+        "p95_shift_voxels": 7.4290658023286005,
+        "transform": {
+          "scale": 49.81109110254197,
+          "rotation_matrix": [
+            [
+              0.9999999609965002,
+              -0.0002583501123595011,
+              -0.00010612359417864253
+            ],
+            [
+              0.0002583177071703871,
+              0.9999999200460994,
+              -0.0003052535935928706
+            ],
+            [
+              0.00010620244799389583,
+              0.00030522616808293903,
+              0.999999947779012
+            ]
+          ],
+          "translation": [
+            198.48113775591867,
+            197.40736120811687,
+            201.04165654035194
+          ],
+          "rotation_deg": 0.023705389857282495,
+          "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+        }
+      }
+    ],
+    "difference_from_baseline": {
+      "median_voxels": 1.1139931520753574,
+      "p95_voxels": 1.6578852678749316,
+      "maximum_voxels": 2.158292420011826
+    },
+    "image_metrics": {
+      "junction_mean_foreground_fraction": 1.0,
+      "junction_any_foreground_fraction": 1.0,
+      "holdout_candidate_median_distance_voxels": 1.8194372010799662,
+      "holdout_candidate_p95_distance_voxels": 11.479031035124345,
+      "corridor_median_foreground_fraction": 0.6419753086419753,
+      "corridor_p10_foreground_fraction": 0.6186556927297668,
+      "complete_corridor_gap_fraction": 0.0,
+      "measured_strut_radius_voxels": 6.0,
+      "spatial_bin_median_ranges": {
+        "x": 0.006858710562414272,
+        "y": 0.009602194787379892,
+        "z": 0.012345679012345623
+      },
+      "gates": {
+        "junction_foreground_sufficient": true,
+        "corridor_foreground_sufficient": true,
+        "spatial_bias_within_limit": true,
+        "holdout_candidates_supported": true,
+        "measured_radius_positive": true
+      },
+      "overall_pass": true
+    }
+  },
+  "refinement_error": null,
+  "interpretation_boundary": "This comparison can reject a transform that fits the CT image poorly; without a registered reference it cannot establish absolute transform error."
+}

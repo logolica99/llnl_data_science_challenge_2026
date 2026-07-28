@@ -175,13 +175,13 @@ Helpful extra software: **Napari** (interactive 3D/slice viewer — great for sa
 
 | # | Task | What we build | Definition of done |
 |---|---|---|---|
-| 1 | Tool calling with MCP | Implement `segment_ct_dataset(input, output, threshold)` in `src/mcp_server.py`; register server in `~/.codex/config.toml` | `/mcp` shows the server; "segment data/unitcell/unitcell.npy with threshold …" works from chat |
+| 1 | Tool calling with MCP | Implement `segment_ct_dataset(input, output, threshold)` in `src/mcp_server.py`; register server in `~/.codex/config.toml` | `/mcp` shows the server; the archived Part 1 input is `DEPRECATED/part1/data/unitcell/unitcell.npy` |
 | 2 | Multiple tools | Add `visualize_slice(input, output, slice_index, axis=0)` | Agent chains segment → visualize in one conversation |
 | 3 | MCP as API wrapper | Add `skeletonize(input, output)` that **calls the provided `skeletonize_mask` internally** — the lesson is wrapping existing software, not rewriting it | Agent runs segment → visualize → skeletonize end-to-end |
 | 4 | Skills | Use provided `nde_report_expert` | "Please create an NDE report from the files in ./data" produces the MD report with metrics table + two 3D views |
 | 5 | Custom skill | Our own `.agents/skills/<name>/SKILL.md` (ideas: metadata extractor; threshold optimizer sweeping 0.3/0.5/0.7) | Skill triggers and runs after CLI restart |
 | 6 | Subagent | `.codex/agents/*.toml` **Segmentation Subagent** | Segments a `.tif`; closed-loop optimization with visual feedback; saves script + mask (`.tif`) + slice-380 PNG + MD report w/ fg/bg voxel counts, all into `segmentation/` subfolder next to the input; terminates at 10 iterations / 3 failed attempts |
-| 7 | LLM evals | `evals/rubric_segmentation_1.md` | `codex -i <gt.png> -i <result.png> "...apply rubric..."` returns JSON `{reasoning, score}` |
+| 7 | LLM evals | `DEPRECATED/part1/evals/rubric_segmentation_1.md` | `codex -i <gt.png> -i <result.png> "...apply rubric..."` returns JSON `{reasoning, score}` |
 
 **Task 7 rubric criteria (0–5 scale):** structural integrity (strut connectivity vs GT), false positives/negatives (over/under-segmentation), topology (junctions preserved), noise/artifacts. 5 = identical to GT … 0 = blank/unrelated.
 

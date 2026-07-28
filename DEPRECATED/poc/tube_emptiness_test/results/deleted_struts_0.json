@@ -1,0 +1,10 @@
+{
+  "stl": "0.stl",
+  "deleted_count": 0,
+  "deleted_strut_ids": [],
+  "triangle_count": 3514642,
+  "triangle_deficit_from_0_stl": 0,
+  "triangles_per_deleted_strut": null,
+  "scale_mm_per_design_unit": 2.305,
+  "radius_mm": 0.4
+}

@@ -18,10 +18,16 @@ segmentation, registration, prior labels, or unrestricted manifests.
    use a CLI, script, direct import, or local substitute.
 2. Invoke `load_lattice_graph` once and retain its explicit ID↔row map.
 3. Invoke `resolve_cad_graph_orientation` on the nominal graph and 0 percent
-   STL. Require origin-centered millimetres, scale preservation, support from
-   lattice geometry, and exactly one winning hypothesis. Do not use a
-   whole-mesh bounding box as the primary method. Equivalent hypotheses mean
-   `manual_review`; never select one by ordering.
+   STL, passing an optional declaration only when its exact path/hash and
+   specimen/design IDs came from the immutable handoff. Require the frozen
+   2.28 mm/design-unit centerline pitch, origin-centered millimetres, finite
+   dimensions, orthonormal rotation, right-handedness unless explicitly
+   contract-authorized, valid translation, and all-edge geometry support. The
+   tool must verify declaration source/provenance IDs, graph/STL hashes, and
+   canonical self-hash independently. Do not use a whole-mesh bounding box as
+   the primary method. A verified declaration may resolve symmetric geometry;
+   equivalent hypotheses without one mean `manual_review`. An invalid,
+   tampered, contradictory, or unsupported declaration means `halt`.
 4. Invoke `label_deleted_edges` once for the frozen orientation and all three
    variants. The tool must load meshes sequentially, test every nominal strut,
    calibrate the tube radius on the full design, and use triangle support.
@@ -41,5 +47,7 @@ path, role, hash, count, or content.
 - Do not use exact floating-point coordinate differencing or clustering as the
   primary deletion method.
 - Do not guess orientation or edge assignments.
+- Never read deletion labels or answer-bearing variant evidence until the
+  orientation artifact has passed independent revalidation.
 - Refuse overwrite unless the MCP response verifies an exact idempotent replay.
 - Report access truthfully; this skill is MCP-backed, not fully autonomous.

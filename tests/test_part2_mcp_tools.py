@@ -16,7 +16,7 @@ import tifffile
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mcp_server import mcp  # noqa: E402
+from mcp_server import MCPResponseEnvelope, mcp  # noqa: E402
 from part2_core.response import RESPONSE_SCHEMA_VERSION  # noqa: E402
 
 
@@ -56,6 +56,11 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("volume_info", tools)
         self.assertIn("load_lattice_graph", tools)
         self.assertIn("replay_exact_otsu", tools)
+        self.assertIn("resolve_cad_graph_orientation", tools)
+        self.assertIn("label_deleted_edges", tools)
+        self.assertIn("verify_canonical_segmentation", tools)
+        self.assertIn("localize_lattice_nodes", tools)
+        self.assertIn("compute_registration_qa", tools)
         volume_properties = tools["volume_info"].parameters["properties"]
         self.assertEqual("string", volume_properties["input_filepath"]["type"])
         self.assertEqual(True, volume_properties["include_sha256"]["default"])
@@ -65,6 +70,84 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             ["auto", "native_uint16", "full_volume_affine_uint16"],
             otsu_properties["histogram_encoding"]["enum"],
+        )
+        orientation_schema = tools["resolve_cad_graph_orientation"].parameters
+        self.assertIn("specimen_id", orientation_schema["required"])
+        self.assertIn("design_id", orientation_schema["required"])
+        self.assertIn(
+            "declared_transform_filepath", orientation_schema["properties"]
+        )
+        label_schema = tools["label_deleted_edges"].parameters
+        self.assertIn("specimen_id", label_schema["required"])
+        self.assertIn("design_id", label_schema["required"])
+        localization_schema = tools["localize_lattice_nodes"].parameters
+        self.assertIn(
+            "analysis_policy_artifact_filepath", localization_schema["required"]
+        )
+        qa_schema = tools["compute_registration_qa"].parameters
+        self.assertIn("analysis_scope_artifact_filepath", qa_schema["required"])
+        self.assertNotIn("absolute_registration_uncertainty", qa_schema["properties"])
+        verification_schema = tools["verify_canonical_segmentation"].parameters
+        self.assertEqual(
+            {
+                "specimen_id",
+                "design_id",
+                "analysis_policy_artifact_filepath",
+                "exact_otsu_report_filepath",
+                "canonical_mask_filepath",
+                "mask_comparison_report_filepath",
+                "output_filepath",
+                "registration_mode",
+            },
+            set(verification_schema["required"]),
+        )
+        self.assertEqual(False, verification_schema["additionalProperties"])
+        self.assertEqual(
+            False, verification_schema["properties"]["overwrite"]["default"]
+        )
+        for name in (
+            "volume_info",
+            "load_lattice_graph",
+            "resolve_cad_graph_orientation",
+            "label_deleted_edges",
+            "replay_exact_otsu",
+            "verify_canonical_segmentation",
+            "register_lattice_to_ct",
+            "localize_lattice_nodes",
+            "compute_registration_qa",
+        ):
+            output_schema = tools[name].output_schema
+            self.assertFalse(output_schema["additionalProperties"], name)
+            self.assertEqual(
+                {
+                    "response_schema_version",
+                    "tool",
+                    "status",
+                    "gate",
+                    "summary",
+                    "result",
+                    "artifacts",
+                    "hashes",
+                    "warnings",
+                    "error",
+                },
+                set(output_schema["properties"]),
+                name,
+            )
+        free_orientation_fields = {
+            "allow_reflection",
+            "sample_count",
+            "scale_candidates",
+            "ambiguity_absolute_mm",
+            "ambiguity_relative_fraction",
+            "config_sha256",
+            "stage1_policy_filepath",
+            "stage1_policy_sha256",
+        }
+        self.assertTrue(
+            free_orientation_fields.isdisjoint(
+                orientation_schema["properties"]
+            )
         )
 
     async def test_volume_info_returns_hash_and_axis_mapping_through_mcp(self) -> None:
@@ -76,6 +159,7 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(call.is_error)
         result = call.structured_content
+        MCPResponseEnvelope.model_validate(result)
         self.assertEqual(RESPONSE_SCHEMA_VERSION, result["response_schema_version"])
         self.assertEqual("ok", result["status"])
         self.assertEqual("pass", result["gate"])
@@ -100,6 +184,7 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(call.is_error)
         result = call.structured_content
+        MCPResponseEnvelope.model_validate(result)
         self.assertEqual("ok", result["status"])
         self.assertEqual("manual_review", result["gate"])
         self.assertEqual(

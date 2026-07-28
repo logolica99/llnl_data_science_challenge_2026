@@ -1,0 +1,61 @@
+{
+  "threshold": 40054,
+  "source_ct_shape_zyx": [
+    761,
+    815,
+    837
+  ],
+  "downsample_factor": 2,
+  "central_z_margin_full_resolution_voxels": 49,
+  "detection_z_range_full_resolution": [
+    50,
+    710
+  ],
+  "edt_peak_threshold_downsampled_voxels": 2.0,
+  "all_component_count": 5353,
+  "detected_node_count": 3525,
+  "component_size_range_kept": [
+    2,
+    999
+  ],
+  "full_sampled_foreground_bounds_xyz": [
+    [
+      18.0,
+      24.0,
+      0.0
+    ],
+    [
+      782.0,
+      768.0,
+      760.0
+    ]
+  ],
+  "detection_foreground_bounds_xyz": [
+    [
+      56.0,
+      40.0,
+      50.0
+    ],
+    [
+      770.0,
+      756.0,
+      710.0
+    ]
+  ],
+  "detected_bounds_xyz": [
+    [
+      62.666666666666664,
+      50.0,
+      50.0
+    ],
+    [
+      765.6111111111111,
+      724.3461538461538,
+      710.0
+    ]
+  ],
+  "elapsed_seconds": 5.549850958981551,
+  "fit_candidate_count": 2820,
+  "holdout_candidate_count": 705,
+  "holdout_fraction": 0.2
+}

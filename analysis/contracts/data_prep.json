@@ -37,6 +37,11 @@
       },
       {
         "server": "segmentation-tools",
+        "name": "verify_canonical_segmentation",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      },
+      {
+        "server": "segmentation-tools",
         "name": "visualize_slice",
         "response_schema_version": "part2-mcp-response/1.0.0"
       },
@@ -62,6 +67,11 @@
     "attempt_scoped_stage_2_handoff",
     "verified_data_prep_handoff",
     "frozen_analysis_parameters_sha256",
+    "specimen_id",
+    "design_id",
+    "requested_analysis_scope",
+    "frozen_localization_policy",
+    "frozen_qa_policy",
     "ct_volume",
     "nominal_graph_json",
     "normalized_nominal_graph_map",
@@ -77,6 +87,7 @@
     "analysis/<specimen_id>/segmentation/histogram_report.json",
     "analysis/<specimen_id>/segmentation/canonical_mask.npy",
     "analysis/<specimen_id>/segmentation/mask_comparison.json",
+    "analysis/<specimen_id>/segmentation/segmentation_verification_mcp_response.json",
     "analysis/<specimen_id>/registration/registered_graph.json",
     "analysis/<specimen_id>/registration/registration_report.json",
     "analysis/<specimen_id>/registration/localized_graph.json",
@@ -234,6 +245,10 @@
         "path": "analysis/<specimen_id>/segmentation/mask_comparison.json"
       },
       {
+        "role": "segmentation_verification_mcp_response",
+        "path": "analysis/<specimen_id>/segmentation/segmentation_verification_mcp_response.json"
+      },
+      {
         "role": "registered_graph",
         "path": "analysis/<specimen_id>/registration/registered_graph.json"
       },
@@ -285,6 +300,7 @@
       "otsu_report",
       "canonical_segmentation_mask",
       "segmentation_mask_comparison",
+      "segmentation_verification_mcp_response",
       "registered_graph",
       "registration_report",
       "localized_graph",
@@ -293,7 +309,8 @@
       "junction_overlay",
       "spatial_bias_figure",
       "data_prep_result",
-      "data_prep_completion_receipt"
+      "data_prep_completion_receipt",
+      "analysis_ready_specimen_manifest"
     ]
   },
   "required_receipt_assertions": [
@@ -301,10 +318,14 @@
     "stage_1_receipt_hash_matches",
     "data_prep_handoff_hash_matches",
     "frozen_config_hash_matches",
+    "specimen_and_design_identifiers_match_every_bound_artifact",
+    "requested_analysis_scope_matches_hashed_intake",
+    "localization_and_qa_policies_match_hashed_intake",
     "stage_handoff_excludes_all_label_roles_paths_and_hashes",
     "input_artifact_hashes_match",
     "output_artifact_hashes_match",
     "exact_histogram_otsu_complete",
+    "canonical_segmentation_verified_by_persisted_mcp_evidence",
     "reference_specimen_replay_matches_40054_and_58653410",
     "graph_counts_and_topology_match_manifest",
     "registration_mode_recorded_in_every_output",
@@ -315,10 +336,17 @@
     "localization_uses_label_blind_deterministic_multistart",
     "localization_incident_support_uses_robust_aggregation",
     "localization_support_non_degrading_or_coarse_position_retained",
+    "primary_stable_coarse_fallback_ambiguous_rejected_and_boundary_limited_counts_recorded_separately",
+    "fallback_node_and_incident_edge_quality_propagated",
+    "localization_aggregate_gates_pass_frozen_thresholds",
     "qa_uncertainty_derived_from_hashed_artifacts_not_agent_scalar",
     "coarse_capture_gate_passed",
     "padded_roi_gate_passed",
     "metrology_gate_recorded_separately",
+    "roi_gate_results_authorized_and_recorded",
+    "authorized_and_unauthorized_outputs_recorded",
+    "reason_codes_and_localization_quality_counts_recorded",
+    "localization_and_qa_artifact_paths_and_hashes_bound",
     "defect_labels_not_accessed",
     "accessed_inputs_within_phase_allowlist",
     "forbidden_inputs_not_accessed"
@@ -330,19 +358,23 @@
     "matching_hashes_required": true,
     "frozen_config_hash_required": true,
     "coarse_capture_and_padded_roi_gates_pass": true,
-    "metrology_failure_requires_explicit_roi_only_resume": true,
+    "roi_screening_allows_metrology_not_authorized": true,
+    "direct_metrology_requires_passing_absolute_uncertainty": true,
     "next_stage_locked_until_verified": true
   },
   "manual_review_conditions": [
-    "metrology_gate_failed_but_coarse_capture_and_padded_roi_gates_passed",
+    "direct_metrology_scope_with_missing_or_excessive_absolute_uncertainty",
     "bounded_localization_instability_or_insufficient_ct_support_with_preserved_coarse_coordinates",
-    "absolute_registration_uncertainty_unavailable_for_direct_metrology"
+    "ambiguity_or_fallback_fraction_exceeds_frozen_policy_without_a_deterministic_hard_failure"
   ],
   "halt_conditions": [
     "missing_or_schema_incompatible_dependency",
     "histogram_rejection_gate_failure",
     "registration_or_topology_gate_failure",
     "coarse_capture_or_padded_roi_gate_failure",
+    "malformed_missing_or_tampered_analysis_scope",
+    "specimen_design_run_or_artifact_binding_mismatch",
+    "rejected_or_boundary_limited_fraction_exceeds_frozen_policy",
     "autonomous_pre_freeze_aligned_json_access",
     "defect_label_access",
     "deterministic_gate_failure",

@@ -1,7 +1,8 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "specimen_id": "brian_tran_9x9x9_0point5dash1",
-  "lifecycle_state": "analysis_ready",
+  "design_id": "octet_truss_9x9x9",
+  "lifecycle_state": "ready_for_data_prep",
   "unresolved_fields": [],
   "inputs": {
     "ct": {
@@ -45,6 +46,7 @@
     }
   },
   "analysis_parameters": {
+    "requested_analysis_scope": "roi_screening",
     "registration": {
       "mode": "challenge_aligned_json",
       "local_recenter_required": true
@@ -80,6 +82,48 @@
       "minimum_otsu_separability": 0.45,
       "minimum_class_mean_separation_sigma": 0.75
     },
+    "localization_policy": {
+      "schema_version": "stage2-localization-policy/1.1.0",
+      "patch_radius_voxels": 10,
+      "search_radius_voxels": 8.0,
+      "maximum_shift_voxels": 8.0,
+      "smoothing_sigma_voxels": 1.25,
+      "mean_shift_bandwidth_voxels": 4.0,
+      "mean_shift_max_iterations": 12,
+      "mean_shift_tolerance_voxels": 0.05,
+      "seed_perturbation_voxels": 2.0,
+      "seed_cluster_radius_voxels": 2.0,
+      "minimum_seed_consensus_fraction": 0.7,
+      "minimum_candidate_support": 0.05,
+      "minimum_relative_support_improvement": 0.01,
+      "incident_sample_distances_voxels": [
+        3.0,
+        5.0,
+        7.0
+      ],
+      "core_support_weight": 0.7,
+      "incident_support_weight": 0.3,
+      "minimum_primary_or_stable_coarse_fraction": 0.95,
+      "maximum_fallback_fraction": 0.05,
+      "maximum_ambiguous_fraction": 0.05,
+      "maximum_rejected_fraction": 0.0,
+      "maximum_boundary_limited_fraction": 0.0
+    },
+    "qa_policy": {
+      "schema_version": "stage2-qa-policy/1.1.0",
+      "junction_patch_radius_voxels": 2,
+      "corridor_axial_samples": 9,
+      "corridor_radius_voxels": 6.0,
+      "corridor_angular_samples": 8,
+      "roi_padding_fraction": 0.2,
+      "spatial_bins_per_axis": 5,
+      "radial_foreground_probability": 0.5,
+      "minimum_mean_junction_foreground_fraction": 0.85,
+      "minimum_median_corridor_foreground_fraction": 0.08,
+      "maximum_spatial_bin_median_range": 0.25,
+      "minimum_roi_in_bounds_fraction": 0.99,
+      "maximum_uncertainty_to_radius_ratio": 1.0
+    },
     "budgets": {
       "local_recenter_radius_voxels": 8.0,
       "roi_padding_fraction": 0.2,
@@ -87,14 +131,15 @@
       "maximum_agent_retries": 2
     },
     "artifact_schema_versions": {
-      "specimen_manifest": "2.0.0",
-      "registration_qa": "1.0.0",
+      "specimen_manifest": "2.1.0",
+      "node_localization": "1.2.0",
+      "registration_qa": "1.2.0",
       "per_strut_metrics": "1.0.0",
       "classified_struts": "1.0.0",
       "nde_report": "1.0.0"
     }
   },
-  "analysis_parameters_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02",
+  "analysis_parameters_sha256": "df56325e8bd51b767c8ec845d859cb0f52972e0cdca7827646332a4eb5240e82",
   "derived": {
     "graph_summary": {
       "method": "canonical_lattice_topology",
@@ -105,7 +150,7 @@
           "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
           "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
         ],
-        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
+        "config_sha256": "df56325e8bd51b767c8ec845d859cb0f52972e0cdca7827646332a4eb5240e82"
       },
       "values": {
         "junction_count": 10206,
@@ -130,7 +175,7 @@
           "24dcb40c13c4a729cdd84b760b803d78c61bb31ec6b2411724ff6f78cafc2ec4",
           "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
         ],
-        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
+        "config_sha256": "df56325e8bd51b767c8ec845d859cb0f52972e0cdca7827646332a4eb5240e82"
       },
       "values": {
         "spacing": [
@@ -154,7 +199,7 @@
         "input_sha256": [
           "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
         ],
-        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
+        "config_sha256": "df56325e8bd51b767c8ec845d859cb0f52972e0cdca7827646332a4eb5240e82"
       },
       "values": {
         "threshold": 40054,
@@ -181,14 +226,46 @@
         "input_sha256": [
           "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7"
         ],
-        "config_sha256": "fd139e219fd30d53e3f858aa6b052cbf9b65f701793e397189dd65be5f0fce02"
+        "config_sha256": "df56325e8bd51b767c8ec845d859cb0f52972e0cdca7827646332a4eb5240e82"
       },
       "values": {
+        "specimen_id": "brian_tran_9x9x9_0point5dash1",
+        "design_id": "octet_truss_9x9x9",
         "aligned_graph_state": "input",
+        "requested_analysis_scope": "roi_screening",
         "overall_pass": true,
         "local_recenter_complete": true,
         "roi_gate_pass": true,
-        "metrology_gate_pass": true
+        "metrology_gate_status": "not_authorized",
+        "authorized_outputs": [
+          "segmentation",
+          "registration",
+          "node_localization",
+          "coarse_region_screening",
+          "padded_roi_definition"
+        ],
+        "unauthorized_outputs": [
+          "absolute_metrology",
+          "direct_dimensional_measurement"
+        ],
+        "roi_gate_results": {
+          "image_support": true,
+          "localization_quality": true,
+          "coarse_region_support": true,
+          "padded_roi_in_bounds": true
+        },
+        "localization_quality_counts": {
+          "primary": 8714,
+          "stable_coarse": 1098,
+          "fallback": 394,
+          "ambiguous": 0,
+          "rejected": 0,
+          "boundary_limited": 0
+        },
+        "reason_codes": [
+          "ROI_GATES_PASS",
+          "METROLOGY_NOT_AUTHORIZED"
+        ]
       }
     }
   }

@@ -146,6 +146,9 @@ def compare_segmentation_masks(
 
     if not mask_paths or len(mask_paths) != len(thresholds):
         raise ValueError("mask_paths and thresholds must be non-empty positional pairs")
+    normalized_thresholds = [float(value) for value in thresholds]
+    if any(not np.isfinite(value) for value in normalized_thresholds):
+        raise ValueError("Every threshold must be finite")
     raw = load_volume(raw_path)
     root = Path(repository_root).expanduser().resolve() if repository_root else None
 
@@ -153,9 +156,9 @@ def compare_segmentation_masks(
         return path.relative_to(root).as_posix() if root is not None else str(path)
     candidates: list[dict[str, Any]] = []
     artifacts: dict[str, Any] = {}
-    for index, (path, threshold) in enumerate(zip(mask_paths, thresholds, strict=True)):
-        if not np.isfinite(threshold):
-            raise ValueError("Every threshold must be finite")
+    for index, (path, threshold) in enumerate(
+        zip(mask_paths, normalized_thresholds, strict=True)
+    ):
         mask = load_volume(path)
         if mask.shape != raw.shape:
             raise ValueError(f"Mask shape {mask.shape} does not match raw shape {raw.shape}")
@@ -200,7 +203,11 @@ def compare_segmentation_masks(
             "retention": "regenerable",
         }
     config_hash = sha256_json(
-        {"thresholds": thresholds, "registration_mode": registration_mode, "chunk_depth": chunk_depth}
+        {
+            "thresholds": normalized_thresholds,
+            "registration_mode": registration_mode,
+            "chunk_depth": chunk_depth,
+        }
     )
     all_exact = all(item["exact_threshold_match"] for item in candidates)
     result = {

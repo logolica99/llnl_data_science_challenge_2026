@@ -18,10 +18,45 @@ from specimen_ingest import SpecimenIngestError, ingest_specimen  # noqa: E402
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--specimen-id", required=True)
+    parser.add_argument("--design-id", required=True)
+    parser.add_argument(
+        "--requested-analysis-scope",
+        required=True,
+        choices=("roi_screening", "direct_metrology"),
+    )
     parser.add_argument("--cad", required=True, type=Path)
     parser.add_argument("--design-graph", required=True, type=Path)
     parser.add_argument("--ct", required=True, type=Path)
+    parser.add_argument(
+        "--ct-metadata-response",
+        required=True,
+        type=Path,
+        help=(
+            "persisted inspect_volume_metadata MCP response at "
+            "analysis/<specimen-id>/config/ct_metadata_response.json"
+        ),
+    )
+    parser.add_argument(
+        "--ct-metadata-response-sha256",
+        required=True,
+        help="exact SHA-256 returned for the persisted MCP response artifact",
+    )
+    parser.add_argument(
+        "--ct-metadata-call-receipt",
+        required=True,
+        type=Path,
+        help=(
+            "persisted inspect_volume_metadata call receipt at "
+            "analysis/<specimen-id>/config/ct_metadata_mcp_call_receipt.json"
+        ),
+    )
+    parser.add_argument(
+        "--ct-metadata-call-receipt-sha256",
+        required=True,
+        help="exact SHA-256 returned for the persisted MCP call-receipt artifact",
+    )
     parser.add_argument("--aligned-graph", type=Path)
+    parser.add_argument("--design-transform-declaration", type=Path)
     parser.add_argument(
         "--registration-mode",
         required=True,
@@ -62,10 +97,19 @@ def main() -> int:
         result = ingest_specimen(
             repository_root=args.repository_root,
             specimen_id=args.specimen_id,
+            design_id=args.design_id,
+            requested_analysis_scope=args.requested_analysis_scope,
             cad_path=args.cad,
             design_graph_path=args.design_graph,
             ct_path=args.ct,
+            ct_metadata_response_path=args.ct_metadata_response,
+            ct_metadata_response_sha256=args.ct_metadata_response_sha256,
+            ct_metadata_call_receipt_path=args.ct_metadata_call_receipt,
+            ct_metadata_call_receipt_sha256=(
+                args.ct_metadata_call_receipt_sha256
+            ),
             aligned_graph_path=args.aligned_graph,
+            design_transform_declaration_path=args.design_transform_declaration,
             registration_mode=args.registration_mode,
             association_confirmed=args.confirm_association,
             allowed_data_roots=args.data_root,

@@ -1,0 +1,28 @@
+{
+  "required_artifacts_exist": {
+    "segment_ct.py": true,
+    "mask.tif": true,
+    "slice_380.png": true,
+    "report.md": true
+  },
+  "mask_dtype": "uint8",
+  "mask_shape": [
+    761,
+    815,
+    837
+  ],
+  "input_shape": [
+    761,
+    815,
+    837
+  ],
+  "mask_unique_values": [
+    0,
+    1
+  ],
+  "mask_uint8_binary_shape_compatible": true,
+  "visualization_nonempty": true,
+  "visualization_matches_mask_slice_380": true,
+  "reported_voxel_counts_sum_to_input_total": true,
+  "reported_voxel_sum": 519119955
+}
