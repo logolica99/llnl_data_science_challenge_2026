@@ -1,4 +1,4 @@
-﻿interface:
+interface:
   display_name: "Strut Metrics Analyzer"
   short_description: "Measure label-blind Stage 2 strut evidence"
   default_prompt: "Use $strut-defect-analyzer to compute hash-verified Stage 2 strut metrics from a sealed Stage 1 handoff."
