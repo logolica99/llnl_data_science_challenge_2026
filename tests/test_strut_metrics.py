@@ -19,10 +19,10 @@ import numpy as np
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-import mcp_server  # noqa: E402
-from mcp_tools import common as mcp_common  # noqa: E402
-from part2_core import strut_metrics  # noqa: E402
-from part2_core.registration import register_lattice_to_ct  # noqa: E402
+from llnl_nde import server as mcp_server  # noqa: E402
+from llnl_nde.mcp_tools import common as mcp_common  # noqa: E402
+from llnl_nde.core import strut_metrics  # noqa: E402
+from llnl_nde.core.registration import register_lattice_to_ct  # noqa: E402
 
 
 def _sha(path: Path) -> str:

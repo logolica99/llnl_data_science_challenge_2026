@@ -23,7 +23,7 @@ from typing import Any, Mapping
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from part2_orchestration import (  # noqa: E402
+from llnl_nde.orchestration.pipeline import (  # noqa: E402
     artifact_record,
     build_stage_receipt,
     canonical_json_sha256,
@@ -35,8 +35,8 @@ from part2_orchestration import (  # noqa: E402
     start_stage,
     validate_pipeline_manifest,
 )
-from specimen_ingest import ingest_specimen  # noqa: E402
-from data_prep_handoff import create_data_prep_handoff  # noqa: E402
+from llnl_nde.orchestration.specimen_ingest import ingest_specimen  # noqa: E402
+from llnl_nde.orchestration.receipts import create_data_prep_handoff  # noqa: E402
 
 
 SPECIMEN_ID = "demo_missing_strut_specimen"

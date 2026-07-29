@@ -17,7 +17,7 @@ import unittest
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mcp_server import replay_exact_otsu, volume_info  # noqa: E402
+from llnl_nde.server import replay_exact_otsu, volume_info  # noqa: E402
 
 
 CT_PATH = REPOSITORY_ROOT / "data/9x9x9_octet_lattice/9x9x9_octet_lattice.tif"

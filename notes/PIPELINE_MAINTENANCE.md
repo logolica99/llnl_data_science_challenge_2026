@@ -4,7 +4,7 @@
 
 When changing the workflow, update these together:
 
-1. `src/part2_orchestration.py` stage constants and transition rules;
+1. `src/llnl_nde/orchestration/pipeline.py` stage constants and transition rules;
 2. `analysis/contracts/*.json` production contracts;
 3. `.codex/agents/*.toml` owner instructions;
 4. `.agents/skills/part2-pipeline-runbook/` policy and stage routing;
@@ -15,7 +15,7 @@ The complete production contract set is `specimen_ingest.json`, `data_prep.json`
 `strut_metrics.json`, `defect_analysis.json`, and `nde_report.json`. Do not place
 research workflow contracts in `analysis/contracts/`.
 
-The production MCP server is `src/mcp_server.py`. Its registered tool set must
+The production MCP server is `src/llnl_nde/server.py`. Its registered tool set must
 equal the union of `required_dependencies.mcp_tools` in the five contracts.
 Research-only tools belong in `research/mcp_server.py`, which is disabled and
 non-required in `.codex/config.toml`; research outputs must stay beneath
@@ -64,7 +64,7 @@ rg -n "design_diff|Design Diff|stage_5|stage_6|Stage 5|Stage 6|dev_split|sealed_
 Any remaining match must be explicitly marked research-only or historical and
 must not be reachable from a production contract, agent, or skill.
 
-The following names must not be registered by `src/mcp_server.py`:
+The following names must not be registered by `src/llnl_nde/server.py`:
 `compute_detection_metrics`, `summarize_nde_artifacts`, `render_volume_3d`,
 `skeletonize`, and `explore_ct_thresholds`.
 

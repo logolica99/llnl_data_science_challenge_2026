@@ -23,7 +23,7 @@ import uuid
 
 from demo_pipeline import SyntheticFixtureStageRunner
 
-from part2_orchestration import (  # type: ignore  # imported via demo_pipeline
+from llnl_nde.orchestration.pipeline import (  # type: ignore  # imported via demo_pipeline
     OrchestrationError,
     complete_stage,
     pipeline_status,

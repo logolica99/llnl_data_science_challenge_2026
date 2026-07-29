@@ -27,7 +27,7 @@ from typing import Any
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from part2_orchestration import (  # noqa: E402
+from llnl_nde.orchestration.pipeline import (  # noqa: E402
     create_pipeline_manifest,
     pipeline_status,
     start_stage,

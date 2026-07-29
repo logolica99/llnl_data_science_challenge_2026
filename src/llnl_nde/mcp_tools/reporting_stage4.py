@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from part2_core import compute_spatial_stats as _compute_spatial_stats
-from part2_core import get_strut_report as _get_strut_report
-from part2_core import render_lattice_3d as _render_lattice_3d
+from llnl_nde.core import compute_spatial_stats as _compute_spatial_stats
+from llnl_nde.core import get_strut_report as _get_strut_report
+from llnl_nde.core import render_lattice_3d as _render_lattice_3d
 
 from .common import (
     MCPResponseEnvelope,

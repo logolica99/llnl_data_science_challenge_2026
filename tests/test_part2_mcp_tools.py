@@ -16,8 +16,8 @@ import tifffile
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mcp_server import MCPResponseEnvelope, mcp  # noqa: E402
-from part2_core.response import RESPONSE_SCHEMA_VERSION  # noqa: E402
+from llnl_nde.server import MCPResponseEnvelope, mcp  # noqa: E402
+from llnl_nde.core.response import RESPONSE_SCHEMA_VERSION  # noqa: E402
 
 
 class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):

@@ -64,13 +64,13 @@ The code:
 3. Checks that every aligned node lies inside the CT volume.
 4. Copies the aligned coordinates into the registered graph.
 
-It does **not** calculate a scale/rotation/translation transform; the report’s `transform` is therefore `null`. See [registration.py](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/registration.py:610).
+It does **not** calculate a scale/rotation/translation transform; the report’s `transform` is therefore `null`. See [registration.py](../src/llnl_nde/core/registration.py#L610).
 
 ### 2. `autonomous_v2`
 
 This branch independently estimates alignment from the CT. It is designed to prevent the supplied aligned graph from leaking into the fit.
 
-Before the fit is frozen, the code explicitly rejects any `aligned_graph_path`. See [registration.py](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/registration.py:632).
+Before the fit is frozen, the code explicitly rejects any `aligned_graph_path`. See [registration.py](../src/llnl_nde/core/registration.py#L632).
 
 ---
 
@@ -99,7 +99,7 @@ The detector:
 5. Labels connected regions and keeps appropriately sized components.
 6. Uses each component’s center of mass as a candidate junction.
 
-The result is an unordered point cloud of probable CT junctions. This happens in [detect_ct_nodes()](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/registration.py:358).
+The result is an unordered point cloud of probable CT junctions. This happens in [detect_ct_nodes()](../src/llnl_nde/core/registration.py#L358).
 
 ### Step 3: Create fit and holdout sets
 
@@ -108,7 +108,7 @@ The candidates are deterministically shuffled using a fixed random seed:
 - 80% are used for fitting.
 - 20% are hidden from the fitter and used to test the result.
 
-This prevents the system from declaring success based only on points it optimized against. See [split_candidates()](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/registration.py:335).
+This prevents the system from declaring success based only on points it optimized against. See [split_candidates()](../src/llnl_nde/core/registration.py#L335).
 
 ### Step 4: Estimate a coarse transform
 
@@ -138,7 +138,7 @@ The fitter uses **trimmed iterative closest point**, or trimmed ICP:
 4. Recalculate scale, rotation, and translation.
 5. Repeat until the residual stops changing or 60 iterations are reached.
 
-Trimming makes the fit less sensitive to missing nodes, defects, and false detections. The implementation is in [trimmed_icp()](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/registration.py:191).
+Trimming makes the fit less sensitive to missing nodes, defects, and false detections. The implementation is in [trimmed_icp()](../src/llnl_nde/core/registration.py#L191).
 
 ### Step 6: Protect against a bad local optimum
 
@@ -147,7 +147,7 @@ ICP is run from 21 starting points:
 - 3 scale choices: 0.99, 1.00, and 1.01 times the initial scale
 - 7 rotation choices: no perturbation and ±1° around each axis
 
-The best objective wins, but several near-optimal solutions must agree. Their predicted node positions must have a 95th-percentile spread no greater than one voxel. See [multistart_fit()](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/registration.py:256).
+The best objective wins, but several near-optimal solutions must agree. Their predicted node positions must have a 95th-percentile spread no greater than one voxel. See [multistart_fit()](../src/llnl_nde/core/registration.py#L256).
 
 ### Step 7: Apply acceptance gates
 
@@ -165,7 +165,7 @@ The synthetic suite generates known transforms with noise, 20% missing points, a
 
 The robustness suite repeats registration under changes to the threshold, downsampling, random seed, distance-transform cutoff, and trimming fraction. At least four variants must succeed, and their predicted nodes must remain within a two-voxel p95 spread.
 
-These gates are assembled in [registration.py](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/registration.py:684).
+These gates are assembled in [registration.py](../src/llnl_nde/core/registration.py#L684).
 
 ---
 
@@ -208,7 +208,7 @@ For each node, localization:
 5. Scores support at the junction and along its incident strut directions.
 6. Accepts the refined point only if consensus, shift, CT support, and boundary checks pass.
 
-If refinement is unstable, the node remains at its global registered coordinate and is explicitly marked `fallback` or `ambiguous`. It is never silently assigned a questionable refined position. See [_localize_one()](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/localization.py:363).
+If refinement is unstable, the node remains at its global registered coordinate and is explicitly marked `fallback` or `ambiguous`. It is never silently assigned a questionable refined position. See [_localize_one()](../src/llnl_nde/core/localization.py#L363).
 
 ---
 
@@ -226,4 +226,4 @@ The final state is:
 - `manual_review`: alignment may be usable, but quantitative localization or metrology evidence is insufficient.
 - `halt`: hard image, binding, or ROI integrity checks failed.
 
-Importantly, ROI screening can pass while direct dimensional metrology remains unauthorized. Those decisions are separated in [qa.py](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_core/qa.py:917).
+Importantly, ROI screening can pass while direct dimensional metrology remains unauthorized. Those decisions are separated in [qa.py](../src/llnl_nde/core/qa.py#L917).

@@ -85,7 +85,7 @@ The standardized way to let an LLM call our Python functions. Before MCP, every 
   - **Type annotations define the input schema** (`threshold: float`); params **without defaults are required**, with defaults are optional (`axis: int = 0`).
   - **No `*args`/`**kwargs`** — FastMCP needs an explicit signature to build the JSON schema.
   - Return short, useful status strings (or structured data when needed downstream).
-- **Registration:** add the server to `~/.codex/config.toml` under `[mcp_servers.<name>]` with absolute paths to the Python exe and `src/mcp_server.py`. **Restart Codex CLI after every config change** (it does not hot-reload). Verify with `/mcp`.
+- **Registration:** add the server to `~/.codex/config.toml` under `[mcp_servers.<name>]` with absolute paths to the Python exe and `src/llnl_nde/server.py`. **Restart Codex CLI after every config change** (it does not hot-reload). Verify with `/mcp`.
 
 ### 5.2 Skills
 MCP's weakness: many tools up front **bloats the context window** and hurts **tool selection** reliability. A **skill** is a focused, on-demand instruction package (a `SKILL.md` + optional scripts) for a specific workflow — loaded only when relevant. My one-liner from the talk holds: *"skills package domain instructions so the agent writes like a materials scientist."*
@@ -178,7 +178,7 @@ Helpful extra software: **Napari** (interactive 3D/slice viewer — great for sa
 
 | # | Task | What we build | Definition of done |
 |---|---|---|---|
-| 1 | Tool calling with MCP | Implement `segment_ct_dataset(input, output, threshold)` in `src/mcp_server.py`; register server in `~/.codex/config.toml` | `/mcp` shows the server; the archived Part 1 input is `DEPRECATED/part1/data/unitcell/unitcell.npy` |
+| 1 | Tool calling with MCP | Implement `segment_ct_dataset(input, output, threshold)` in the applicable `src/llnl_nde/mcp_tools/*_stage#.py` module; register `src/llnl_nde/server.py` in `~/.codex/config.toml` | `/mcp` shows the server; the archived Part 1 input is `DEPRECATED/part1/data/unitcell/unitcell.npy` |
 | 2 | Multiple tools | Add `visualize_slice(input, output, slice_index, axis=0)` | Agent chains segment → visualize in one conversation |
 | 3 | MCP as API wrapper | Historical `skeletonize` exercise, now isolated on `segmentation-tools-research` | Research agent runs segment → visualize → skeletonize without altering production |
 | 4 | Skills | Historical report exercise; production replacement is `nde-report-generator` | Stage 4 produces graph-aware, hash-bound report artifacts |

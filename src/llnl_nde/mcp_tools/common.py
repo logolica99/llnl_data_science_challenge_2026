@@ -9,10 +9,10 @@ from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from part2_core import error_response as _error_response
-from part2_core import success_response as _success_response
+from llnl_nde.core import error_response as _error_response
+from llnl_nde.core import success_response as _success_response
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
 class MCPErrorEnvelope(BaseModel):

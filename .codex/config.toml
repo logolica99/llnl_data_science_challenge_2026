@@ -1,6 +1,6 @@
 [mcp_servers.segmentation-tools]
 command = "uv"
-args = ["run", "python", "src/mcp_server.py"]
+args = ["run", "python", "src/llnl_nde/server.py"]
 enabled = true
 required = true
 startup_timeout_sec = 20

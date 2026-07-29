@@ -15,7 +15,7 @@ from skimage import measure
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from part2_core.volume import load_volume
+from llnl_nde.core.volume import load_volume
 
 
 SUMMARY_CHUNK_DEPTH = 16

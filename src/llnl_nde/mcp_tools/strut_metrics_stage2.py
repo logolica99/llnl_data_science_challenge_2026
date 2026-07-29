@@ -8,8 +8,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from part2_core import compute_strut_metrics as _compute_strut_metrics
-from specimen_manifest import (
+from llnl_nde.core import compute_strut_metrics as _compute_strut_metrics
+from llnl_nde.orchestration.contracts import (
     canonical_json_sha256 as _canonical_json_sha256,
     load_json as _load_json,
 )

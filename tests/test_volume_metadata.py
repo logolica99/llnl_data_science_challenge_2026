@@ -15,7 +15,7 @@ import tifffile
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from volume_metadata import (  # noqa: E402
+from llnl_nde.core.volume_inspection import (  # noqa: E402
     OUTPUT_SCHEMA_VERSION,
     UNKNOWN,
     VolumeMetadataError,

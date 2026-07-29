@@ -17,13 +17,13 @@ import trimesh
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mcp_server import (  # noqa: E402
+from llnl_nde.server import (  # noqa: E402
     inspect_volume_metadata,
     mcp,
 )
-from specimen_ingest import ingest_specimen  # noqa: E402
-from specimen_manifest import DEFAULT_SCHEMA, canonical_json_sha256  # noqa: E402
-from volume_metadata import UNKNOWN  # noqa: E402
+from llnl_nde.orchestration.specimen_ingest import ingest_specimen  # noqa: E402
+from llnl_nde.orchestration.contracts import DEFAULT_SCHEMA, canonical_json_sha256  # noqa: E402
+from llnl_nde.core.volume_inspection import UNKNOWN  # noqa: E402
 
 
 class VolumeMetadataMCPTests(unittest.IsolatedAsyncioTestCase):

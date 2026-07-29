@@ -15,15 +15,15 @@ import tifffile
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from part2_core.graph import normalize_lattice_graph  # noqa: E402
-from part2_core.otsu import (  # noqa: E402
+from llnl_nde.core.graph import normalize_lattice_graph  # noqa: E402
+from llnl_nde.core.otsu import (  # noqa: E402
     deterministic_histogram,
     otsu_from_histogram,
     replay_exact_otsu,
     write_otsu_artifacts,
 )
-from part2_core.response import error_response, success_response  # noqa: E402
-from part2_core.volume import (  # noqa: E402
+from llnl_nde.core.response import error_response, success_response  # noqa: E402
+from llnl_nde.core.volume import (  # noqa: E402
     AXIS_MAPPING,
     load_volume,
     sample_xyz,

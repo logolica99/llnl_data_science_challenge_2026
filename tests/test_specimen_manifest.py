@@ -12,7 +12,7 @@ import unittest
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from specimen_manifest import (  # noqa: E402
+from llnl_nde.orchestration.contracts import (  # noqa: E402
     ManifestValidationError,
     canonical_json_sha256,
     manifest_paths,
@@ -20,7 +20,7 @@ from specimen_manifest import (  # noqa: E402
     topology_summary,
     validate_manifest,
 )
-from segmentation_replay import histogram_sha256, otsu_from_histogram  # noqa: E402
+from llnl_nde.cli.segmentation_replay import histogram_sha256, otsu_from_histogram  # noqa: E402
 
 import numpy as np
 

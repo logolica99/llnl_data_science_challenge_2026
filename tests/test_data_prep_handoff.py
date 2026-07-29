@@ -20,17 +20,20 @@ import trimesh
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from data_prep_handoff import (  # noqa: E402
+from llnl_nde.orchestration.receipts import (  # noqa: E402
     DataPrepHandoffError,
     apply_data_prep_result,
     create_data_prep_handoff,
 )
-import mcp_server  # noqa: E402
-from mcp_tools import common as mcp_common  # noqa: E402
-from part2_core.otsu import replay_exact_otsu  # noqa: E402
-from part2_core.segmentation import compare_segmentation_masks  # noqa: E402
-from specimen_ingest import ingest_specimen, inspect_lattice_graph  # noqa: E402
-from specimen_manifest import (  # noqa: E402
+from llnl_nde import server as mcp_server  # noqa: E402
+from llnl_nde.mcp_tools import common as mcp_common  # noqa: E402
+from llnl_nde.core.otsu import replay_exact_otsu  # noqa: E402
+from llnl_nde.core.segmentation import compare_segmentation_masks  # noqa: E402
+from llnl_nde.orchestration.specimen_ingest import (  # noqa: E402
+    ingest_specimen,
+    inspect_lattice_graph,
+)
+from llnl_nde.orchestration.contracts import (  # noqa: E402
     DEFAULT_SCHEMA,
     canonical_json_sha256,
     load_json,

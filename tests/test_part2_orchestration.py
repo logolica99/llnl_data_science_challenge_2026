@@ -13,7 +13,7 @@ import unittest
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from part2_orchestration import (  # noqa: E402
+from llnl_nde.orchestration.pipeline import (  # noqa: E402
     ManifestValidationError,
     REGISTRATION_MODES,
     STAGE_NAMES,

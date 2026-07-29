@@ -6,10 +6,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from part2_core import normalize_lattice_graph as _normalize_lattice_graph
-from part2_core import success_response as _success_response
-from part2_core.artifacts import sha256_json, write_json_atomic
-from volume_metadata import inspect_volume_envelope
+from llnl_nde.core import normalize_lattice_graph as _normalize_lattice_graph
+from llnl_nde.core import success_response as _success_response
+from llnl_nde.core.artifacts import sha256_json, write_json_atomic
+from llnl_nde.core.volume_inspection import inspect_volume_envelope
 
 from . import common
 from .common import (

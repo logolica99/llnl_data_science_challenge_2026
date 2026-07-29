@@ -17,13 +17,13 @@ import trimesh
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from specimen_ingest import (  # noqa: E402
+from llnl_nde.orchestration.specimen_ingest import (  # noqa: E402
     SpecimenIngestError,
     ingest_specimen,
     inspect_lattice_graph,
     validate_ingest_artifact_bundle,
 )
-from specimen_manifest import (  # noqa: E402
+from llnl_nde.orchestration.contracts import (  # noqa: E402
     DEFAULT_SCHEMA,
     canonical_json_sha256,
     sha256_file,
@@ -233,7 +233,7 @@ class SpecimenIngestTests(unittest.TestCase):
         self.assertNotIn("ct_metadata", signature.parameters)
 
         source = inspect.getsource(sys.modules[ingest_specimen.__module__])
-        self.assertNotIn("from volume_metadata import", source)
+        self.assertNotIn("from llnl_nde.core.volume_inspection import", source)
         self.assertNotIn("inspect_volume(", source)
 
     def test_production_intake_accepts_nominal_graph_and_ct_without_cad(self) -> None:

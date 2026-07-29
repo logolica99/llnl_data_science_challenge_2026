@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 import numpy as np
 
-from part2_core import (
+from llnl_nde.core import (
     compare_segmentation_masks as _compare_masks_core,
     compute_registration_qa as _compute_registration_qa,
     load_volume as _load_volume,
@@ -21,8 +21,8 @@ from part2_core import (
     volume_metadata as _volume_metadata,
     write_otsu_artifacts as _write_otsu_artifacts,
 )
-from part2_core.artifacts import write_json_atomic
-from specimen_manifest import (
+from llnl_nde.core.artifacts import write_json_atomic
+from llnl_nde.orchestration.contracts import (
     canonical_json_sha256 as _canonical_json_sha256,
     load_json as _load_json,
     validate_manifest as _validate_specimen_manifest,

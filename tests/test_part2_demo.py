@@ -428,7 +428,7 @@ class Part2DemoTests(unittest.TestCase):
                 if isinstance(node, ast.Import):
                     imported.update(alias.name.split(".")[0] for alias in node.names)
                 elif isinstance(node, ast.ImportFrom) and node.module:
-                    imported.add(node.module.split(".")[0])
+                    imported.add(node.module)
         self.assertTrue(
             imported.isdisjoint(
                 {
@@ -438,12 +438,13 @@ class Part2DemoTests(unittest.TestCase):
                     "skimage",
                     "matplotlib",
                     "pyvista",
-                    "part2_core",
-                    "mcp_server",
                 }
             )
         )
-        self.assertIn("part2_orchestration", imported)
+        self.assertFalse(
+            any(module.startswith("llnl_nde.core") for module in imported)
+        )
+        self.assertIn("llnl_nde.orchestration.pipeline", imported)
 
 
 if __name__ == "__main__":

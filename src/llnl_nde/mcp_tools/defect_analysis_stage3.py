@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from part2_core import classify_struts as _classify_struts
-from part2_core import render_strut_evidence as _render_strut_evidence
+from llnl_nde.core import classify_struts as _classify_struts
+from llnl_nde.core import render_strut_evidence as _render_strut_evidence
 
 from .common import (
     MCPResponseEnvelope,

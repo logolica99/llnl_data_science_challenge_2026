@@ -12,7 +12,7 @@ import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from data_prep_handoff import (  # noqa: E402
+from llnl_nde.orchestration.receipts import (  # noqa: E402
     DataPrepHandoffError,
     apply_data_prep_result,
 )

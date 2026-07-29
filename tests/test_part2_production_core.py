@@ -16,21 +16,21 @@ from scipy.spatial.transform import Rotation
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from part2_core.artifacts import sha256_file, sha256_json  # noqa: E402
-from part2_core.evidence import render_strut_evidence  # noqa: E402
-from part2_core.lattice import load_lattice_json  # noqa: E402
-from part2_core.localization import localize_lattice_nodes  # noqa: E402
-from part2_core.otsu import replay_exact_otsu  # noqa: E402
-from part2_core.qa import compute_registration_qa  # noqa: E402
-from part2_core.registration import (  # noqa: E402
+from llnl_nde.core.artifacts import sha256_file, sha256_json  # noqa: E402
+from llnl_nde.core.evidence import render_strut_evidence  # noqa: E402
+from llnl_nde.core.lattice import load_lattice_json  # noqa: E402
+from llnl_nde.core.localization import localize_lattice_nodes  # noqa: E402
+from llnl_nde.core.otsu import replay_exact_otsu  # noqa: E402
+from llnl_nde.core.qa import compute_registration_qa  # noqa: E402
+from llnl_nde.core.registration import (  # noqa: E402
     SimilarityTransform,
     register_lattice_to_ct,
     run_synthetic_suite,
     solve_similarity,
 )
-from part2_core.reports import get_strut_report  # noqa: E402
-from part2_core.sampling import sample_corridor  # noqa: E402
-from part2_core.struts import classify_struts, compute_strut_metrics  # noqa: E402
+from llnl_nde.core.reporting import get_strut_report  # noqa: E402
+from llnl_nde.core.sampling import sample_corridor  # noqa: E402
+from llnl_nde.core.struts import classify_struts, compute_strut_metrics  # noqa: E402
 
 
 class SyntheticFixture(unittest.TestCase):
@@ -1262,7 +1262,9 @@ class GraphSizeAndWrapperBoundaryTests(unittest.TestCase):
     def test_new_mcp_wrappers_contain_no_numpy_numerical_calls(self) -> None:
         modules = [
             ast.parse(path.read_text(encoding="utf-8"))
-            for path in sorted((REPOSITORY_ROOT / "src/mcp_tools").glob("stage*.py"))
+            for path in sorted(
+                (REPOSITORY_ROOT / "src/llnl_nde/mcp_tools").glob("*_stage[0-4].py")
+            )
         ]
         names = {
             "register_lattice_to_ct",

@@ -19,8 +19,8 @@ if str(REPOSITORY_ROOT) not in sys.path:
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from part2_core.otsu import replay_exact_otsu, write_otsu_artifacts  # noqa: E402
-from part2_core.segmentation import (  # noqa: E402
+from llnl_nde.core.otsu import replay_exact_otsu, write_otsu_artifacts  # noqa: E402
+from llnl_nde.core.segmentation import (  # noqa: E402
     compare_segmentation_masks,
     segment_ct_dataset,
     visualize_slice,

@@ -140,14 +140,17 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
-The production entry point, `src/mcp_server.py`, only assembles the server and
-preserves its public imports. Tool adapters are grouped by immutable pipeline
-stage in `src/mcp_tools/stage0.py` through `stage4.py`; shared path policy and
-closed response handling live in `src/mcp_tools/common.py`. Scientific
-implementations remain MCP-independent under `src/part2_core/`. Add a new tool
-to its owning stage module and stage contract rather than expanding the server
-entry point. Contract tests require the registered production tool set to match
-the declared stage dependencies exactly.
+The production entry point, `src/llnl_nde/server.py`, only assembles the server.
+Tool adapters are grouped by immutable pipeline ownership in
+`src/llnl_nde/mcp_tools/`, using descriptive names ending in `_stage0.py`
+through `_stage4.py`. Shared path policy and closed response handling live in
+`src/llnl_nde/mcp_tools/common.py`; scientific implementations remain
+MCP-independent under `src/llnl_nde/core/`; control-plane code lives under
+`src/llnl_nde/orchestration/`; and supported command-line entry points live
+under `src/llnl_nde/cli/`. Add a new tool to its owning stage module and stage
+contract rather than expanding the server entry point. Contract tests require
+the registered production tool set to match the declared stage dependencies
+exactly. Previous top-level import paths remain compatibility aliases only.
 
 The server also exposes `inspect_volume_metadata`, a structured Part 2 tool
 used by the `volume-metadata` skill. It constrains NPY/TIFF inputs to the
@@ -223,7 +226,7 @@ Add the MCP tools to your Codex CLI configuration file at `~/.codex/config.toml`
 ```toml
 [mcp_servers.segmentation-tools]
 command = "<PATH_TO_PYTHON_EXE>"
-args = ["<PATH_TO_DSSI_CHALLENGE>/src/mcp_server.py"]
+args = ["<PATH_TO_DSSI_CHALLENGE>/src/llnl_nde/server.py"]
 env = {}
 ```
 
@@ -434,7 +437,7 @@ Here are some suggested tracks for your multi-agent system. You can choose one o
 
 ## Appendix: Starter Python Code
 
-### `src/mcp_server.py`
+### `src/llnl_nde/server.py`
 
 ```python
 from fastmcp import FastMCP

@@ -15,12 +15,12 @@ from fastmcp import Client
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mcp_server import MCPResponseEnvelope, mcp  # noqa: E402
-from part2_core.spatial import (  # noqa: E402
+from llnl_nde.server import MCPResponseEnvelope, mcp  # noqa: E402
+from llnl_nde.core.spatial import (  # noqa: E402
     compute_spatial_stats,
     render_lattice_3d,
 )
-from part2_core.struts import METRIC_FIELDS  # noqa: E402
+from llnl_nde.core.struts import METRIC_FIELDS  # noqa: E402
 
 
 class Stage4ReportingTests(unittest.IsolatedAsyncioTestCase):
