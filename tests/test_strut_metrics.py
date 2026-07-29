@@ -20,6 +20,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
 import mcp_server  # noqa: E402
+from mcp_tools import common as mcp_common  # noqa: E402
 from part2_core import strut_metrics  # noqa: E402
 from part2_core.registration import register_lattice_to_ct  # noqa: E402
 
@@ -324,7 +325,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
             interpolation_calls += 1
             return original(*args, **kwargs)
 
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root), mock.patch.object(
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root), mock.patch.object(
             strut_metrics.ndimage, "map_coordinates", side_effect=count_interpolation
         ):
             async with Client(mcp_server.mcp) as client:
@@ -362,7 +363,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         base = {key: value for key, value in handoff.items() if key != "canonical_handoff_sha256"}
         handoff["canonical_handoff_sha256"] = _canonical(base)
         _write_json(self.handoff, handoff)
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             async with Client(mcp_server.mcp) as client:
                 call = await client.call_tool("compute_strut_metrics", self._arguments())
         self.assertFalse(call.is_error)
@@ -384,7 +385,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         }
         handoff["canonical_handoff_sha256"] = _canonical(base)
         _write_json(self.handoff, handoff)
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             async with Client(mcp_server.mcp) as client:
                 call = await client.call_tool("compute_strut_metrics", self._arguments())
         result = call.structured_content
@@ -404,7 +405,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         }
         handoff["canonical_handoff_sha256"] = _canonical(base)
         _write_json(self.handoff, handoff)
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             async with Client(mcp_server.mcp) as client:
                 call = await client.call_tool("compute_strut_metrics", self._arguments())
         result = call.structured_content
@@ -416,7 +417,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["stage_2_strut_metrics"]["centerline_smoothing_passes"] = 3
         _write_json(self.config, config)
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             async with Client(mcp_server.mcp) as client:
                 call = await client.call_tool("compute_strut_metrics", self._arguments())
         result = call.structured_content
@@ -457,7 +458,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         handoff["canonical_handoff_sha256"] = _canonical(handoff_base)
         _write_json(self.handoff, handoff)
 
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             async with Client(mcp_server.mcp) as client:
                 call = await client.call_tool("compute_strut_metrics", self._arguments())
         result = call.structured_content
@@ -466,7 +467,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("authorizations differ", result["summary"].lower())
 
     async def test_exact_replay_is_idempotent_and_overwrite_is_forbidden(self) -> None:
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             async with Client(mcp_server.mcp) as client:
                 first = await client.call_tool("compute_strut_metrics", self._arguments())
                 second = await client.call_tool("compute_strut_metrics", self._arguments())
@@ -500,7 +501,7 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         output.mkdir(parents=True)
         sentinel = output / "per_strut_metrics.csv"
         sentinel.write_text("do not replace\n", encoding="utf-8")
-        with mock.patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with mock.patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             async with Client(mcp_server.mcp) as client:
                 call = await client.call_tool("compute_strut_metrics", self._arguments())
         result = call.structured_content

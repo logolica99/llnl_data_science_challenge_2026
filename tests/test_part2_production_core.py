@@ -1260,8 +1260,10 @@ class GraphSizeAndWrapperBoundaryTests(unittest.TestCase):
         )
 
     def test_new_mcp_wrappers_contain_no_numpy_numerical_calls(self) -> None:
-        source = (REPOSITORY_ROOT / "src/mcp_server.py").read_text(encoding="utf-8")
-        module = ast.parse(source)
+        modules = [
+            ast.parse(path.read_text(encoding="utf-8"))
+            for path in sorted((REPOSITORY_ROOT / "src/mcp_tools").glob("stage*.py"))
+        ]
         names = {
             "register_lattice_to_ct",
             "localize_lattice_nodes",
@@ -1275,6 +1277,7 @@ class GraphSizeAndWrapperBoundaryTests(unittest.TestCase):
         }
         wrappers = [
             node
+            for module in modules
             for node in module.body
             if isinstance(node, ast.FunctionDef) and node.name in names
         ]
