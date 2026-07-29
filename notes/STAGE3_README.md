@@ -40,6 +40,7 @@ Stage 3 starts only from a verified, attempt-scoped Stage 3 handoff whose
 predecessor is a passing Stage 2 receipt. The handoff must bind the exact
 artifact hashes and canonical paths for:
 
+- the Stage 2 completion receipt itself;
 - `analysis_config.json`;
 - `corridor_calibration.json`;
 - `per_strut_metrics.csv`;
@@ -47,9 +48,15 @@ artifact hashes and canonical paths for:
 - `localized_graph.json`;
 - the specimen CT volume.
 
-Classification uses the first four artifacts. The localized graph and CT are
-provided to `render_strut_evidence` only; they are not used to recompute the
-Stage 2 measurements or classification features.
+Classification consumes the frozen analysis config, metrics, and profiles;
+the receipt and corridor calibration are verified provenance inputs. The
+localized graph and CT are provided to `render_strut_evidence` only; they are
+not used to recompute Stage 2 measurements or classification features.
+
+Every Stage 3 MCP request includes the canonical Stage 2 completion-receipt
+path. The adapter verifies the receipt self-hash, Stage 2 handoff, frozen
+control-config and contract bindings, required passing assertions, and all four
+Stage 2 output hashes before allowing classification or evidence rendering.
 
 Development labels, evaluation labels, intentional-deletion labels, ground
 truth, STL/CAD variants, and aligned substitute graphs are forbidden production

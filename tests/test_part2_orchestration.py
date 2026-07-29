@@ -104,12 +104,32 @@ class ProductionPipelineTopologyTests(unittest.TestCase):
         self.assertEqual([0, 1, 2, 3, 4], manifest["stage_order"])
         self.assertEqual("ready", manifest["stages"]["0"]["state"])
         self.assertTrue(
-            all(manifest["stages"][str(number)]["state"] == "locked" for number in range(1, 5))
+            all(
+                manifest["stages"][str(number)]["state"] == "locked"
+                for number in range(1, 5)
+            )
         )
         validated = validate_pipeline_manifest(
             created["path"], repository_root=self.root
         )
         self.assertEqual(manifest["manifest_sha256"], validated["manifest_sha256"])
+
+    def test_stage_three_requires_the_canonical_stage_two_receipt(self) -> None:
+        contracts = _load_contracts(self.root, "analysis/contracts")
+        defect_analysis = contracts[3]["document"]
+        self.assertIn(
+            "stage_2_completion_receipt",
+            defect_analysis["input_artifacts"]["required_roles"],
+        )
+        receipt_rule = next(
+            rule
+            for rule in defect_analysis["input_artifacts"]["allowed"]
+            if rule["role"] == "stage_2_completion_receipt"
+        )
+        self.assertEqual(
+            "analysis/<specimen_id>/receipts/stage_2_strut_metrics_attempt_*.json",
+            receipt_rule["path"],
+        )
 
     def test_research_contracts_are_not_loaded_as_production_stages(self) -> None:
         contracts = _load_contracts(self.root, "analysis/contracts")

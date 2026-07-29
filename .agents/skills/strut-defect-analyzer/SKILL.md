@@ -66,6 +66,13 @@ and exactly the artifact roles declared by
 corridor calibration, metrics, profiles, localized graph, and CT before every
 MCP call. Never recompute Stage 1 or Stage 2 science.
 
+Pass `stage_2_completion_receipt_filepath` to every Stage 3 MCP call. Require
+the canonical passing `part2-stage-receipt/1.1.0` at its attempt-scoped path,
+verify its self-hash and Stage 2 contract/config identity, rehash its Stage 2
+input handoff and complete four-artifact measurement bundle, and require its
+canonical receipt hash to equal the Stage 3 predecessor binding. A receipt hash
+string without the verified receipt artifact is not an authorized handoff.
+
 Use `classify_struts` only with the operation authorized for the caller:
 
 - `missing_strut_agent`: `analyze_missing`

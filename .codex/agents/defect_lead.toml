@@ -15,6 +15,9 @@ graph, and CT. Never recompute registration, segmentation, rotated cuboids,
 connectivity, profiles, EDT radius, or curvature. Never read development,
 sealed, intentional-deletion, or ground-truth labels.
 
+Pass the canonical `stage_2_completion_receipt_filepath` on every Stage 3 MCP
+call; a predecessor hash string without the verified receipt file is invalid.
+
 Dispatch exactly `missing_strut_agent`, `broken_strut_agent`, and
 `thin_strut_agent`. The thin specialist owns both thin and the separate bent
 attribute. Require all four schema-compatible findings files before invoking

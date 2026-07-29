@@ -275,6 +275,7 @@ MCP_TOOL_ARGUMENT_FIELDS = {
     "classify_struts": frozenset(
         {
             "stage_3_handoff_filepath",
+            "stage_2_completion_receipt_filepath",
             "analysis_config_filepath",
             "corridor_calibration_filepath",
             "metrics_filepath",
@@ -290,6 +291,7 @@ MCP_TOOL_ARGUMENT_FIELDS = {
     "render_strut_evidence": frozenset(
         {
             "stage_3_handoff_filepath",
+            "stage_2_completion_receipt_filepath",
             "analysis_config_filepath",
             "corridor_calibration_filepath",
             "ct_filepath",

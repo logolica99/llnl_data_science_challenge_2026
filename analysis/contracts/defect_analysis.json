@@ -20,13 +20,14 @@
       {"server": "segmentation-tools", "name": "render_strut_evidence", "response_schema_version": "part2-mcp-response/1.0.0"}
     ]
   },
-  "required_inputs": ["verified_stage_2_receipt", "analysis_config", "corridor_calibration", "per_strut_metrics", "per_strut_profiles", "localized_graph", "ct_volume"],
+  "required_inputs": ["stage_2_completion_receipt", "analysis_config", "corridor_calibration", "per_strut_metrics", "per_strut_profiles", "localized_graph", "ct_volume"],
   "optional_inputs": [],
   "required_outputs": ["findings_missing", "findings_thin", "findings_bent", "findings_broken", "classification_thresholds", "classified_struts", "classification_decision_log", "evidence_packets", "classifier_verifier_report"],
   "forbidden_operations": ["training_or_evaluation_label_access", "registration_recomputation", "roi_measurement_recomputation", "silent_lead_override", "classification_without_fixed_precedence", "mcp_cli_or_direct_import_fallback"],
   "input_artifacts": {
     "allowed": [
       {"role": "stage_handoff", "path": "analysis/<specimen_id>/handoffs/stage_3_defect_analysis_attempt_<attempt>.json", "consumers": ["defect_lead", "missing_strut_agent", "thin_strut_agent", "broken_strut_agent", "classifier_verifier"]},
+      {"role": "stage_2_completion_receipt", "path": "analysis/<specimen_id>/receipts/stage_2_strut_metrics_attempt_*.json", "consumers": ["defect_lead", "missing_strut_agent", "thin_strut_agent", "broken_strut_agent", "classifier_verifier", "classify_struts", "render_strut_evidence"]},
       {"role": "analysis_config", "path": "analysis/<specimen_id>/config/analysis_config.json", "consumers": ["defect_lead", "missing_strut_agent", "thin_strut_agent", "broken_strut_agent", "classifier_verifier"]},
       {"role": "corridor_calibration", "path": "analysis/<specimen_id>/struts/corridor_calibration.json", "consumers": ["defect_lead", "missing_strut_agent", "thin_strut_agent", "broken_strut_agent", "classifier_verifier"]},
       {"role": "per_strut_metrics", "path": "analysis/<specimen_id>/struts/per_strut_metrics.csv", "consumers": ["defect_lead", "missing_strut_agent", "thin_strut_agent", "broken_strut_agent", "classifier_verifier", "classify_struts"]},
@@ -39,7 +40,7 @@
       {"role": "classification_decision_log", "path": "analysis/<specimen_id>/struts/decision_log.md", "consumers": ["classifier_verifier"]},
       {"role": "evidence_packets", "path": "analysis/<specimen_id>/evidence/strut_<id>/**", "allow_multiple": true, "consumers": ["classifier_verifier"]}
     ],
-    "required_roles": ["stage_handoff", "analysis_config", "corridor_calibration", "per_strut_metrics", "per_strut_profiles", "localized_graph", "ct_volume"],
+    "required_roles": ["stage_handoff", "stage_2_completion_receipt", "analysis_config", "corridor_calibration", "per_strut_metrics", "per_strut_profiles", "localized_graph", "ct_volume"],
     "forbidden": [
       {"role": "development_labels", "path": "**/dev_split.json"},
       {"role": "sealed_labels", "path": "**/sealed_split.json"},

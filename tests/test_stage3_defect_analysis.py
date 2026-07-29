@@ -45,7 +45,11 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         self.struts.mkdir(parents=True)
         self.addCleanup(lambda: shutil.rmtree(self.analysis, ignore_errors=True))
         self.validation_output = (
-            REPOSITORY_ROOT / "research" / "runs" / "stage3_validation" / self.specimen_id
+            REPOSITORY_ROOT
+            / "research"
+            / "runs"
+            / "stage3_validation"
+            / self.specimen_id
         )
         self.addCleanup(
             lambda: shutil.rmtree(self.validation_output, ignore_errors=True)
@@ -104,7 +108,9 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
             )
             rows.append(row)
         with self.metrics.open("w", newline="", encoding="utf-8") as stream:
-            writer = csv.DictWriter(stream, fieldnames=METRIC_FIELDS, lineterminator="\n")
+            writer = csv.DictWriter(
+                stream, fieldnames=METRIC_FIELDS, lineterminator="\n"
+            )
             writer.writeheader()
             writer.writerows(rows)
 
@@ -142,6 +148,17 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
                 "corridor_radius_voxels": 4.0,
             },
         )
+        self.metrics_report = self.struts / "metrics_report.json"
+        _write_json(
+            self.metrics_report,
+            {
+                "schema_version": "part2-strut-metrics-report/1.0.0",
+                "gate": "pass",
+                "specimen_id": self.specimen_id,
+                "measurement_only": True,
+                "classification_performed": False,
+            },
+        )
         self.ct = self.analysis / "inputs" / "ct.npy"
         self.ct.parent.mkdir(parents=True)
         np.save(self.ct, np.ones((32, 32, 32), dtype=np.uint16))
@@ -152,7 +169,10 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
             junctions.extend(
                 [
                     {"id": identifier * 10, "position": [5, 5 + 5 * identifier, 10]},
-                    {"id": identifier * 10 + 1, "position": [15, 5 + 5 * identifier, 10]},
+                    {
+                        "id": identifier * 10 + 1,
+                        "position": [15, 5 + 5 * identifier, 10],
+                    },
                 ]
             )
             struts.append(
@@ -167,9 +187,7 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
             {
                 "junctions": junctions,
                 "struts": struts,
-                "unit_cells": [
-                    {"id": 1, "indices": [0, 0, 0], "struts": [1, 2, 3, 4]}
-                ],
+                "unit_cells": [{"id": 1, "indices": [0, 0, 0], "struts": [1, 2, 3, 4]}],
             },
         )
         self.nominal_graph = self.analysis / "inputs" / "nominal_graph.json"
@@ -184,7 +202,11 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
                     },
                     {
                         "id": identifier * 10 + 1,
-                        "position": [float(identifier * 2 + 1), float(identifier * 2 + 1), 1.0],
+                        "position": [
+                            float(identifier * 2 + 1),
+                            float(identifier * 2 + 1),
+                            1.0,
+                        ],
                     },
                 ]
             )
@@ -193,18 +215,101 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
             {
                 "junctions": nominal_junctions,
                 "struts": struts,
-                "unit_cells": [
-                    {"id": 1, "indices": [0, 0, 0], "struts": [1, 2, 3, 4]}
-                ],
+                "unit_cells": [{"id": 1, "indices": [0, 0, 0], "struts": [1, 2, 3, 4]}],
             },
         )
         self.handoff = (
             self.analysis / "handoffs" / "stage_3_defect_analysis_attempt_1.json"
         )
+        stage2_contract = (
+            REPOSITORY_ROOT / "analysis" / "contracts" / "strut_metrics.json"
+        )
+        stage2_contract_document = json.loads(
+            stage2_contract.read_text(encoding="utf-8")
+        )
+        self.stage2_handoff = (
+            self.analysis / "handoffs" / "stage_2_strut_metrics_attempt_1.json"
+        )
+        stage2_handoff_base = {
+            "schema_version": "part2-stage-handoff/1.0.0",
+            "specimen_id": self.specimen_id,
+            "stage_number": 2,
+            "stage": "strut_metrics",
+            "owner": "strut_metrics",
+            "attempt": 1,
+            "run_token": "stage2-test-token",
+            "created_at": "2026-07-28T23:00:00Z",
+            "registration_mode": "autonomous_v2",
+            "config_sha256": sha256_file(self.config),
+            "contract_version": stage2_contract_document["schema_version"],
+            "contract_sha256": sha256_file(stage2_contract),
+            "predecessor_receipt_sha256": "a" * 64,
+            "input_artifacts": [],
+            "forbidden_operations": stage2_contract_document["forbidden_operations"],
+        }
+        stage2_handoff_document = {
+            **stage2_handoff_base,
+            "canonical_handoff_sha256": sha256_json(stage2_handoff_base),
+        }
+        _write_json(self.stage2_handoff, stage2_handoff_document)
+        self.stage2_receipt = (
+            self.analysis / "receipts" / "stage_2_strut_metrics_attempt_1.json"
+        )
+        stage2_outputs = [
+            {
+                "role": role,
+                "path": path.relative_to(REPOSITORY_ROOT).as_posix(),
+                "sha256": sha256_file(path),
+            }
+            for role, path in (
+                ("corridor_calibration", self.calibration),
+                ("per_strut_metrics", self.metrics),
+                ("per_strut_profiles", self.profiles),
+                ("metrics_report", self.metrics_report),
+            )
+        ]
+        stage2_receipt_base = {
+            "schema_version": "part2-stage-receipt/1.1.0",
+            "contract_version": stage2_contract_document["schema_version"],
+            "contract_sha256": sha256_file(stage2_contract),
+            "specimen_id": self.specimen_id,
+            "stage_number": 2,
+            "stage": "strut_metrics",
+            "owner": "strut_metrics",
+            "attempt": 1,
+            "run_token": "stage2-test-token",
+            "terminal_state": "pass",
+            "failure_kind": None,
+            "completed_at": "2026-07-28T23:30:00Z",
+            "config_sha256": sha256_file(self.config),
+            "registration_mode": "autonomous_v2",
+            "predecessor_receipt_sha256": "a" * 64,
+            "input_handoff": {
+                "path": self.stage2_handoff.relative_to(REPOSITORY_ROOT).as_posix(),
+                "sha256": sha256_file(self.stage2_handoff),
+                "canonical_sha256": stage2_handoff_document["canonical_handoff_sha256"],
+            },
+            "scoped_handoffs": [],
+            "supplemental_handoffs": [],
+            "registration_freeze": None,
+            "output_artifacts": stage2_outputs,
+            "stage_policy": None,
+            "assertions": {
+                name: True
+                for name in stage2_contract_document["required_receipt_assertions"]
+            },
+            "error": None,
+        }
+        stage2_receipt_document = {
+            **stage2_receipt_base,
+            "canonical_receipt_sha256": sha256_json(stage2_receipt_base),
+        }
+        _write_json(self.stage2_receipt, stage2_receipt_document)
         contract = REPOSITORY_ROOT / "analysis" / "contracts" / "defect_analysis.json"
         contract_document = json.loads(contract.read_text(encoding="utf-8"))
         artifacts = []
         for role, path in (
+            ("stage_2_completion_receipt", self.stage2_receipt),
             ("analysis_config", self.config),
             ("corridor_calibration", self.calibration),
             ("per_strut_metrics", self.metrics),
@@ -232,12 +337,28 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
             "config_sha256": sha256_file(self.config),
             "contract_version": contract_document["schema_version"],
             "contract_sha256": sha256_file(contract),
-            "predecessor_receipt_sha256": "b" * 64,
+            "predecessor_receipt_sha256": stage2_receipt_document[
+                "canonical_receipt_sha256"
+            ],
             "input_artifacts": artifacts,
             "forbidden_operations": contract_document["forbidden_operations"],
         }
         handoff["canonical_handoff_sha256"] = sha256_json(handoff)
         _write_json(self.handoff, handoff)
+
+    def _stage3_arguments(self) -> dict[str, object]:
+        relative = lambda path: path.relative_to(REPOSITORY_ROOT).as_posix()
+        return {
+            "stage_3_handoff_filepath": relative(self.handoff),
+            "stage_2_completion_receipt_filepath": relative(self.stage2_receipt),
+            "analysis_config_filepath": relative(self.config),
+            "corridor_calibration_filepath": relative(self.calibration),
+            "metrics_filepath": relative(self.metrics),
+            "profiles_filepath": relative(self.profiles),
+            "localized_graph_filepath": relative(self.graph),
+            "ct_filepath": relative(self.ct),
+            "output_directory": relative(self.struts),
+        }
 
     def test_common_schema_and_prior_missing_broken_math(self) -> None:
         config = json.loads(self.config.read_text(encoding="utf-8"))
@@ -282,12 +403,14 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(by_id[1]["bent"])
 
         schema = json.loads(
-            (REPOSITORY_ROOT / "analysis/schema/classified_struts.schema.json").read_text(
-                encoding="utf-8"
-            )
+            (
+                REPOSITORY_ROOT / "analysis/schema/classified_struts.schema.json"
+            ).read_text(encoding="utf-8")
         )
         Draft202012Validator(schema).validate(
-            json.loads((self.struts / "unit_classified.json").read_text(encoding="utf-8"))
+            json.loads(
+                (self.struts / "unit_classified.json").read_text(encoding="utf-8")
+            )
         )
 
     def test_unresolved_disconnection_requires_review_evidence(self) -> None:
@@ -300,7 +423,9 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
                 row["endpoint1_to_collar_component_voxel_count_in_corridor"] = "0"
                 row["both_endpoint_segments_observed"] = "False"
         with review_metrics.open("w", newline="", encoding="utf-8") as stream:
-            writer = csv.DictWriter(stream, fieldnames=METRIC_FIELDS, lineterminator="\n")
+            writer = csv.DictWriter(
+                stream, fieldnames=METRIC_FIELDS, lineterminator="\n"
+            )
             writer.writeheader()
             writer.writerows(rows)
         config = json.loads(self.config.read_text(encoding="utf-8"))
@@ -332,14 +457,27 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(row["evidence_required"])
         self.assertIn("specialist_review_required", row["reasons"])
 
-    async def test_mcp_partial_team_is_manual_review_and_renders_local_evidence(self) -> None:
+    async def test_mcp_partial_team_is_manual_review_and_renders_local_evidence(
+        self,
+    ) -> None:
         base_arguments = {
-            "stage_3_handoff_filepath": self.handoff.relative_to(REPOSITORY_ROOT).as_posix(),
-            "analysis_config_filepath": self.config.relative_to(REPOSITORY_ROOT).as_posix(),
-            "corridor_calibration_filepath": self.calibration.relative_to(REPOSITORY_ROOT).as_posix(),
+            "stage_3_handoff_filepath": self.handoff.relative_to(
+                REPOSITORY_ROOT
+            ).as_posix(),
+            "stage_2_completion_receipt_filepath": self.stage2_receipt.relative_to(
+                REPOSITORY_ROOT
+            ).as_posix(),
+            "analysis_config_filepath": self.config.relative_to(
+                REPOSITORY_ROOT
+            ).as_posix(),
+            "corridor_calibration_filepath": self.calibration.relative_to(
+                REPOSITORY_ROOT
+            ).as_posix(),
             "metrics_filepath": self.metrics.relative_to(REPOSITORY_ROOT).as_posix(),
             "profiles_filepath": self.profiles.relative_to(REPOSITORY_ROOT).as_posix(),
-            "localized_graph_filepath": self.graph.relative_to(REPOSITORY_ROOT).as_posix(),
+            "localized_graph_filepath": self.graph.relative_to(
+                REPOSITORY_ROOT
+            ).as_posix(),
             "ct_filepath": self.ct.relative_to(REPOSITORY_ROOT).as_posix(),
             "output_directory": self.struts.relative_to(REPOSITORY_ROOT).as_posix(),
         }
@@ -351,7 +489,9 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
                 )
                 result = call.structured_content
                 self.assertEqual("ok", result["status"], result)
-                expected_gate = "pass" if kind in {"missing", "broken"} else "manual_review"
+                expected_gate = (
+                    "pass" if kind in {"missing", "broken"} else "manual_review"
+                )
                 self.assertEqual(expected_gate, result["gate"])
 
             merged_call = await client.call_tool(
@@ -364,8 +504,15 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
             evidence_call = await client.call_tool(
                 "render_strut_evidence",
                 {
-                    "stage_3_handoff_filepath": base_arguments["stage_3_handoff_filepath"],
-                    "analysis_config_filepath": base_arguments["analysis_config_filepath"],
+                    "stage_3_handoff_filepath": base_arguments[
+                        "stage_3_handoff_filepath"
+                    ],
+                    "stage_2_completion_receipt_filepath": base_arguments[
+                        "stage_2_completion_receipt_filepath"
+                    ],
+                    "analysis_config_filepath": base_arguments[
+                        "analysis_config_filepath"
+                    ],
                     "corridor_calibration_filepath": base_arguments[
                         "corridor_calibration_filepath"
                     ],
@@ -375,9 +522,9 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
                     ],
                     "metrics_filepath": base_arguments["metrics_filepath"],
                     "profiles_filepath": base_arguments["profiles_filepath"],
-                    "classifications_filepath": (
-                        self.struts / "classified_struts.json"
-                    ).relative_to(REPOSITORY_ROOT).as_posix(),
+                    "classifications_filepath": (self.struts / "classified_struts.json")
+                    .relative_to(REPOSITORY_ROOT)
+                    .as_posix(),
                     "thresholds_filepath": (self.struts / "thresholds.json")
                     .relative_to(REPOSITORY_ROOT)
                     .as_posix(),
@@ -400,9 +547,14 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(manifest["provenance"]["classification_recomputed"])
         self.assertIn("aligned_xz", manifest["artifacts"])
 
-    async def test_mcp_exports_non_authoritative_missing_broken_validation_csvs(self) -> None:
+    async def test_mcp_exports_non_authoritative_missing_broken_validation_csvs(
+        self,
+    ) -> None:
         base_arguments = {
             "stage_3_handoff_filepath": self.handoff.relative_to(
+                REPOSITORY_ROOT
+            ).as_posix(),
+            "stage_2_completion_receipt_filepath": self.stage2_receipt.relative_to(
                 REPOSITORY_ROOT
             ).as_posix(),
             "analysis_config_filepath": self.config.relative_to(
@@ -412,9 +564,7 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
                 REPOSITORY_ROOT
             ).as_posix(),
             "metrics_filepath": self.metrics.relative_to(REPOSITORY_ROOT).as_posix(),
-            "profiles_filepath": self.profiles.relative_to(
-                REPOSITORY_ROOT
-            ).as_posix(),
+            "profiles_filepath": self.profiles.relative_to(REPOSITORY_ROOT).as_posix(),
             "localized_graph_filepath": self.graph.relative_to(
                 REPOSITORY_ROOT
             ).as_posix(),
@@ -512,13 +662,18 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
                     "stage_3_handoff_filepath": self.handoff.relative_to(
                         REPOSITORY_ROOT
                     ).as_posix(),
+                    "stage_2_completion_receipt_filepath": self.stage2_receipt.relative_to(
+                        REPOSITORY_ROOT
+                    ).as_posix(),
                     "analysis_config_filepath": self.config.relative_to(
                         REPOSITORY_ROOT
                     ).as_posix(),
                     "corridor_calibration_filepath": self.calibration.relative_to(
                         REPOSITORY_ROOT
                     ).as_posix(),
-                    "metrics_filepath": self.metrics.relative_to(REPOSITORY_ROOT).as_posix(),
+                    "metrics_filepath": self.metrics.relative_to(
+                        REPOSITORY_ROOT
+                    ).as_posix(),
                     "profiles_filepath": self.profiles.relative_to(
                         REPOSITORY_ROOT
                     ).as_posix(),
@@ -537,7 +692,81 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("halt", result["gate"])
         self.assertIn("canonical hash", result["error"]["message"])
 
-    def test_independent_verifier_requires_complete_team_and_exact_evidence(self) -> None:
+    async def test_mcp_rejects_nonpassing_stage2_completion_receipt(self) -> None:
+        receipt = json.loads(self.stage2_receipt.read_text(encoding="utf-8"))
+        receipt["terminal_state"] = "manual_review"
+        receipt_base = {
+            key: value
+            for key, value in receipt.items()
+            if key != "canonical_receipt_sha256"
+        }
+        receipt["canonical_receipt_sha256"] = sha256_json(receipt_base)
+        _write_json(self.stage2_receipt, receipt)
+
+        handoff = json.loads(self.handoff.read_text(encoding="utf-8"))
+        handoff["predecessor_receipt_sha256"] = receipt["canonical_receipt_sha256"]
+        next(
+            record
+            for record in handoff["input_artifacts"]
+            if record["role"] == "stage_2_completion_receipt"
+        )["sha256"] = sha256_file(self.stage2_receipt)
+        handoff_base = {
+            key: value
+            for key, value in handoff.items()
+            if key != "canonical_handoff_sha256"
+        }
+        handoff["canonical_handoff_sha256"] = sha256_json(handoff_base)
+        _write_json(self.handoff, handoff)
+
+        async with Client(mcp) as client:
+            call = await client.call_tool(
+                "classify_struts",
+                {**self._stage3_arguments(), "operation": "analyze_missing"},
+            )
+        result = call.structured_content
+        self.assertEqual("error", result["status"])
+        self.assertEqual("halt", result["gate"])
+        self.assertIn("receipt identity", result["error"]["message"])
+
+    async def test_mcp_rejects_stage2_control_config_mismatch(self) -> None:
+        handoff = json.loads(self.handoff.read_text(encoding="utf-8"))
+        handoff["config_sha256"] = "d" * 64
+        handoff_base = {
+            key: value
+            for key, value in handoff.items()
+            if key != "canonical_handoff_sha256"
+        }
+        handoff["canonical_handoff_sha256"] = sha256_json(handoff_base)
+        _write_json(self.handoff, handoff)
+
+        async with Client(mcp) as client:
+            call = await client.call_tool(
+                "classify_struts",
+                {**self._stage3_arguments(), "operation": "analyze_missing"},
+            )
+        result = call.structured_content
+        self.assertEqual("error", result["status"])
+        self.assertEqual("halt", result["gate"])
+        self.assertIn("frozen config is stale", result["error"]["message"])
+
+    async def test_mcp_rejects_tampered_stage2_measurement_bundle(self) -> None:
+        report = json.loads(self.metrics_report.read_text(encoding="utf-8"))
+        report["gate"] = "manual_review"
+        _write_json(self.metrics_report, report)
+
+        async with Client(mcp) as client:
+            call = await client.call_tool(
+                "classify_struts",
+                {**self._stage3_arguments(), "operation": "analyze_missing"},
+            )
+        result = call.structured_content
+        self.assertEqual("error", result["status"])
+        self.assertEqual("halt", result["gate"])
+        self.assertIn("stale for metrics_report", result["error"]["message"])
+
+    def test_independent_verifier_requires_complete_team_and_exact_evidence(
+        self,
+    ) -> None:
         config = json.loads(self.config.read_text(encoding="utf-8"))
         policy = config["stage_3_defect_analysis"]
         policy["development_mode"] = False
@@ -660,9 +889,9 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(verifier["self_verification"]["every_strut_labeled_once"])
 
         tampered = json.loads(classifications.read_text(encoding="utf-8"))
-        next(
-            row for row in tampered["classifications"] if row["strut_id"] == 3
-        )["class"] = "present"
+        next(row for row in tampered["classifications"] if row["strut_id"] == 3)[
+            "class"
+        ] = "present"
         _write_json(classifications, tampered)
         with self.assertRaisesRegex(ValueError, "precedence"):
             verify_strut_classifications(
