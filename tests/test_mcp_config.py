@@ -33,11 +33,12 @@ class MCPConfigurationTests(unittest.TestCase):
                 self.assertEqual(
                     ["run", "--frozen", "python", entrypoint], server["args"]
                 )
-                self.assertEqual("..", server["cwd"])
+                self.assertEqual(".", server["cwd"])
                 self.assertEqual(
                     REPOSITORY_ROOT,
-                    (self.config_path.parent / server["cwd"]).resolve(),
+                    (REPOSITORY_ROOT / server["cwd"]).resolve(),
                 )
+                self.assertTrue((REPOSITORY_ROOT / entrypoint).is_file())
                 self.assertFalse(Path(server["command"]).is_absolute())
                 self.assertTrue(
                     all(not Path(argument).is_absolute() for argument in server["args"])

@@ -210,17 +210,17 @@ the root of any clone:
 uv sync --frozen
 ```
 
-Open the cloned repository itself as the Codex workspace, trust the project,
-and restart Codex. The project configuration launches the server with `uv run
---frozen` and resolves its working directory relative to `.codex/`, so the
-clone may live at any filesystem path. Inspect `/mcp` after restart and confirm
-that `segmentation-tools` is connected. A personal
+Open the cloned repository root itself as the Codex workspace, trust the
+project, and restart Codex. The project configuration launches the server with
+`uv run --frozen` from the current repository root, so the clone may live at
+any filesystem path. Inspect `/mcp` after restart and confirm that
+`segmentation-tools` is connected. A personal
 `~/.codex/config.toml` entry with the same server name can mask a missing or
 untrusted project configuration and should be removed.
 
 > [!IMPORTANT]
 > Codex loads project `.codex/config.toml` only for trusted projects. Start
-> Codex from the repository and restart the client after pulling MCP
+> Codex from the repository root and restart the client after pulling MCP
 > configuration or tool-schema changes.
 
 Refer to the Codex configuration reference for more details: [Codex configuration](https://developers.openai.com/codex/config-reference)
