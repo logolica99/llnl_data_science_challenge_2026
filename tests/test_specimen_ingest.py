@@ -663,7 +663,9 @@ class SpecimenIngestTests(unittest.TestCase):
                 repository_root=self.root,
             )
 
-    def test_unknown_declarations_remain_provisional(self) -> None:
+    def test_unknown_ct_axes_remain_provisional_when_metadata_cannot_resolve_them(
+        self,
+    ) -> None:
         metadata_path, metadata_sha256 = self._write_ct_metadata_response(
             specimen_id="ambiguous_specimen"
         )
@@ -694,7 +696,61 @@ class SpecimenIngestTests(unittest.TestCase):
         )
 
         self.assertEqual("provisional", result["lifecycle_state"])
-        self.assertTrue(result["unresolved_fields"])
+        self.assertEqual(
+            ["analysis_parameters.coordinates.array_axes"],
+            result["unresolved_fields"],
+        )
+        manifest = json.loads(
+            Path(result["paths"]["specimen_manifest"]).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            ["x", "y", "z"],
+            manifest["analysis_parameters"]["coordinates"]["graph_axes"],
+        )
+
+    def test_unknown_axes_resolve_from_canonical_graph_and_ct_metadata(self) -> None:
+        metadata_path, metadata_sha256 = self._write_ct_metadata_response(
+            specimen_id="resolved_axes_specimen",
+            array_axes=["z", "y", "x"],
+        )
+        result = ingest_specimen(
+            repository_root=self.root,
+            specimen_id="resolved_axes_specimen",
+            design_id="test_design",
+            requested_analysis_scope="roi_screening",
+            cad_path=self.cad,
+            design_graph_path=self.graph,
+            ct_path=self.ct,
+            ct_metadata_response_path=metadata_path,
+            ct_metadata_response_sha256=metadata_sha256,
+            ct_metadata_call_receipt_path=metadata_path.with_name(
+                "ct_metadata_mcp_call_receipt.json"
+            ),
+            ct_metadata_call_receipt_sha256=sha256_file(
+                metadata_path.with_name("ct_metadata_mcp_call_receipt.json")
+            ),
+            registration_mode="autonomous_v2",
+            association_confirmed=True,
+            graph_axes="unknown",
+            array_axes="unknown",
+            retention="external",
+            schema_path=DEFAULT_SCHEMA,
+        )
+
+        self.assertEqual("ready_for_data_prep", result["lifecycle_state"])
+        self.assertEqual([], result["unresolved_fields"])
+        manifest = json.loads(
+            Path(result["paths"]["specimen_manifest"]).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            {
+                "graph_axes": ["x", "y", "z"],
+                "array_axes": ["z", "y", "x"],
+                "numpy_index_expression": "volume[round(z), round(y), round(x)]",
+                "aligned_graph_units": "unknown",
+            },
+            manifest["analysis_parameters"]["coordinates"],
+        )
 
 
 if __name__ == "__main__":

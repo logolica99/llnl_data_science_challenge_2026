@@ -4370,10 +4370,22 @@ def _validate_stage0_output_documents(
             + ", ".join(stale_sources)
         )
     output_declarations = bundle["request"]["declared"]
+    expected_declarations = {
+        "graph_axes": (
+            ["x", "y", "z"]
+            if scientist_request["graph_axes"] == "unknown"
+            else scientist_request["graph_axes"]
+        ),
+        "array_axes": (
+            manifest_inputs["ct_metadata"]["array_axes"]
+            if scientist_request["array_axes"] == "unknown"
+            else scientist_request["array_axes"]
+        ),
+    }
     stale_declarations = [
         name
         for name in ("graph_axes", "array_axes")
-        if output_declarations.get(name) != scientist_request[name]
+        if output_declarations.get(name) != expected_declarations[name]
     ]
     if stale_declarations:
         raise ReceiptValidationError(

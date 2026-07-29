@@ -779,10 +779,15 @@ def inspect_cad_stl(
     }
 
 
-def _axes(value: str, expected: str) -> list[str] | str:
+def _axes(
+    value: str,
+    expected: str,
+    *,
+    resolve_unknown_to_expected: bool = False,
+) -> list[str] | str:
     normalized = value.lower()
     if normalized == UNKNOWN:
-        return UNKNOWN
+        return list(expected) if resolve_unknown_to_expected else UNKNOWN
     if normalized != expected:
         raise SpecimenIngestError(
             f"Expected axes {expected!r} or 'unknown', found {value!r}"
@@ -1053,9 +1058,18 @@ def ingest_specimen(
             "graph-to-CAD transform declarations are not supported"
         )
 
-    declared_graph_axes = _axes(graph_axes, "xyz")
+    # Nominal lattice JSON positions use the repository's canonical XYZ
+    # component order. Preserve explicit validation, but do not force a manual
+    # review when a caller leaves this canonical convention unspecified.
+    declared_graph_axes = _axes(
+        graph_axes,
+        "xyz",
+        resolve_unknown_to_expected=True,
+    )
     declared_array_axes = _axes(array_axes, "zyx")
     observed_array_axes = ct["manifest_fragment"]["ct_metadata"]["array_axes"]
+    if declared_array_axes == UNKNOWN and observed_array_axes == ["z", "y", "x"]:
+        declared_array_axes = list(observed_array_axes)
     if (
         observed_array_axes != UNKNOWN
         and declared_array_axes != UNKNOWN

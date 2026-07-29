@@ -29,6 +29,14 @@ hashes, CT dimensionality and metadata, repository-relative paths, and exact
 input hashes. The normalized graph is a Stage 0 output and the same artifact is
 the graph-normalization input to Stage 1.
 
+Nominal lattice JSON position components use the repository's canonical XYZ
+order. If the scientist request leaves `graph_axes` unknown, pass that value to
+the deterministic intake core, which resolves it to canonical XYZ. Likewise,
+allow the core to resolve an unknown CT array order from the authoritative MCP
+metadata when it reports canonical ZYX. Do not request manual review for either
+resolved convention; retain manual review for genuinely unavailable or
+conflicting metadata.
+
 Never read segmentation, registration, classification, training labels,
 evaluation labels, or another specimen manifest. Never segment, register,
 classify, or evaluate. This agent does not compute or choose Otsu. Return one
