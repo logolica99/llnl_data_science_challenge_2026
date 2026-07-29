@@ -191,7 +191,8 @@ sequenceDiagram
     Ref-->>Lock: Compare against frozen result only
 ```
 
-The freeze enforcement is implemented in [part2_orchestration.py](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_orchestration.py:6940), with post-freeze authorization beginning at [part2_orchestration.py](/Users/dannyvillanueva/Documents/Livermore/llnl_stage1_stage2_agents/src/part2_orchestration.py:7083).
+Freeze enforcement and post-freeze authorization are implemented in
+`src/llnl_nde/orchestration/pipeline.py`.
 
 ---
 

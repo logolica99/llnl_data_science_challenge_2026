@@ -1546,25 +1546,38 @@ class DataPrepHandoffTests(unittest.TestCase):
 
     def test_handoff_consumes_evidence_without_scientific_recomputation(self) -> None:
         tree = ast.parse(
-            (REPOSITORY_ROOT / "src/data_prep_handoff.py").read_text(
+            (
+                REPOSITORY_ROOT
+                / "src/llnl_nde/orchestration/receipts.py"
+            ).read_text(
                 encoding="utf-8"
             )
         )
-        imported_roots: set[str] = set()
+        imported_modules: set[str] = set()
         referenced_names: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                imported_roots.update(
-                    alias.name.split(".")[0] for alias in node.names
-                )
+                imported_modules.update(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom) and node.module:
-                imported_roots.add(node.module.split(".")[0])
+                imported_modules.add(node.module)
             elif isinstance(node, ast.Name):
                 referenced_names.add(node.id)
-        self.assertTrue(
-            imported_roots.isdisjoint(
-                {"numpy", "scipy", "skimage", "part2_core", "mcp_server"}
-            )
+        forbidden_imports = {
+            "numpy",
+            "scipy",
+            "skimage",
+            "llnl_nde.core",
+            "llnl_nde.server",
+        }
+        self.assertFalse(
+            {
+                imported
+                for imported in imported_modules
+                if any(
+                    imported == forbidden or imported.startswith(f"{forbidden}.")
+                    for forbidden in forbidden_imports
+                )
+            }
         )
         self.assertTrue(
             referenced_names.isdisjoint({"load_volume", "replay_exact_otsu"})

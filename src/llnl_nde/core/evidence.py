@@ -39,7 +39,7 @@ def _save_image(
         path,
         dpi=140,
         bbox_inches="tight",
-        metadata={"Software": "part2_core"},
+        metadata={"Software": "llnl_nde"},
     )
     plt.close(figure)
     return {"path": str(path), "sha256": sha256_file(path)}
@@ -128,7 +128,7 @@ def render_strut_evidence(
         profile_path,
         dpi=140,
         bbox_inches="tight",
-        metadata={"Software": "part2_core"},
+        metadata={"Software": "llnl_nde"},
     )
     plt.close(figure)
     artifacts["occupancy_profile"] = {

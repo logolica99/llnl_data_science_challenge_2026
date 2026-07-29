@@ -9,7 +9,7 @@ skill, MCP implementation, test, or runtime artifact.
 
 | Archived material | Production replacement |
 |---|---|
-| `poc/ct_registration/` and `poc/ct_registration_v2/` | `src/part2_core/registration.py`, the `register_lattice_to_ct` MCP tool, and the `ct-registration` skill |
+| `poc/ct_registration/` and `poc/ct_registration_v2/` | `src/llnl_nde/core/registration.py`, the `register_lattice_to_ct` MCP tool, and the `ct-registration` skill |
 | `poc/tube_emptiness_test/` and `scripts/missing_strut_heatmap.py` | Research-only design comparison outside the production nominal-graph + CT workflow |
 | `agents/segmentation_agent.toml` | `.codex/agents/data_prep.toml` |
 | `scripts/ct-threshold-optimizer/` | `research/skills/ct-threshold-explorer/` and the disabled `segmentation-tools-research` MCP server |

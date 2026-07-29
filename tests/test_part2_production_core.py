@@ -338,7 +338,7 @@ class ProductionPipelineTests(SyntheticFixture):
             return localization_result(prediction, "localized")
 
         with mock.patch(
-            "part2_core.localization._localize_one", side_effect=bounded_fallback
+            "llnl_nde.core.localization._localize_one", side_effect=bounded_fallback
         ):
             first = localize_lattice_nodes(
                 self.volume,
@@ -398,7 +398,7 @@ class ProductionPipelineTests(SyntheticFixture):
             )
 
         with mock.patch(
-            "part2_core.localization._localize_one", side_effect=excessive_fallback
+            "llnl_nde.core.localization._localize_one", side_effect=excessive_fallback
         ):
             excessive = localize_lattice_nodes(
                 self.volume,
@@ -426,7 +426,7 @@ class ProductionPipelineTests(SyntheticFixture):
             )
 
         with mock.patch(
-            "part2_core.localization._localize_one", side_effect=boundary_limited
+            "llnl_nde.core.localization._localize_one", side_effect=boundary_limited
         ):
             boundary = localize_lattice_nodes(
                 self.volume,
@@ -459,7 +459,7 @@ class ProductionPipelineTests(SyntheticFixture):
             )
 
         with mock.patch(
-            "part2_core.localization._localize_one", side_effect=excessive_ambiguity
+            "llnl_nde.core.localization._localize_one", side_effect=excessive_ambiguity
         ):
             ambiguous = localize_lattice_nodes(
                 self.volume,

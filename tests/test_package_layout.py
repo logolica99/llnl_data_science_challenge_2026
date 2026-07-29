@@ -49,18 +49,27 @@ class PackageLayoutTests(unittest.TestCase):
             "orchestration/pipeline.py",
             "cli/specimen_ingest.py",
             "cli/segmentation_replay.py",
+            "cli/cloud_smoke_check.py",
         }
         missing = sorted(path for path in expected if not (package / path).is_file())
         self.assertEqual([], missing)
 
-    def test_legacy_imports_alias_canonical_implementations(self) -> None:
-        from llnl_nde.core import compute_strut_metrics as canonical_metrics
-        from llnl_nde.server import mcp as canonical_mcp
-        from mcp_server import mcp as legacy_mcp
-        from part2_core import compute_strut_metrics as legacy_metrics
-
-        self.assertIs(canonical_metrics, legacy_metrics)
-        self.assertIs(canonical_mcp, legacy_mcp)
+    def test_legacy_source_layout_is_absent(self) -> None:
+        source = REPOSITORY_ROOT / "src"
+        legacy_paths = {
+            "cloud_smoke_check.py",
+            "data_prep_handoff.py",
+            "mcp_server.py",
+            "mcp_tools",
+            "part2_core",
+            "part2_orchestration.py",
+            "segmentation_replay.py",
+            "specimen_ingest.py",
+            "specimen_manifest.py",
+            "volume_metadata.py",
+        }
+        present = sorted(path for path in legacy_paths if (source / path).exists())
+        self.assertEqual([], present)
 
 
 if __name__ == "__main__":

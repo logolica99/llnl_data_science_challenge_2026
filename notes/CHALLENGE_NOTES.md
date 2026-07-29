@@ -115,7 +115,12 @@ DATA_SCIENCE_CHALLENGE_2026.pdf   ← full challenge instructions (same content 
 README.md                          ← merged instructions (read this, it's canonical)
 requirements.txt                   ← numpy, matplotlib, fastmcp, scikit-image, tifffile
 src/
-  mcp_server.py                    ← production Stage 0–4 FastMCP server
+  llnl_nde/
+    server.py                      ← production Stage 0–4 FastMCP server
+    mcp_tools/                     ← thin wrappers grouped by immutable stage
+    core/                          ← deterministic scientific implementations
+    orchestration/                 ← contracts, receipts, and pipeline state
+    cli/                           ← user-facing command-line entry points
 .agents/skills/nde-report-generator/ ← production Stage 4 reporting skill
 research/
   mcp_server.py                    ← disabled legacy/evaluation/research surface
