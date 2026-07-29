@@ -60,6 +60,44 @@ class RuntimeBackendTests(unittest.TestCase):
         server = config["mcp_servers"]["segmentation-tools"]
         self.assertEqual("approve", server["default_tools_approval_mode"])
 
+    def test_mcp_server_configuration_is_clone_portable_and_frozen(self) -> None:
+        import tomllib
+
+        config_path = REPOSITORY_ROOT / ".codex/config.toml"
+        with config_path.open("rb") as stream:
+            config = tomllib.load(stream)
+
+        expected = {
+            "segmentation-tools": "src/llnl_nde/server.py",
+            "segmentation-tools-research": "research/mcp_server.py",
+        }
+        for name, entrypoint in expected.items():
+            with self.subTest(server=name):
+                server = config["mcp_servers"][name]
+                self.assertEqual("uv", server["command"])
+                self.assertEqual(
+                    ["run", "--frozen", "python", entrypoint],
+                    server["args"],
+                )
+                self.assertEqual("..", server["cwd"])
+                self.assertEqual(
+                    REPOSITORY_ROOT,
+                    (config_path.parent / server["cwd"]).resolve(),
+                )
+                self.assertFalse(Path(server["command"]).is_absolute())
+                self.assertTrue(
+                    all(not Path(argument).is_absolute() for argument in server["args"])
+                )
+
+        self.assertTrue(config["mcp_servers"]["segmentation-tools"]["enabled"])
+        self.assertTrue(config["mcp_servers"]["segmentation-tools"]["required"])
+        self.assertFalse(
+            config["mcp_servers"]["segmentation-tools-research"]["enabled"]
+        )
+        self.assertFalse(
+            config["mcp_servers"]["segmentation-tools-research"]["required"]
+        )
+
     def test_running_manifest_requires_reconciliation(self) -> None:
         run = self.module.RuntimeRun()
         run.manifest = {"pipeline_state": "running"}

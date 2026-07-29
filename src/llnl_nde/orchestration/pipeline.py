@@ -272,6 +272,40 @@ MCP_TOOL_ARGUMENT_FIELDS = {
             "overwrite",
         }
     ),
+    "classify_struts": frozenset(
+        {
+            "stage_3_handoff_filepath",
+            "stage_2_completion_receipt_filepath",
+            "analysis_config_filepath",
+            "corridor_calibration_filepath",
+            "metrics_filepath",
+            "profiles_filepath",
+            "localized_graph_filepath",
+            "ct_filepath",
+            "output_directory",
+            "operation",
+            "evidence_manifest_filepaths",
+            "overwrite",
+        }
+    ),
+    "render_strut_evidence": frozenset(
+        {
+            "stage_3_handoff_filepath",
+            "stage_2_completion_receipt_filepath",
+            "analysis_config_filepath",
+            "corridor_calibration_filepath",
+            "ct_filepath",
+            "localized_graph_filepath",
+            "metrics_filepath",
+            "profiles_filepath",
+            "classifications_filepath",
+            "thresholds_filepath",
+            "output_directory",
+            "strut_id",
+            "crop_margin_voxels",
+            "overwrite",
+        }
+    ),
 }
 OUTPUT_BINDING_FIELDS = frozenset(
     {

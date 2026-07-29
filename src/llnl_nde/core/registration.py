@@ -27,6 +27,7 @@ from .lattice import (
 )
 from .otsu import replay_exact_otsu
 from .strut_metrics import DEFAULT_STAGE2_CONFIG
+from .defect_analysis import DEFAULT_STAGE3_CONFIG
 from .volume import AXIS_MAPPING, load_volume
 
 REGISTRATION_SCHEMA_VERSION = "part2-registration/1.0.0"
@@ -800,6 +801,7 @@ def register_lattice_to_ct(
         stage_2_strut_metrics["otsu_threshold"] = (
             float(threshold) if threshold is not None else None
         )
+        stage_3_defect_analysis = copy.deepcopy(DEFAULT_STAGE3_CONFIG)
         analysis_config = {
             "schema_version": "part2-analysis-config/1.0.0",
             "registration_mode": mode,
@@ -817,6 +819,7 @@ def register_lattice_to_ct(
                 ),
             },
             "stage_2_strut_metrics": stage_2_strut_metrics,
+            "stage_3_defect_analysis": stage_3_defect_analysis,
             "label_inputs_accessed": False,
         }
         config_artifact = write_json_atomic(

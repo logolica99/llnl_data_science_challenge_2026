@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logolica99/llnl_data_science_challenge_2026/analysis/schema/specialist_findings.schema.json",
+  "title": "Stage 3 specialist findings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "specimen_id",
+    "stage_number",
+    "specialist",
+    "defect_kind",
+    "status",
+    "policy_sha256",
+    "input_hashes",
+    "coverage",
+    "findings",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {"const": "part2-specialist-findings/1.0.0"},
+    "specimen_id": {"type": "string", "minLength": 1},
+    "stage_number": {"const": 3},
+    "specialist": {
+      "enum": [
+        "missing_strut_agent",
+        "broken_strut_agent",
+        "thin_strut_agent"
+      ]
+    },
+    "defect_kind": {"enum": ["missing", "broken", "thin", "bent"]},
+    "status": {"enum": ["complete", "deferred"]},
+    "policy_sha256": {"$ref": "#/$defs/sha256"},
+    "input_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["per_strut_metrics_sha256", "per_strut_profiles_sha256"],
+      "properties": {
+        "per_strut_metrics_sha256": {"$ref": "#/$defs/sha256"},
+        "per_strut_profiles_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nominal_strut_count",
+        "evaluated_count",
+        "positive_count",
+        "negative_count",
+        "review_count",
+        "deferred_count"
+      ],
+      "properties": {
+        "nominal_strut_count": {"type": "integer", "minimum": 1},
+        "evaluated_count": {"type": "integer", "minimum": 0},
+        "positive_count": {"type": "integer", "minimum": 0},
+        "negative_count": {"type": "integer", "minimum": 0},
+        "review_count": {"type": "integer", "minimum": 0},
+        "deferred_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "strut_id",
+          "disposition",
+          "reasons",
+          "features",
+          "evidence_required",
+          "evidence_refs"
+        ],
+        "properties": {
+          "strut_id": {"type": "integer", "minimum": 0},
+          "disposition": {
+            "enum": ["positive", "negative", "review", "deferred"]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "minItems": 1
+          },
+          "features": {
+            "type": "object",
+            "additionalProperties": {
+              "type": ["number", "integer", "boolean", "string", "null"]
+            }
+          },
+          "evidence_required": {"type": "boolean"},
+          "evidence_refs": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_version",
+        "metrics_recomputed",
+        "registration_recomputed",
+        "training_labels_read",
+        "evaluation_labels_read",
+        "intentional_deletion_labels_read"
+      ],
+      "properties": {
+        "rule_version": {"type": "string", "minLength": 1},
+        "metrics_recomputed": {"const": false},
+        "registration_recomputed": {"const": false},
+        "training_labels_read": {"const": false},
+        "evaluation_labels_read": {"const": false},
+        "intentional_deletion_labels_read": {"const": false}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

@@ -5,6 +5,14 @@ functions and is responsible only for path policy and structured envelopes.
 """
 
 from .classification import classify_struts
+from .defect_analysis import (
+    DEFAULT_STAGE3_CONFIG,
+    analyze_strut_specialist,
+    export_stage3_validation_csvs,
+    merge_strut_classifications,
+    normalize_stage3_config,
+    verify_strut_classifications,
+)
 from .evidence import render_strut_evidence
 from .graph import GraphNormalizationError, normalize_lattice_graph
 from .localization import localize_lattice_nodes
@@ -62,6 +70,7 @@ __all__ = [
     "AXIS_MAPPING",
     "DEFAULT_OTSU_RECIPE",
     "DEFAULT_REGISTRATION_CONFIG",
+    "DEFAULT_STAGE3_CONFIG",
     "GATES",
     "GraphNormalizationError",
     "OtsuReplayError",
@@ -70,6 +79,7 @@ __all__ = [
     "VolumeLoadError",
     "VolumeView",
     "classify_struts",
+    "analyze_strut_specialist",
     "coarse_initialization",
     "compute_registration_qa",
     "compute_spatial_stats",
@@ -78,14 +88,17 @@ __all__ = [
     "detect_ct_nodes",
     "deterministic_histogram",
     "error_response",
+    "export_stage3_validation_csvs",
     "get_strut_report",
     "histogram_diagnostics",
     "histogram_sha256",
     "iter_array_chunks",
     "load_volume",
     "localize_lattice_nodes",
+    "merge_strut_classifications",
     "multistart_fit",
     "normalize_lattice_graph",
+    "normalize_stage3_config",
     "otsu_from_histogram",
     "read_metrics_csv",
     "replay_exact_otsu",
@@ -103,6 +116,7 @@ __all__ = [
     "trimmed_icp",
     "volume_metadata",
     "visualize_slice",
+    "verify_strut_classifications",
     "write_otsu_artifacts",
     "xyz_to_zyx_indices",
 ]

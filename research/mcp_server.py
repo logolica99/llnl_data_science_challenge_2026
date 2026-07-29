@@ -20,6 +20,9 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from llnl_nde.core.otsu import replay_exact_otsu, write_otsu_artifacts  # noqa: E402
+from llnl_nde.core.defect_analysis import (  # noqa: E402
+    export_stage3_validation_csvs as _export_stage3_validation_csvs,
+)
 from llnl_nde.core.segmentation import (  # noqa: E402
     compare_segmentation_masks,
     segment_ct_dataset,
@@ -124,6 +127,52 @@ def compute_detection_metrics(
     )
     result["artifacts"]["detection_metrics"]["path"] = _relative(output)
     return _research_response("compute_detection_metrics", result)
+
+
+@mcp.tool()
+def export_stage3_validation_csvs(
+    classifications_filepath: str,
+    missing_findings_filepath: str,
+    broken_findings_filepath: str,
+    metrics_filepath: str,
+    nominal_graph_filepath: str,
+    output_directory: str,
+    excluded_nominal_axis: str = "y",
+    excluded_nominal_value: float = 18.0,
+    coordinate_tolerance: float = 1e-9,
+) -> dict[str, Any]:
+    """Export non-authoritative Stage 3 validation CSVs under research/runs."""
+
+    classifications = _repository_input(
+        classifications_filepath, suffixes={".json"}, research_copy=True
+    )
+    missing = _repository_input(
+        missing_findings_filepath, suffixes={".json"}, research_copy=True
+    )
+    broken = _repository_input(
+        broken_findings_filepath, suffixes={".json"}, research_copy=True
+    )
+    metrics = _repository_input(
+        metrics_filepath, suffixes={".csv"}, research_copy=True
+    )
+    nominal_graph = _repository_input(
+        nominal_graph_filepath, suffixes={".json"}, research_copy=True
+    )
+    output = _research_output(output_directory)
+    result = _export_stage3_validation_csvs(
+        classifications,
+        missing,
+        broken,
+        metrics,
+        nominal_graph,
+        output,
+        excluded_nominal_axis=excluded_nominal_axis,
+        excluded_nominal_value=excluded_nominal_value,
+        coordinate_tolerance=coordinate_tolerance,
+    )
+    for artifact in result["artifacts"].values():
+        artifact["path"] = _relative(artifact["path"])
+    return _research_response("export_stage3_validation_csvs", result)
 
 
 @mcp.tool()

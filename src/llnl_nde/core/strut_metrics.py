@@ -81,6 +81,9 @@ METRIC_FIELDS = [
     "same_material_component_connects_a_to_b",
     "same_component_connects_collar_a_to_b",
     "shared_component_voxel_count_in_corridor",
+    "endpoint0_to_collar_component_voxel_count_in_corridor",
+    "endpoint1_to_collar_component_voxel_count_in_corridor",
+    "both_endpoint_segments_observed",
     "junction_masked_collar_shared_component_voxel_count_in_corridor",
     "edt_radius_median_voxels",
     "centerline_curvature_rms_voxels",
@@ -477,10 +480,14 @@ def _shared_components(
     disk: np.ndarray,
     first_z: float,
     second_z: float,
-    half_length: float,
+    first_half_length: float,
+    second_half_length: float | None = None,
 ) -> tuple[bool, int, int]:
-    first = _window_indices(local_z, first_z, half_length)
-    second = _window_indices(local_z, second_z, half_length)
+    second_half = (
+        first_half_length if second_half_length is None else second_half_length
+    )
+    first = _window_indices(local_z, first_z, first_half_length)
+    second = _window_indices(local_z, second_z, second_half)
     first_labels = np.unique(labels[first][:, disk])
     second_labels = np.unique(labels[second][:, disk])
     shared = np.intersect1d(first_labels[first_labels > 0], second_labels[second_labels > 0])
@@ -582,9 +589,10 @@ def _analyze_cuboid(
     foreground_count = int(np.count_nonzero(interior))
     largest_fraction = float(sizes.max() / foreground_count) if sizes.size and foreground_count else 0.0
 
-    labels_full, _ = ndimage.label(
-        nominal_corridor, structure=COMPONENT_STRUCTURE_26
-    )
+    # Claire's authoritative component domain is the full 20%-padded,
+    # unmasked cylindrical corridor. Padding extends inspection but never
+    # moves the nominal endpoint windows at z=0 and z=L.
+    labels_full, _ = ndimage.label(corridor, structure=COMPONENT_STRUCTURE_26)
     endpoint_half = float(config["endpoint_seed_half_length_voxels"])
     collar_half = float(config["collar_half_length_voxels"])
     # The nominal collar locations are frozen at 0.20L and 0.80L.  Junction
@@ -600,6 +608,24 @@ def _analyze_cuboid(
         0.0,
         geometry.length_voxels,
         endpoint_half,
+    )
+    endpoint0_to_collar, _, endpoint0_to_collar_voxels = _shared_components(
+        labels_full,
+        cuboid.local_z,
+        disk,
+        0.0,
+        collar_a,
+        endpoint_half,
+        collar_half,
+    )
+    endpoint1_to_collar, _, endpoint1_to_collar_voxels = _shared_components(
+        labels_full,
+        cuboid.local_z,
+        disk,
+        geometry.length_voxels,
+        collar_b,
+        endpoint_half,
+        collar_half,
     )
     collar_connected, _, collar_shared_voxels = _shared_components(
         labels_interior,
@@ -674,6 +700,11 @@ def _analyze_cuboid(
         "same_material_component_connects_a_to_b": direct_connected,
         "same_component_connects_collar_a_to_b": collar_connected,
         "shared_component_voxel_count_in_corridor": direct_shared_voxels,
+        "endpoint0_to_collar_component_voxel_count_in_corridor": endpoint0_to_collar_voxels,
+        "endpoint1_to_collar_component_voxel_count_in_corridor": endpoint1_to_collar_voxels,
+        "both_endpoint_segments_observed": bool(
+            endpoint0_to_collar and endpoint1_to_collar
+        ),
         "junction_masked_collar_shared_component_voxel_count_in_corridor": collar_shared_voxels,
         "edt_radius_median_voxels": edt_radius,
         "centerline_curvature_rms_voxels": curvature,
@@ -705,6 +736,13 @@ def _analyze_cuboid(
         "interior_edt_radius_voxels": radius_profile,
         "same_material_component_connects_a_to_b": direct_connected,
         "same_component_connects_collar_a_to_b": collar_connected,
+        "endpoint0_to_collar_component_observed": endpoint0_to_collar,
+        "endpoint1_to_collar_component_observed": endpoint1_to_collar,
+        "endpoint0_to_collar_component_voxel_count_in_corridor": endpoint0_to_collar_voxels,
+        "endpoint1_to_collar_component_voxel_count_in_corridor": endpoint1_to_collar_voxels,
+        "both_endpoint_segments_observed": bool(
+            endpoint0_to_collar and endpoint1_to_collar
+        ),
         "roi_in_bounds_fraction": in_bounds_fraction,
     }
     return row, profile
@@ -1171,11 +1209,14 @@ def read_metrics_csv(path: str | Path) -> list[dict[str, Any]]:
         "maximum_axial_gap_samples",
         "interior_component_count",
         "shared_component_voxel_count_in_corridor",
+        "endpoint0_to_collar_component_voxel_count_in_corridor",
+        "endpoint1_to_collar_component_voxel_count_in_corridor",
         "junction_masked_collar_shared_component_voxel_count_in_corridor",
     }
     boolean_fields = {
         "same_material_component_connects_a_to_b",
         "same_component_connects_collar_a_to_b",
+        "both_endpoint_segments_observed",
         "roi_valid",
     }
     parsed: list[dict[str, Any]] = []

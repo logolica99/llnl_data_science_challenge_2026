@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logolica99/llnl_data_science_challenge_2026/analysis/schema/defect_analysis_input.schema.json",
+  "title": "Frozen Stage 3 defect-analysis configuration",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["stage_3_defect_analysis"],
+  "properties": {
+    "stage_3_defect_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "development_mode",
+        "label_blind",
+        "policy_source",
+        "precedence",
+        "bent_is_non_competing_attribute",
+        "missing",
+        "broken",
+        "thin",
+        "bent"
+      ],
+      "properties": {
+        "schema_version": {"const": "part2-defect-analysis-config/1.0.0"},
+        "development_mode": {"type": "boolean"},
+        "label_blind": {"const": true},
+        "policy_source": {"const": "frozen_prior_connectivity_method"},
+        "precedence": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "missing"},
+            {"const": "broken"},
+            {"const": "thin"},
+            {"const": "present"}
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "bent_is_non_competing_attribute": {"const": true},
+        "missing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "implementation_status",
+            "central_start_fraction",
+            "central_end_fraction",
+            "smoothing_window_samples",
+            "maximum_smoothed_minimum_foreground_fraction",
+            "require_primary_disconnection"
+          ],
+          "properties": {
+            "implementation_status": {"const": "complete"},
+            "central_start_fraction": {"const": 0.2},
+            "central_end_fraction": {"const": 0.8},
+            "smoothing_window_samples": {"const": 3},
+            "maximum_smoothed_minimum_foreground_fraction": {"const": 0.0},
+            "require_primary_disconnection": {"const": true}
+          }
+        },
+        "broken": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "implementation_status",
+            "central_reference_quantile",
+            "deficit_ratio",
+            "minimum_deficit_fraction",
+            "minimum_deficit_run_samples",
+            "minimum_collar_foreground_fraction",
+            "minimum_shared_component_voxels",
+            "connected_material_loss_is_broken",
+            "unresolved_disconnection_outcome"
+          ],
+          "properties": {
+            "implementation_status": {"const": "complete"},
+            "central_reference_quantile": {"const": 0.9},
+            "deficit_ratio": {"const": 0.5},
+            "minimum_deficit_fraction": {"const": 0.15},
+            "minimum_deficit_run_samples": {"const": 3},
+            "minimum_collar_foreground_fraction": {"const": 0.05},
+            "minimum_shared_component_voxels": {"const": 500},
+            "connected_material_loss_is_broken": {"const": true},
+            "unresolved_disconnection_outcome": {"const": "review"}
+          }
+        },
+        "thin": {"$ref": "#/$defs/teammateSpecialist"},
+        "bent": {"$ref": "#/$defs/teammateSpecialist"}
+      }
+    }
+  },
+  "$defs": {
+    "teammateSpecialist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["implementation_status", "owner", "policy"],
+      "properties": {
+        "implementation_status": {"enum": ["deferred", "complete"]},
+        "owner": {"const": "teammate"},
+        "policy": {"type": "object"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "stage_3_defect_analysis": {
+            "properties": {"development_mode": {"const": false}}
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "stage_3_defect_analysis": {
+            "properties": {
+              "thin": {
+                "properties": {"implementation_status": {"const": "complete"}}
+              },
+              "bent": {
+                "properties": {"implementation_status": {"const": "complete"}}
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

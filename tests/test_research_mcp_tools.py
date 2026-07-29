@@ -129,6 +129,7 @@ class MCPArtifactToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("skeletonize", tools)
         self.assertIn("compute_detection_metrics", tools)
         self.assertIn("explore_ct_thresholds", tools)
+        self.assertIn("export_stage3_validation_csvs", tools)
         render_properties = tools["render_volume_3d"].parameters["properties"]
         self.assertEqual(0.5, render_properties["surface_level"]["default"])
         self.assertEqual(False, render_properties["overwrite"]["default"])
