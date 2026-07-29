@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Strut Scope</title>
-  <meta name="description" content="Local viewing-only inspection of CSV-listed struts in registered CT TIFF volumes.">
+  <meta name="description" content="Local CT review of JSON-classified thin, thick, and bent lattice struts.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
     <div>
       <p class="eyebrow">LOCAL CT REVIEW</p>
       <h1>Strut Scope</h1>
-      <p class="subtitle">Inspect uploaded struts without automated defect labels.</p>
+      <p class="subtitle">Review JSON-classified struts, live radius profiles, centerline deviation, and CT evidence.</p>
     </div>
     <div class="privacy-pill"><span></span> Files stay on this computer</div>
   </header>
@@ -22,7 +22,7 @@
       <div class="section-heading">
         <div>
           <p class="step-label">01 / LOAD DATA</p>
-          <h2 id="uploadTitle">Choose the three matching files</h2>
+          <h2 id="uploadTitle">Choose the matching CT and JSON files</h2>
         </div>
         <p class="section-note">The registered JSON must use TIFF voxel coordinates.</p>
       </div>
@@ -47,11 +47,11 @@
           <span class="file-action">Browse</span>
         </label>
         <label class="file-card">
-          <input id="csvFile" type="file" accept=".csv,text/csv">
+          <input id="analysisFiles" type="file" accept=".json,application/json" multiple>
           <span class="file-index">C</span>
           <span class="file-copy">
-            <b>Flagged-strut CSV</b>
-            <small id="csvName">Requires a strut_id column</small>
+            <b>Analysis JSON files</b>
+            <small id="analysisName">Select one or more finding / hand-off JSONs</small>
           </span>
           <span class="file-action">Browse</span>
         </label>
@@ -60,7 +60,7 @@
       <div class="load-row">
         <button id="loadFiles" class="primary-button" disabled>Load viewer</button>
         <button id="clearFiles" class="text-button" hidden>Clear files</button>
-        <div id="loadStatus" class="load-status" role="status">Select all three files to begin.</div>
+        <div id="loadStatus" class="load-status" role="status">Select a TIFF, registered JSON, and analysis JSON files.</div>
       </div>
     </section>
 
@@ -74,6 +74,12 @@
           <span>Search</span>
           <input id="searchInput" type="search" placeholder="Enter strut ID" autocomplete="off">
         </label>
+        <label class="search-box">
+          <span>Defect filter</span>
+          <select id="defectFilter">
+            <option value="all">All classifications</option>
+          </select>
+        </label>
         <div id="strutList" class="strut-list" role="listbox" aria-label="Uploaded struts"></div>
         <p id="unmatchedNote" class="unmatched-note"></p>
       </aside>
@@ -83,7 +89,7 @@
           <div class="empty-mark"></div>
           <p class="step-label">03 / INSPECT</p>
           <h2>Select a strut</h2>
-          <p>Its measured radius profile and uploaded CSV metadata will appear here.</p>
+          <p>Its live radius profile, centerline deviation, and uploaded JSON metadata will appear here.</p>
         </div>
 
         <div id="strutDetail" hidden>
@@ -96,10 +102,12 @@
           </div>
 
           <div class="metric-strip">
+            <div><span>Classification</span><b id="classificationMetric">—</b></div>
+            <div><span>Confidence</span><b id="confidenceMetric">—</b></div>
             <div><span>Tracked coverage</span><b id="coverageMetric">—</b></div>
             <div><span>Median radius</span><b id="radiusMetric">—</b></div>
-            <div><span>Registered length</span><b id="lengthMetric">—</b></div>
-            <div><span>Auto threshold</span><b id="thresholdMetric">—</b></div>
+            <div><span>Max deviation</span><b id="deviationMetric">—</b></div>
+            <div><span>CT threshold</span><b id="thresholdMetric">—</b></div>
           </div>
 
           <section class="graph-card">
@@ -113,11 +121,22 @@
             <canvas id="radiusGraph" aria-label="Radius profile graph"></canvas>
           </section>
 
+          <section class="graph-card">
+            <div class="card-title">
+              <div>
+                <h3>Deviation from expected centerline</h3>
+                <p>Distance between the tracked CT center and its best-fit straight centerline.</p>
+              </div>
+              <div class="graph-key deviation-key"><span></span> centerline deviation</div>
+            </div>
+            <canvas id="deviationGraph" aria-label="Centerline deviation graph"></canvas>
+          </section>
+
           <section class="metadata-card">
             <div class="card-title">
               <div>
-                <h3>Uploaded reference data</h3>
-                <p>Values copied from the selected CSV row.</p>
+                <h3>Uploaded analysis data</h3>
+                <p>Merged values from every selected JSON finding for this strut.</p>
               </div>
             </div>
             <div id="metadataGrid" class="metadata-grid"></div>

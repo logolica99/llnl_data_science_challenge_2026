@@ -172,3 +172,6 @@ ehthumbs.db
 Thumbs.db
 
 result
+
+# Workspace-local scientific runtime used for reproducible CT analysis.
+.python_packages/

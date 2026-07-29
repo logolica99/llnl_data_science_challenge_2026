@@ -24,7 +24,7 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { cursor: pointer; }
 
 .topbar {
@@ -130,13 +130,14 @@ main { padding: 30px clamp(18px, 4vw, 64px) 64px; }
 .count-chip { padding: 5px 9px; border-radius: 999px; color: #406174; background: #eaf1f5; font-size: 10px; font-weight: 800; }
 .search-box { display: block; margin: 16px 0; }
 .search-box span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
-.search-box input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; outline: none; background: white; }
-.search-box input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(8, 123, 189, .10); }
+.search-box input, .search-box select { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; outline: none; background: white; }
+.search-box input:focus, .search-box select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(8, 123, 189, .10); }
 
 .strut-list { height: 525px; overflow: auto; padding-right: 5px; }
 .strut-row {
   display: grid;
   grid-template-columns: 1fr auto;
+  align-items: center;
   width: 100%;
   margin-bottom: 6px;
   padding: 12px;
@@ -150,6 +151,13 @@ main { padding: 30px clamp(18px, 4vw, 64px) 64px; }
 .strut-row.active { border-color: #8bcadd; background: #e8f8fb; }
 .strut-row b { font-size: 14px; }
 .strut-row span { color: var(--muted); font-size: 11px; }
+.strut-row small { grid-column: 1 / -1; margin-top: 5px; color: var(--muted); font-size: 9px; }
+.class-badge { padding: 3px 7px; border-radius: 999px; font-weight: 800; text-transform: capitalize; }
+.class-badge.thin { color: #075e8e; background: #dff2ff; }
+.class-badge.thick { color: #8a4b00; background: #fff0d7; }
+.class-badge.bent { color: #66328d; background: #f0e4fb; }
+.class-badge.normal { color: #12664f; background: #dff6ed; }
+.class-badge.uncertain { color: #596574; background: #e8edf2; }
 .unmatched-note { margin: 12px 2px 0; color: #9a5b00; font-size: 11px; line-height: 1.5; }
 
 .inspection-panel { min-width: 0; padding: clamp(24px, 3vw, 42px); }
@@ -161,7 +169,7 @@ main { padding: 30px clamp(18px, 4vw, 64px) 64px; }
 
 .detail-heading { margin-bottom: 24px; }
 .detail-heading h2 { font-size: 32px; }
-.metric-strip { display: grid; grid-template-columns: repeat(4, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 12px; }
+.metric-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); overflow: hidden; border: 1px solid var(--line); border-radius: 12px; }
 .metric-strip > div { padding: 16px; border-right: 1px solid var(--line); }
 .metric-strip > div:last-child { border-right: 0; }
 .metric-strip span, .metadata-grid span { display: block; margin-bottom: 5px; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
@@ -172,7 +180,8 @@ main { padding: 30px clamp(18px, 4vw, 64px) 64px; }
 .card-title p { margin: 0; color: var(--muted); font-size: 11px; }
 .graph-key { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
 .graph-key span { width: 22px; height: 3px; border-radius: 2px; background: var(--blue); }
-#radiusGraph { display: block; width: 100%; height: 300px; margin-top: 16px; }
+#radiusGraph, #deviationGraph { display: block; width: 100%; height: 300px; margin-top: 16px; }
+.deviation-key span { background: #8b4db5; }
 .metadata-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 17px; }
 .metadata-grid > div { min-width: 0; padding: 12px; border-radius: 9px; background: #f5f8fb; }
 .metadata-grid b { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }

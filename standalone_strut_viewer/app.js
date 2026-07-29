@@ -5,6 +5,9 @@ const state = {
   selectedEntry: null,
   profile: null,
   volume: null,
+  profileCache: new Map(),
+  volumeCache: new Map(),
+  profileAbort: null,
   trackedOverlay: true,
   registeredOverlay: true,
 };
@@ -16,7 +19,7 @@ const fmt = (value, digits = 2) =>
 const inputs = {
   tiff: $("tiffFile"),
   json: $("jsonFile"),
-  csv: $("csvFile"),
+  analyses: $("analysisFiles"),
 };
 
 function setStatus(message, kind = "") {
@@ -30,24 +33,22 @@ function selectedFile(input) {
 }
 
 function refreshFileState() {
-  const mappings = [
-    [inputs.tiff, $("tiffName"), "Choose a 3D .tif or .tiff"],
-    [inputs.json, $("jsonName"), "Junction and strut voxel positions"],
-    [inputs.csv, $("csvName"), "Requires a strut_id column"],
-  ];
-  mappings.forEach(([input, label, fallback]) => {
-    label.textContent = selectedFile(input)?.name || fallback;
-  });
-  const ready = mappings.every(([input]) => selectedFile(input));
+  $("tiffName").textContent = selectedFile(inputs.tiff)?.name || "Choose a 3D .tif or .tiff";
+  $("jsonName").textContent = selectedFile(inputs.json)?.name || "Junction and strut voxel positions";
+  const analyses = [...(inputs.analyses.files || [])];
+  $("analysisName").textContent = analyses.length
+    ? `${analyses.length} JSON file${analyses.length === 1 ? "" : "s"} selected`
+    : "Select one or more finding / hand-off JSONs";
+  const ready = selectedFile(inputs.tiff) && selectedFile(inputs.json) && analyses.length;
   $("loadFiles").disabled = !ready;
-  if (ready) setStatus("Ready to load the three files.");
-  else setStatus("Select all three files to begin.");
+  if (ready) setStatus(`Ready to load ${analyses.length + 2} files.`);
+  else setStatus("Select a TIFF, registered JSON, and analysis JSON files.");
 }
 
 async function uploadFile(url, file) {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "X-Upload-Filename": encodeURIComponent(file.name) },
+    headers: { "X-File-Name": encodeURIComponent(file.name) },
     body: file,
   });
   const payload = await response.json().catch(() => ({}));
@@ -58,29 +59,32 @@ async function uploadFile(url, file) {
 async function loadFiles() {
   const tiff = selectedFile(inputs.tiff);
   const json = selectedFile(inputs.json);
-  const csv = selectedFile(inputs.csv);
-  if (!tiff || !json || !csv) return;
+  const analyses = [...(inputs.analyses.files || [])];
+  if (!tiff || !json || !analyses.length) return;
   const button = $("loadFiles");
   button.disabled = true;
   try {
+    await fetch("/api/session", { method: "DELETE" });
     setStatus("Streaming TIFF to temporary local storage…");
     const tiffResult = await uploadFile("/api/tiff", tiff);
     setStatus(`TIFF ready (${tiffResult.shape_zyx.join(" × ")} voxels). Reading registration…`);
     await uploadFile("/api/registration", json);
-    setStatus("Registration ready. Reading flagged-strut CSV…");
-    await uploadFile("/api/csv", csv);
+    setStatus(`Registration ready. Reading ${analyses.length} analysis JSON files...`);
+    await Promise.all(analyses.map((file) => uploadFile("/api/results", file)));
     const response = await fetch("/api/catalog", { cache: "no-store" });
     const catalog = await response.json();
     if (!response.ok) throw new Error(catalog.error || "Could not build the strut list.");
     if (!catalog.entries.length) {
-      throw new Error("None of the CSV strut IDs were found in the registered JSON.");
+      throw new Error("No analysis JSON strut IDs were found in the registered JSON.");
     }
     state.catalog = catalog;
     state.selectedEntry = null;
     state.profile = null;
+    state.profileCache.clear();
+    state.volumeCache.clear();
     renderCatalog();
     setStatus(
-      `Loaded ${catalog.entries.length.toLocaleString()} struts. Auto threshold: ${fmt(catalog.threshold, 1)}.`,
+      `Loaded ${catalog.entries.length.toLocaleString()} struts from ${analyses.length} JSON files. CT threshold: ${fmt(catalog.threshold, 1)}.`,
       "success"
     );
     $("clearFiles").hidden = false;
@@ -94,6 +98,8 @@ async function clearFiles() {
   await fetch("/api/session", { method: "DELETE" }).catch(() => {});
   Object.values(inputs).forEach((input) => { input.value = ""; });
   state.catalog = state.selectedEntry = state.profile = state.volume = null;
+  state.profileCache.clear();
+  state.volumeCache.clear();
   $("workspace").hidden = true;
   $("clearFiles").hidden = true;
   $("strutDetail").hidden = true;
@@ -106,31 +112,52 @@ function renderCatalog() {
   $("strutCount").textContent = `${state.catalog.entries.length.toLocaleString()} struts`;
   const missing = state.catalog.unmatched_ids || [];
   $("unmatchedNote").textContent = missing.length
-    ? `${missing.length} CSV ID${missing.length === 1 ? " was" : "s were"} not present in the registered JSON.`
+    ? `${missing.length} analysis ID${missing.length === 1 ? " was" : "s were"} not present in the registered JSON.`
     : "";
   $("searchInput").value = "";
+  const filter = $("defectFilter");
+  filter.innerHTML = '<option value="all">All classifications</option>';
+  Object.entries(state.catalog.class_counts || {}).forEach(([name, count]) => {
+    if (!count) return;
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = `${name[0].toUpperCase()}${name.slice(1)} (${count})`;
+    filter.appendChild(option);
+  });
   renderStrutList();
 }
 
 function renderStrutList() {
   const query = $("searchInput").value.trim().toLowerCase();
-  const values = state.catalog.entries.filter((entry) =>
-    !query || String(entry.strut_id).toLowerCase().includes(query)
-  );
+  const defect = $("defectFilter").value;
+  const values = state.catalog.entries
+    .filter((entry) =>
+      (!query || String(entry.strut_id).toLowerCase().includes(query)) &&
+      (defect === "all" || entry.classifications.includes(defect))
+    )
+    .sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0));
   const list = $("strutList");
   list.innerHTML = "";
-  values.slice(0, 1000).forEach((entry) => {
+  values.slice(0, 250).forEach((entry) => {
     const button = document.createElement("button");
     button.className = `strut-row ${state.selectedEntry?.strut_id === entry.strut_id ? "active" : ""}`;
     button.type = "button";
     button.setAttribute("role", "option");
     button.setAttribute("aria-selected", state.selectedEntry?.strut_id === entry.strut_id ? "true" : "false");
-    button.innerHTML = `<b>#${entry.strut_id}</b><span>${fmt(entry.length_voxels, 1)} vox</span>`;
+    button.innerHTML =
+      `<b>#${entry.strut_id}</b>` +
+      `<span class="class-badge ${entry.classification}">${entry.classifications.join(" + ")}</span>` +
+      `<small>${fmt(entry.confidence, 2)} confidence</small>`;
     button.addEventListener("click", () => selectStrut(entry));
     list.appendChild(button);
   });
   if (!values.length) {
-    list.innerHTML = '<p class="unmatched-note">No strut IDs match that search.</p>';
+    list.innerHTML = '<p class="unmatched-note">No struts match the current search and filter.</p>';
+  } else if (values.length > 250) {
+    const note = document.createElement("p");
+    note.className = "unmatched-note";
+    note.textContent = `Showing the first 250 of ${values.length.toLocaleString()} matches. Search by ID to narrow the list.`;
+    list.appendChild(note);
   }
 }
 
@@ -141,25 +168,45 @@ async function selectStrut(entry) {
   $("emptyState").hidden = true;
   $("strutDetail").hidden = false;
   $("detailId").textContent = `#${entry.strut_id}`;
-  $("coverageMetric").textContent = "Loading…";
+  $("coverageMetric").textContent = "Loading...";
   $("radiusMetric").textContent = "—";
-  $("lengthMetric").textContent = `${fmt(entry.length_voxels, 2)} vox`;
+  $("deviationMetric").textContent = "—";
+  $("classificationMetric").textContent = entry.classifications.join(" + ");
+  $("confidenceMetric").textContent = fmt(entry.confidence, 2);
   $("thresholdMetric").textContent = fmt(state.catalog.threshold, 1);
-  renderMetadata(entry.fields);
-  clearGraph();
+  renderMetadata({
+    classifications: entry.classifications.join(", "),
+    sources: entry.sources.join(", "),
+    registered_length_voxels: entry.length_voxels,
+    ...entry.fields,
+  });
+  clearGraphs();
+  if (state.profileAbort) state.profileAbort.abort();
+  const cacheKey = `${entry.strut_id}:${state.catalog.threshold}`;
   try {
-    const response = await fetch(
-      `/api/profile/${entry.strut_id}?threshold=${encodeURIComponent(state.catalog.threshold)}`,
-      { cache: "no-store" }
-    );
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "Profile calculation failed.");
+    let payload = state.profileCache.get(cacheKey);
+    if (!payload) {
+      state.profileAbort = new AbortController();
+      const response = await fetch(
+        `/api/profile/${entry.strut_id}?threshold=${encodeURIComponent(state.catalog.threshold)}`,
+        { cache: "no-store", signal: state.profileAbort.signal }
+      );
+      payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Profile calculation failed.");
+      state.profileCache.set(cacheKey, payload);
+      if (state.profileCache.size > 128) {
+        state.profileCache.delete(state.profileCache.keys().next().value);
+      }
+    }
     if (state.selectedEntry?.strut_id !== entry.strut_id) return;
     state.profile = payload;
     $("coverageMetric").textContent = `${fmt(100 * payload.coverage, 0)}%`;
     $("radiusMetric").textContent = `${fmt(payload.median_radius_voxels, 2)} vox`;
-    drawRadiusGraph(payload.profile);
+    $("deviationMetric").textContent = `${fmt(payload.centerline_deviation_max_voxels, 2)} vox`;
+    drawRadiusGraph(payload.profile, entry.fields);
+    drawDeviationGraph(payload.profile);
   } catch (error) {
+    if (error.name === "AbortError") return;
     $("coverageMetric").textContent = "Unavailable";
     setStatus(error.message || String(error), "error");
   }
@@ -170,7 +217,7 @@ function renderMetadata(fields) {
   const entries = Object.entries(fields || {});
   target.innerHTML = "";
   if (!entries.length) {
-    target.innerHTML = "<div><span>CSV metadata</span><b>No additional columns</b></div>";
+    target.innerHTML = "<div><span>JSON metadata</span><b>No additional fields</b></div>";
     return;
   }
   entries.forEach(([key, value]) => {
@@ -178,25 +225,28 @@ function renderMetadata(fields) {
     const label = document.createElement("span");
     const content = document.createElement("b");
     label.textContent = key.replaceAll("_", " ");
-    content.textContent = value;
-    content.title = value;
+    const display = typeof value === "object" ? JSON.stringify(value) : String(value);
+    content.textContent = display;
+    content.title = display;
     item.append(label, content);
     target.appendChild(item);
   });
 }
 
-function clearGraph() {
-  const canvas = $("radiusGraph");
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.max(1, Math.round(rect.width * devicePixelRatio));
-  canvas.height = Math.max(1, Math.round(300 * devicePixelRatio));
-  const context = canvas.getContext("2d");
-  context.scale(devicePixelRatio, devicePixelRatio);
-  context.clearRect(0, 0, rect.width, 300);
+function clearGraphs() {
+  ["radiusGraph", "deviationGraph"].forEach((id) => {
+    const canvas = $(id);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.round(rect.width * devicePixelRatio));
+    canvas.height = Math.max(1, Math.round(300 * devicePixelRatio));
+    const context = canvas.getContext("2d");
+    context.scale(devicePixelRatio, devicePixelRatio);
+    context.clearRect(0, 0, rect.width, 300);
+  });
 }
 
-function drawRadiusGraph(profile) {
-  const canvas = $("radiusGraph");
+function drawSeriesGraph(canvasId, profile, field, color, ylabel, reference = null) {
+  const canvas = $(canvasId);
   const width = canvas.clientWidth || 700;
   const height = 300;
   const dpr = devicePixelRatio || 1;
@@ -208,8 +258,8 @@ function drawRadiusGraph(profile) {
   const pad = { left: 52, right: 22, top: 24, bottom: 40 };
   const graphWidth = width - pad.left - pad.right;
   const graphHeight = height - pad.top - pad.bottom;
-  const radii = profile.map((item) => item.radius_voxels).filter(Number.isFinite);
-  const maximum = Math.max(1, ...radii) * 1.16;
+  const values = profile.map((item) => item[field]).filter(Number.isFinite);
+  const maximum = Math.max(1, ...values, Number(reference || 0)) * 1.16;
 
   context.strokeStyle = "#dbe4ec";
   context.lineWidth = 1;
@@ -224,17 +274,28 @@ function drawRadiusGraph(profile) {
     context.fillText(fmt(maximum * (1 - step / 4), 1), 15, y + 3);
   }
 
-  context.strokeStyle = "#087bbd";
+  if (Number.isFinite(reference)) {
+    const y = pad.top + (1 - reference / maximum) * graphHeight;
+    context.save();
+    context.setLineDash([7, 5]);
+    context.strokeStyle = "#d08b2e";
+    context.beginPath();
+    context.moveTo(pad.left, y);
+    context.lineTo(width - pad.right, y);
+    context.stroke();
+    context.restore();
+  }
+  context.strokeStyle = color;
   context.lineWidth = 2.5;
   context.beginPath();
   let started = false;
   profile.forEach((item) => {
-    if (!Number.isFinite(item.radius_voxels)) {
+    if (!Number.isFinite(item[field])) {
       started = false;
       return;
     }
     const x = pad.left + item.fraction * graphWidth;
-    const y = pad.top + (1 - item.radius_voxels / maximum) * graphHeight;
+    const y = pad.top + (1 - item[field] / maximum) * graphHeight;
     if (started) context.lineTo(x, y);
     else {
       context.moveTo(x, y);
@@ -244,10 +305,10 @@ function drawRadiusGraph(profile) {
   context.stroke();
 
   profile.forEach((item) => {
-    if (!Number.isFinite(item.radius_voxels)) return;
+    if (!Number.isFinite(item[field])) return;
     const x = pad.left + item.fraction * graphWidth;
-    const y = pad.top + (1 - item.radius_voxels / maximum) * graphHeight;
-    context.fillStyle = "#087bbd";
+    const y = pad.top + (1 - item[field] / maximum) * graphHeight;
+    context.fillStyle = color;
     context.beginPath();
     context.arc(x, y, 3.3, 0, Math.PI * 2);
     context.fill();
@@ -258,8 +319,24 @@ function drawRadiusGraph(profile) {
   context.save();
   context.translate(10, height / 2 + 30);
   context.rotate(-Math.PI / 2);
-  context.fillText("radius (voxels)", 0, 0);
+  context.fillText(ylabel, 0, 0);
   context.restore();
+}
+
+function drawRadiusGraph(profile, fields) {
+  const peerRadius = Number(fields.peer_median_radius_voxels);
+  drawSeriesGraph(
+    "radiusGraph", profile, "radius_voxels", "#087bbd", "radius (voxels)",
+    Number.isFinite(peerRadius) ? peerRadius : null
+  );
+}
+
+function drawDeviationGraph(profile) {
+  const threshold = Number(state.catalog.thresholds?.bent_adjacent_deviation_voxels);
+  drawSeriesGraph(
+    "deviationGraph", profile, "deviation_voxels", "#8b4db5",
+    "deviation (voxels)", Number.isFinite(threshold) ? threshold : null
+  );
 }
 
 function parseHeaderNumbers(response, name) {
@@ -270,22 +347,37 @@ async function openFourViews() {
   if (!state.selectedEntry || !state.profile) return;
   const button = $("openViews");
   button.disabled = true;
-  button.textContent = "Loading volume…";
+  button.textContent = "Loading volume...";
   try {
-    const response = await fetch(`/api/volume/${state.selectedEntry.strut_id}`, { cache: "no-store" });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.error || "Could not load the local CT crop.");
+    const cacheKey = state.selectedEntry.strut_id;
+    state.volume = state.volumeCache.get(cacheKey);
+    if (!state.volume) {
+      const response = await fetch(`/api/volume/${cacheKey}`, { cache: "no-store" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Could not load the local CT crop.");
+      }
+      const buffer = await response.arrayBuffer();
+      const dtype = response.headers.get("X-Volume-Dtype");
+      const constructors = {
+        uint16: Uint16Array,
+        int16: Int16Array,
+        float32: Float32Array,
+      };
+      const TypedArray = constructors[dtype] || Float32Array;
+      state.volume = {
+        data: new TypedArray(buffer),
+        shape: parseHeaderNumbers(response, "X-Volume-Shape"),
+        origin: parseHeaderNumbers(response, "X-Volume-Origin-XYZ"),
+        start: parseHeaderNumbers(response, "X-Strut-Start-XYZ"),
+        end: parseHeaderNumbers(response, "X-Strut-End-XYZ"),
+        range: parseHeaderNumbers(response, "X-Intensity-Range"),
+      };
+      state.volumeCache.set(cacheKey, state.volume);
+      if (state.volumeCache.size > 2) {
+        state.volumeCache.delete(state.volumeCache.keys().next().value);
+      }
     }
-    const buffer = await response.arrayBuffer();
-    state.volume = {
-      data: new Float32Array(buffer),
-      shape: parseHeaderNumbers(response, "X-Volume-Shape"),
-      origin: parseHeaderNumbers(response, "X-Volume-Origin-XYZ"),
-      start: parseHeaderNumbers(response, "X-Strut-Start-XYZ"),
-      end: parseHeaderNumbers(response, "X-Strut-End-XYZ"),
-      range: parseHeaderNumbers(response, "X-Intensity-Range"),
-    };
     state.trackedOverlay = true;
     state.registeredOverlay = true;
     updateOverlayButton("overlayToggle", "CT tracking", true);
@@ -740,6 +832,7 @@ Object.values(inputs).forEach((input) => input.addEventListener("change", refres
 $("loadFiles").addEventListener("click", loadFiles);
 $("clearFiles").addEventListener("click", clearFiles);
 $("searchInput").addEventListener("input", renderStrutList);
+$("defectFilter").addEventListener("change", renderStrutList);
 $("openViews").addEventListener("click", openFourViews);
 $("overlayToggle").addEventListener("click", toggleTrackedOverlay);
 $("registeredToggle").addEventListener("click", toggleRegisteredOverlay);

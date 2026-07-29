@@ -29,7 +29,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Opening the standalone strut viewer at http://127.0.0.1:$Port/"
-Write-Host "Upload a TIFF, registered JSON, and flagged-strut CSV in the browser."
+Write-Host "Upload a TIFF, registered JSON, and one or more analysis JSON files in the browser."
 Write-Host "Press Ctrl+C to stop; temporary TIFF data will be deleted."
 
 & $pythonPath (Join-Path $viewerRoot "server.py") --port $Port

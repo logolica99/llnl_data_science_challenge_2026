@@ -51,8 +51,12 @@ class StandaloneViewerTests(unittest.TestCase):
             ])),
             3.0,
         )
+        self.assertIn("centerline_deviation_max_voxels", result)
+        self.assertTrue(all(
+            "deviation_voxels" in item for item in result["profile"]
+        ))
 
-    def test_catalog_matches_csv_ids_to_registered_json(self):
+    def test_catalog_merges_analysis_json_by_strut_id(self):
         state = server.AppState()
         try:
             state.set_registration({
@@ -64,11 +68,43 @@ class StandaloneViewerTests(unittest.TestCase):
                     {"id": 10, "junction0": 1, "junction1": 2},
                 ],
             })
-            state.set_csv("strut_id,note\n10,review\n99,unknown\n")
+            state.set_result_json({
+                "defect_class": "thin",
+                "findings": [
+                    {"strut_id": 10, "classification": "thin", "confidence": 0.92},
+                    {"strut_id": 99, "classification": "thin"},
+                ],
+            }, "findings_thin.json")
+            state.set_result_json({
+                "defect_class": "bent",
+                "findings": [
+                    {"strut_id": 10, "classification": "bent", "reason": "curved"},
+                ],
+            }, "findings_bent.json")
             catalog = state.catalog()
             self.assertEqual([item["strut_id"] for item in catalog["entries"]], [10])
             self.assertEqual(catalog["unmatched_ids"], [99])
-            self.assertEqual(catalog["entries"][0]["fields"]["note"], "review")
+            self.assertEqual(catalog["entries"][0]["classifications"], ["thin", "bent"])
+            self.assertEqual(catalog["entries"][0]["fields"]["reason"], "curved")
+            self.assertEqual(catalog["class_counts"]["thin"], 1)
+            self.assertEqual(catalog["class_counts"]["bent"], 1)
+        finally:
+            state.clear()
+
+    def test_crop_keeps_big_endian_uint16_as_compact_uint16(self):
+        state = server.AppState()
+        try:
+            state.volume = synthetic_volume().astype(">u2")
+            state.set_registration({
+                "junctions": [
+                    {"id": 1, "position": [24, 24, 5]},
+                    {"id": 2, "position": [24, 24, 58]},
+                ],
+                "struts": [{"id": 10, "junction0": 1, "junction1": 2}],
+            })
+            crop = state.crop(10)
+            self.assertEqual(crop["dtype"], "uint16")
+            self.assertEqual(len(crop["body"]), int(np.prod(crop["shape"])) * 2)
         finally:
             state.clear()
 
@@ -83,7 +119,10 @@ class StandaloneViewerTests(unittest.TestCase):
                 base + path,
                 data=body,
                 method=method,
-                headers={"Content-Type": "application/octet-stream"},
+                headers={
+                    "Content-Type": "application/octet-stream",
+                    "X-File-Name": "findings_thin.json",
+                },
             )
             with urllib.request.urlopen(req, timeout=10) as response:
                 return response.status, response.headers, response.read()
@@ -105,7 +144,15 @@ class StandaloneViewerTests(unittest.TestCase):
                 "struts": [{"id": 10, "junction0": 1, "junction1": 2}],
             }).encode()
             request("/api/registration", "POST", registration)
-            request("/api/csv", "POST", b"strut_id,note\n10,inspect\n")
+            findings = json.dumps({
+                "defect_class": "thin",
+                "findings": [{
+                    "strut_id": 10,
+                    "classification": "thin",
+                    "confidence": 0.9,
+                }],
+            }).encode()
+            request("/api/results", "POST", findings)
 
             _, _, catalog_body = request("/api/catalog")
             catalog = json.loads(catalog_body)
@@ -118,10 +165,12 @@ class StandaloneViewerTests(unittest.TestCase):
             )
             profile = json.loads(profile_body)
             self.assertGreater(profile["coverage"], 0.85)
+            self.assertIn("centerline_deviation_max_voxels", profile)
 
             _, headers, crop_body = request("/api/volume/10")
             shape = [int(value) for value in headers["X-Volume-Shape"].split(",")]
-            self.assertEqual(len(crop_body), int(np.prod(shape)) * 4)
+            self.assertEqual(headers["X-Volume-Dtype"], "uint16")
+            self.assertEqual(len(crop_body), int(np.prod(shape)) * 2)
 
             temp_dir = server.STATE.temp_dir
             self.assertTrue(Path(temp_dir).exists())

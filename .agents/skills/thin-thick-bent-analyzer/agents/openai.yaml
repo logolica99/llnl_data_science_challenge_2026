@@ -1,0 +1,9 @@
+interface:
+  display_name: "Thin/Thick/Bent Analyzer"
+  short_description: "Classify CT strut radius and bending defects"
+  default_prompt: "Use $thin-thick-bent-analyzer to measure and classify thin, thick, and bent CT lattice struts."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools"
+      description: "Repository CT measurement, classification, and evidence tools"

@@ -1,4 +1,15 @@
 import os
+import site
+
+# The project keeps its scientific/MCP runtime under .python_packages. Using
+# addsitedir (rather than PYTHONPATH alone) processes pywin32's .pth bootstrap
+# on Windows, which FastMCP's stdio transport requires.
+_LOCAL_PACKAGES = os.path.realpath(
+    os.path.join(os.path.dirname(__file__), "..", ".python_packages")
+)
+if os.path.isdir(_LOCAL_PACKAGES):
+    site.addsitedir(_LOCAL_PACKAGES)
+
 os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib_cache" if os.name != "nt" else os.path.join(os.environ["TEMP"], "matplotlib_cache")
 from fastmcp import FastMCP
 import numpy as np
@@ -6,9 +17,32 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from skeletonization import skeletonize_mask
+from strut_defect_pipeline import (
+    classify_struts as classify_struts_artifacts,
+    compute_strut_metrics as compute_strut_metrics_artifacts,
+    render_strut_evidence as render_strut_evidence_artifacts,
+    run_pipeline as run_strut_defect_pipeline_artifacts,
+)
 
 # Initialize the MCP server
 mcp = FastMCP("CT Segmentation")
+
+
+REPOSITORY_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+
+
+def _repository_path(value: str, must_exist: bool = False) -> str:
+    """Resolve one MCP path while refusing access outside this repository."""
+    resolved = os.path.realpath(value)
+    try:
+        common = os.path.commonpath([REPOSITORY_ROOT, resolved])
+    except ValueError as exc:
+        raise ValueError(f"Path is not on the repository drive: {value}") from exc
+    if common != REPOSITORY_ROOT:
+        raise ValueError(f"Path is outside the repository: {value}")
+    if must_exist and not os.path.exists(resolved):
+        raise FileNotFoundError(resolved)
+    return resolved
 
 @mcp.tool()
 def segment_ct_dataset(input_filepath: str, output_filepath: str, threshold: float) -> str:
@@ -100,6 +134,106 @@ def skeletonize(input_filepath: str, output_filepath: str) -> str:
         return f"Error: skeletonization failed for {input_filepath} (check that the file exists and is a valid mask)"
 
     return f"Skeletonization complete. Saved to {output_filepath}"
+
+
+@mcp.tool()
+def compute_strut_metrics(
+    input_tiff: str,
+    registered_json: str,
+    output_dir: str,
+    threshold: float,
+    positions: int = 11,
+    tracking_radius_voxels: float = 6.0,
+    voxel_size_mm: float | None = None,
+    max_struts: int | None = None,
+    overwrite: bool = False,
+) -> dict:
+    """Measure file-backed radius and centerline profiles for registered CT struts.
+
+    The registered JSON is used only as a local spatial prior. Large measurements
+    are written under ``output_dir``; the tool returns only a compact receipt.
+    """
+    return compute_strut_metrics_artifacts(
+        _repository_path(input_tiff, must_exist=True),
+        _repository_path(registered_json, must_exist=True),
+        _repository_path(output_dir),
+        threshold,
+        positions=positions,
+        tracking_radius_voxels=tracking_radius_voxels,
+        voxel_size_mm=voxel_size_mm,
+        max_struts=max_struts,
+        overwrite=overwrite,
+    )
+
+
+@mcp.tool()
+def classify_struts(
+    strut_summary_csv: str,
+    strut_sections_csv: str,
+    output_dir: str,
+    thresholds_json: str | None = None,
+    overwrite: bool = False,
+) -> dict:
+    """Apply frozen thin/thick/bent policy to existing metric artifacts."""
+    return classify_struts_artifacts(
+        _repository_path(strut_summary_csv, must_exist=True),
+        _repository_path(strut_sections_csv, must_exist=True),
+        _repository_path(output_dir),
+        thresholds_json=(
+            _repository_path(thresholds_json, must_exist=True)
+            if thresholds_json else None
+        ),
+        overwrite=overwrite,
+    )
+
+
+@mcp.tool()
+def render_strut_evidence(
+    classified_struts_csv: str,
+    strut_sections_csv: str,
+    output_dir: str,
+    thresholds_json: str,
+    overwrite: bool = False,
+) -> dict:
+    """Render radius plots for thin/thick and centerline plots for bent calls."""
+    return render_strut_evidence_artifacts(
+        _repository_path(classified_struts_csv, must_exist=True),
+        _repository_path(strut_sections_csv, must_exist=True),
+        _repository_path(output_dir),
+        thresholds_json=_repository_path(thresholds_json, must_exist=True),
+        overwrite=overwrite,
+    )
+
+
+@mcp.tool()
+def run_thin_thick_bent_pipeline(
+    input_tiff: str,
+    registered_json: str,
+    output_dir: str,
+    threshold: float,
+    thresholds_json: str | None = None,
+    positions: int = 11,
+    tracking_radius_voxels: float = 6.0,
+    voxel_size_mm: float | None = None,
+    max_struts: int | None = None,
+    overwrite: bool = False,
+) -> dict:
+    """Run the complete independently testable thin/thick/bent artifact flow."""
+    return run_strut_defect_pipeline_artifacts(
+        _repository_path(input_tiff, must_exist=True),
+        _repository_path(registered_json, must_exist=True),
+        _repository_path(output_dir),
+        threshold,
+        thresholds_json=(
+            _repository_path(thresholds_json, must_exist=True)
+            if thresholds_json else None
+        ),
+        positions=positions,
+        tracking_radius_voxels=tracking_radius_voxels,
+        voxel_size_mm=voxel_size_mm,
+        max_struts=max_struts,
+        overwrite=overwrite,
+    )
 
 if __name__ == "__main__":
     # Run the FastMCP server, exposing the tools over standard I/O (default)

@@ -1,25 +1,26 @@
-"""Local, viewing-only CT strut viewer.
+"""Local CT viewer for JSON-described thin, thick, and bent strut findings.
 
-The uploaded TIFF is streamed to a temporary directory and memory-mapped.
-Registered JSON coordinates locate the struts listed by the uploaded CSV.
-No defect classification is performed.
+The uploaded TIFF is streamed to temporary storage and memory-mapped. A
+registered graph supplies geometry; one or more analysis JSON files supply the
+strut catalog and classification metadata. Radius/deviation profiles are
+computed only for selected struts.
 """
 
 from __future__ import annotations
 
 import argparse
 import atexit
-import csv
-import io
 import json
 import math
+import re
 import shutil
 import tempfile
 import threading
+from collections import OrderedDict
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 import numpy as np
 import tifffile
@@ -240,9 +241,9 @@ def select_path(candidate_planes, expected_area, centerline=None):
 
 
 def extract_profile(volume, start, end, threshold, positions=None,
-                    extent=18.0, grid_size=65, search_radius=12.0):
+                    extent=18.0, grid_size=49, search_radius=12.0):
     positions = np.asarray(
-        positions if positions is not None else np.linspace(0.10, 0.90, 17),
+        positions if positions is not None else np.linspace(0.10, 0.90, 11),
         dtype=float,
     )
     _, u, v, length = make_basis(start, end)
@@ -295,6 +296,41 @@ def extract_profile(volume, start, end, threshold, positions=None,
             "confidence": float(confidence),
             "candidate_count": len(items),
         })
+    distances = np.asarray([item["distance_voxels"] for item in profile], dtype=float)
+    centers_u = np.asarray([
+        item["center_u_voxels"] if item["center_u_voxels"] is not None else np.nan
+        for item in profile
+    ], dtype=float)
+    centers_v = np.asarray([
+        item["center_v_voxels"] if item["center_v_voxels"] is not None else np.nan
+        for item in profile
+    ], dtype=float)
+    confidence = np.asarray([item["confidence"] for item in profile], dtype=float)
+    valid_center = (
+        np.isfinite(centers_u) & np.isfinite(centers_v) & (confidence >= 0.45)
+    )
+    deviation = np.full(len(profile), np.nan, dtype=float)
+    curvature = np.full(len(profile), np.nan, dtype=float)
+    if valid_center.sum() >= 2:
+        indices = np.flatnonzero(valid_center)
+        fit_u = np.polyfit(distances[indices], centers_u[indices], 1)
+        fit_v = np.polyfit(distances[indices], centers_v[indices], 1)
+        deviation[indices] = np.hypot(
+            centers_u[indices] - np.polyval(fit_u, distances[indices]),
+            centers_v[indices] - np.polyval(fit_v, distances[indices]),
+        )
+    if valid_center.sum() >= 3:
+        indices = np.flatnonzero(valid_center)
+        degree = min(3, indices.size - 1)
+        smooth_u = np.polyfit(distances[indices], centers_u[indices], degree)
+        smooth_v = np.polyfit(distances[indices], centers_v[indices], degree)
+        curvature[indices] = np.hypot(
+            np.polyval(np.polyder(smooth_u, 2), distances[indices]),
+            np.polyval(np.polyder(smooth_v, 2), distances[indices]),
+        )
+    for item, residual, curve in zip(profile, deviation, curvature):
+        item["deviation_voxels"] = finite_or_none(residual)
+        item["curvature_inverse_voxels"] = finite_or_none(curve)
     finite_radii = [
         item["radius_voxels"] for item in profile
         if item["radius_voxels"] is not None
@@ -308,7 +344,84 @@ def extract_profile(volume, start, end, threshold, positions=None,
         "median_radius_voxels": (
             float(np.median(finite_radii)) if finite_radii else None
         ),
+        "centerline_deviation_rms_voxels": (
+            float(np.sqrt(np.mean(deviation[np.isfinite(deviation)] ** 2)))
+            if np.any(np.isfinite(deviation)) else None
+        ),
+        "centerline_deviation_max_voxels": (
+            float(np.max(deviation[np.isfinite(deviation)]))
+            if np.any(np.isfinite(deviation)) else None
+        ),
+        "curvature_rms_inverse_voxels": (
+            float(np.sqrt(np.mean(curvature[np.isfinite(curvature)] ** 2)))
+            if np.any(np.isfinite(curvature)) else None
+        ),
     }
+
+
+DEFECT_CLASSES = ("thin", "thick", "bent", "normal", "uncertain")
+
+
+def _flatten_fields(payload, prefix=""):
+    fields = {}
+    for key, value in payload.items():
+        if key in {"strut_id", "id", "profile", "sections"}:
+            continue
+        name = f"{prefix}{key}"
+        if isinstance(value, dict):
+            fields.update(_flatten_fields(value, prefix=f"{name}_"))
+        elif not isinstance(value, (list, tuple)):
+            fields[name] = value
+    return fields
+
+
+def _classification_tokens(item, hint=None):
+    text = " ".join(str(item.get(key, "")) for key in (
+        "classification", "defect_class", "class", "label", "decision_status"
+    )).lower()
+    tokens = set()
+    if hint:
+        text += f" {hint}"
+    for defect_class in DEFECT_CLASSES:
+        if defect_class in text or bool(item.get(f"is_{defect_class}", False)):
+            tokens.add(defect_class)
+    if any(value in tokens for value in ("thin", "thick", "bent")):
+        tokens.discard("normal")
+    return tokens or {"uncertain"}
+
+
+def extract_result_rows(payload):
+    """Return normalized strut findings plus the JSON document role."""
+    if isinstance(payload, list):
+        return payload, None, "findings"
+    if not isinstance(payload, dict):
+        raise ValueError("Analysis JSON must contain an object or array.")
+    if payload.get("junctions") and payload.get("struts"):
+        return [], None, "registered_graph"
+    hint = payload.get("defect_class")
+    for key in ("findings", "classified_struts", "entries", "results"):
+        if isinstance(payload.get(key), list):
+            return payload[key], hint, key
+    if payload.get("stage") == "strut_measurement" and isinstance(
+        payload.get("config"), dict
+    ):
+        return [], None, "measurement_manifest"
+    if "artifacts" in payload and "status" in payload:
+        return [], None, "handoff"
+    if any(key in payload for key in (
+        "thin_radius_ratio_max",
+        "bent_adjacent_deviation_voxels",
+        "radius_robust_z_threshold",
+    )):
+        return [], None, "thresholds"
+    numeric_rows = []
+    if payload and all(isinstance(value, dict) for value in payload.values()):
+        for key, value in payload.items():
+            if re.fullmatch(r"\d+", str(key)):
+                numeric_rows.append({"strut_id": int(key), **value})
+    if numeric_rows:
+        return numeric_rows, hint, "id_map"
+    return [], None, "metadata"
 
 
 class AppState:
@@ -318,10 +431,13 @@ class AppState:
         self.tiff_path = None
         self.volume = None
         self.threshold = None
+        self.analysis_threshold = None
+        self.thresholds = {}
         self.junctions = {}
         self.struts = {}
-        self.csv_rows = []
-        self.profile_cache = {}
+        self.result_rows = {}
+        self.result_documents = []
+        self.profile_cache = OrderedDict()
 
     def clear_tiff(self):
         volume = self.volume
@@ -350,7 +466,10 @@ class AppState:
             self.clear_tiff()
             self.junctions = {}
             self.struts = {}
-            self.csv_rows = []
+            self.result_rows = {}
+            self.result_documents = []
+            self.analysis_threshold = None
+            self.thresholds = {}
 
     def set_tiff(self, temp_dir, path, volume, threshold):
         with self.lock:
@@ -382,46 +501,57 @@ class AppState:
             self.struts = struts
             self.profile_cache.clear()
 
-    def set_csv(self, text):
-        reader = csv.DictReader(io.StringIO(text))
-        if not reader.fieldnames:
-            raise ValueError("CSV has no header row.")
-        id_column = next(
-            (name for name in reader.fieldnames if name.strip().lower() == "strut_id"),
-            None,
-        )
-        if id_column is None:
-            raise ValueError("CSV must contain a strut_id column.")
-        rows = []
-        seen = set()
-        for raw in reader:
-            value = (raw.get(id_column) or "").strip()
-            if not value:
-                continue
-            try:
-                strut_id = int(float(value))
-            except ValueError as exc:
-                raise ValueError(f"Invalid strut_id value: {value!r}") from exc
-            if strut_id in seen:
-                continue
-            seen.add(strut_id)
-            rows.append({
-                "strut_id": strut_id,
-                "fields": {
-                    str(key): value for key, value in raw.items()
-                    if key is not None and key != id_column and value not in (None, "")
-                },
-            })
-        if not rows:
-            raise ValueError("CSV contains no strut IDs.")
+    def set_result_json(self, payload, source_name="analysis.json"):
+        rows, hint, role = extract_result_rows(payload)
+        source_name = Path(str(source_name or "analysis.json")).name
         with self.lock:
-            self.csv_rows = rows
+            if role == "measurement_manifest":
+                configured = payload.get("config", {}).get("threshold")
+                if configured is not None:
+                    self.analysis_threshold = float(configured)
+            elif role == "thresholds":
+                for key, value in payload.items():
+                    if isinstance(value, (str, int, float, bool)) or value is None:
+                        self.thresholds[str(key)] = value
+
+            added = 0
+            for raw in rows:
+                if not isinstance(raw, dict):
+                    continue
+                value = raw.get("strut_id", raw.get("id"))
+                try:
+                    strut_id = int(float(value))
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"{source_name} contains an invalid strut_id: {value!r}"
+                    ) from exc
+                classifications = _classification_tokens(raw, hint)
+                fields = _flatten_fields(raw)
+                row = self.result_rows.setdefault(strut_id, {
+                    "strut_id": strut_id,
+                    "classifications": set(),
+                    "fields": {},
+                    "sources": [],
+                })
+                row["classifications"].update(classifications)
+                row["fields"].update(fields)
+                if source_name not in row["sources"]:
+                    row["sources"].append(source_name)
+                added += 1
+            self.result_documents.append({
+                "name": source_name,
+                "role": role,
+                "rows": added,
+            })
+            return {"role": role, "rows": added}
 
     def catalog(self):
         with self.lock:
             entries = []
             unmatched = []
-            for row in self.csv_rows:
+            class_counts = {name: 0 for name in DEFECT_CLASSES}
+            class_order = {name: index for index, name in enumerate(DEFECT_CLASSES)}
+            for row in self.result_rows.values():
                 strut_id = row["strut_id"]
                 strut = self.struts.get(strut_id)
                 if strut is None:
@@ -429,13 +559,30 @@ class AppState:
                     continue
                 start = self.junctions[int(strut["junction0"])]
                 end = self.junctions[int(strut["junction1"])]
+                classifications = sorted(
+                    row["classifications"], key=lambda name: class_order.get(name, 99)
+                )
+                for name in classifications:
+                    if name in class_counts:
+                        class_counts[name] += 1
+                confidence = row["fields"].get(
+                    "confidence", row["fields"].get("classification_confidence")
+                )
                 entries.append({
                     "strut_id": strut_id,
                     "start_xyz": [float(value) for value in start],
                     "end_xyz": [float(value) for value in end],
                     "length_voxels": float(np.linalg.norm(end - start)),
                     "fields": row["fields"],
+                    "classifications": classifications,
+                    "classification": classifications[0],
+                    "confidence": confidence,
+                    "sources": row["sources"],
                 })
+            effective_threshold = (
+                self.analysis_threshold
+                if self.analysis_threshold is not None else self.threshold
+            )
             return {
                 "ready": bool(self.volume is not None and entries),
                 "volume_shape_zyx": (
@@ -445,16 +592,22 @@ class AppState:
                 "volume_dtype": (
                     str(self.volume.dtype) if self.volume is not None else None
                 ),
-                "threshold": self.threshold,
+                "threshold": effective_threshold,
+                "auto_threshold": self.threshold,
+                "class_counts": class_counts,
+                "thresholds": self.thresholds,
+                "documents": self.result_documents,
                 "entries": entries,
-                "unmatched_ids": unmatched,
+                "unmatched_ids": sorted(unmatched),
             }
 
     def profile(self, strut_id, threshold):
         key = (int(strut_id), round(float(threshold), 6))
         with self.lock:
             if key in self.profile_cache:
-                return self.profile_cache[key]
+                result = self.profile_cache.pop(key)
+                self.profile_cache[key] = result
+                return result
             if self.volume is None:
                 raise ValueError("Upload a TIFF first.")
             if strut_id not in self.struts:
@@ -471,8 +624,8 @@ class AppState:
                 "end_xyz": [float(value) for value in end],
             })
             self.profile_cache[key] = result
-            if len(self.profile_cache) > 32:
-                self.profile_cache.pop(next(iter(self.profile_cache)))
+            if len(self.profile_cache) > 128:
+                self.profile_cache.popitem(last=False)
             return result
 
     def crop(self, strut_id, padding=24.0):
@@ -494,9 +647,16 @@ class AppState:
             x1, y1, z1 = map(int, high)
             if x1 <= x0 or y1 <= y0 or z1 <= z0:
                 raise ValueError("Registered strut is outside the TIFF volume.")
-            crop = np.asarray(
-                self.volume[z0:z1, y0:y1, x0:x1], dtype="<f4"
+            source = np.asarray(self.volume[z0:z1, y0:y1, x0:x1])
+            dtype_map = {
+                ("u", 2): ("<u2", "uint16"),
+                ("i", 2): ("<i2", "int16"),
+                ("f", 4): ("<f4", "float32"),
+            }
+            target_dtype, dtype_name = dtype_map.get(
+                (source.dtype.kind, source.dtype.itemsize), ("<f4", "float32")
             )
+            crop = np.ascontiguousarray(source, dtype=target_dtype)
             sample = crop.ravel()[::max(1, crop.size // 200_000)]
             display_low, display_high = np.percentile(sample, [1.0, 99.7])
             if display_high <= display_low:
@@ -508,6 +668,7 @@ class AppState:
                 "start": start,
                 "end": end,
                 "range": (float(display_low), float(display_high)),
+                "dtype": dtype_name,
             }
 
 
@@ -566,7 +727,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/octet-stream")
                 self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "no-store")
-                self.send_header("X-Volume-Dtype", "float32")
+                self.send_header("X-Volume-Dtype", crop["dtype"])
                 self.send_header("X-Volume-Shape", ",".join(map(str, crop["shape"])))
                 self.send_header(
                     "X-Volume-Origin-XYZ", ",".join(map(str, crop["origin"]))
@@ -646,10 +807,13 @@ class Handler(SimpleHTTPRequestHandler):
                     "struts": len(STATE.struts),
                 })
                 return
-            if route == "/api/csv":
+            if route == "/api/results":
                 body = self.read_body(MAX_METADATA_BYTES)
-                STATE.set_csv(body.decode("utf-8-sig"))
-                self.send_json({"rows": len(STATE.csv_rows)})
+                payload = json.loads(body.decode("utf-8-sig"))
+                result = STATE.set_result_json(
+                    payload, unquote(self.headers.get("X-File-Name", "analysis.json"))
+                )
+                self.send_json(result)
                 return
             self.send_error_json(HTTPStatus.NOT_FOUND, "Unknown API route.")
         except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as exc:

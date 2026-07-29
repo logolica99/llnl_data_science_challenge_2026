@@ -1,5 +1,7 @@
 numpy
 matplotlib
 fastmcp
+PyYAML
+scipy
 scikit-image
 tifffile
