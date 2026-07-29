@@ -68,6 +68,7 @@ class ProductionMCPTests(unittest.IsolatedAsyncioTestCase):
             "render_volume_3d",
             "skeletonize",
             "explore_ct_thresholds",
+            "export_stage3_validation_csvs",
         ):
             self.assertNotIn(research_only, tools)
         registration_mode = tools["register_lattice_to_ct"].parameters[

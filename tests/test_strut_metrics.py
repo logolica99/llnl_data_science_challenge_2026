@@ -352,7 +352,17 @@ class StrutMetricsMCPTests(unittest.IsolatedAsyncioTestCase):
         with (output / "per_strut_metrics.csv").open(newline="", encoding="utf-8") as stream:
             rows = {int(row["strut_id"]): row for row in csv.DictReader(stream)}
         self.assertEqual("true", rows[100]["same_material_component_connects_a_to_b"])
+        self.assertEqual("true", rows[100]["both_endpoint_segments_observed"])
+        self.assertGreater(
+            int(rows[100]["endpoint0_to_collar_component_voxel_count_in_corridor"]),
+            0,
+        )
+        self.assertGreater(
+            int(rows[100]["endpoint1_to_collar_component_voxel_count_in_corridor"]),
+            0,
+        )
         self.assertEqual("false", rows[104]["same_material_component_connects_a_to_b"])
+        self.assertEqual("false", rows[104]["both_endpoint_segments_observed"])
         self.assertEqual(0.0, float(rows[104]["minimum_foreground_fraction"]))
 
     async def test_tool_halts_when_handoff_exposes_labels(self) -> None:

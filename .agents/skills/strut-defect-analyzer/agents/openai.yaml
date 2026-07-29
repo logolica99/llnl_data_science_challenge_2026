@@ -1,11 +1,11 @@
 interface:
-  display_name: "Strut Metrics Analyzer"
-  short_description: "Measure label-blind Stage 2 strut evidence"
-  default_prompt: "Use $strut-defect-analyzer to compute hash-verified Stage 2 strut metrics from a sealed Stage 1 handoff."
+  display_name: "Strut Defect Analyzer"
+  short_description: "Measure and classify hash-bound strut evidence"
+  default_prompt: "Use $strut-defect-analyzer to measure Stage 2 struts or run the handoff-bound Stage 3 defect team without recomputing prior-stage science."
 
 dependencies:
   tools:
     - type: "mcp"
       value: "segmentation-tools"
-      description: "Required deterministic Stage 2 strut-metrics MCP tool"
+      description: "Required Stage 2 metrics and Stage 3 classification/evidence MCP tools"
       transport: "stdio"

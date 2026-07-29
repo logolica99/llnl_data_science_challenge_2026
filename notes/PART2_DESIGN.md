@@ -72,6 +72,12 @@ contract. The merge precedence is `missing > broken > thin > present`; bent is
 recorded separately. Every non-present result requires an evidence packet and
 the independent verifier must pass before reporting.
 
+Specialists may be implemented and validated incrementally against the common
+findings schema. A missing/broken-only development result must mark thin and
+bent `deferred`, return `manual_review`, and leave Stage 4 locked. Production
+Stage 3 still requires complete missing, broken, thin, and bent findings plus
+an independent verifier pass.
+
 ## Stage 4 — report
 
 The report stage consumes committed metrics, classifications, evidence, and QA.

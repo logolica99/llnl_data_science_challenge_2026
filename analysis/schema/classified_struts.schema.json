@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logolica99/llnl_data_science_challenge_2026/analysis/schema/classified_struts.schema.json",
+  "title": "Stage 3 classified struts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "specimen_id",
+    "stage_number",
+    "gate",
+    "overall_pass",
+    "development_mode",
+    "counts",
+    "classifications",
+    "thresholds_sha256",
+    "metrics_sha256",
+    "profiles_sha256",
+    "specialist_findings_sha256",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {"const": "part2-strut-classification/2.0.0"},
+    "specimen_id": {"type": "string", "minLength": 1},
+    "stage_number": {"const": 3},
+    "gate": {"enum": ["pass", "manual_review"]},
+    "overall_pass": {"type": "boolean"},
+    "development_mode": {"type": "boolean"},
+    "counts": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0},
+      "required": ["missing", "broken", "thin", "present", "deferred", "total"]
+    },
+    "classifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["strut_id", "class", "bent", "reasons", "evidence_required"],
+        "properties": {
+          "strut_id": {"type": "integer", "minimum": 0},
+          "class": {"enum": ["missing", "broken", "thin", "present", "deferred"]},
+          "bent": {"type": ["boolean", "null"]},
+          "reasons": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "evidence_required": {"type": "boolean"}
+        }
+      }
+    },
+    "thresholds_sha256": {"$ref": "#/$defs/sha256"},
+    "metrics_sha256": {"$ref": "#/$defs/sha256"},
+    "profiles_sha256": {"$ref": "#/$defs/sha256"},
+    "specialist_findings_sha256": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missing", "broken", "thin", "bent"],
+      "properties": {
+        "missing": {"$ref": "#/$defs/sha256"},
+        "broken": {"$ref": "#/$defs/sha256"},
+        "thin": {"$ref": "#/$defs/sha256"},
+        "bent": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "precedence",
+        "bent_is_non_competing_attribute",
+        "metrics_recomputed",
+        "label_access"
+      ],
+      "properties": {
+        "precedence": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "missing"},
+            {"const": "broken"},
+            {"const": "thin"},
+            {"const": "present"}
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "bent_is_non_competing_attribute": {"const": true},
+        "metrics_recomputed": {"const": false},
+        "label_access": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["training", "evaluation", "intentional_deletion"],
+          "properties": {
+            "training": {"const": false},
+            "evaluation": {"const": false},
+            "intentional_deletion": {"const": false}
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
