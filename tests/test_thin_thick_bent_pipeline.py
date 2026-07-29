@@ -130,6 +130,24 @@ class ThinThickBentPipelineTests(unittest.TestCase):
                 measured = next(csv.DictReader(handle))
             self.assertGreater(float(measured["median_radius_voxels"]), 2.0)
             self.assertEqual(measured["measurement_quality"], "usable")
+            with (root / "metrics_only" / "strut_section_measurements.csv").open(
+                newline="", encoding="utf-8"
+            ) as handle:
+                measured_section = next(csv.DictReader(handle))
+            self.assertEqual(
+                measured_section["tracking_method"],
+                "3d_centerline_local_tangent",
+            )
+            self.assertNotEqual(measured_section["local_tangent_z"], "")
+            measurement_manifest = json.loads(
+                (root / "metrics_only" / "measurement_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                measurement_manifest["config"]["tracking_method"],
+                "3d_centerline_local_tangent",
+            )
 
             result = run_pipeline(
                 tiff_path, json_path, root / "complete", 500,

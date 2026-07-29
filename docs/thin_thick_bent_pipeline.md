@@ -5,6 +5,13 @@ classifies only thin, thick, and bent candidates, and writes file-backed evidenc
 for later agents. The registered JSON is a soft spatial prior; the TIFF and JSON
 are never modified.
 
+Measurement uses a two-stage 3D tracker. A continuity-constrained plane pass
+bootstraps the CT path inside a bounded tube around the registered edge. The
+final radius samples are then recentered on a smoothed 3D CT centerline and
+resampled perpendicular to its local tangent. Centerline deviation is the
+orthogonal distance from each tracked CT center to a robust best-fit straight
+3D CT line, not distance from the registered JSON line.
+
 ## Run the Brian specimen
 
 From the repository root:

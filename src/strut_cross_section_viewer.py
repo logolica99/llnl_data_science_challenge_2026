@@ -46,6 +46,40 @@ def make_basis(start, end):
     return direction, u, v, float(length)
 
 
+def make_transported_bases(tangents, initial_u=None):
+    """Build consistently oriented perpendicular bases along a 3D path."""
+    tangents = np.asarray(tangents, dtype=float)
+    bases = []
+    previous_u = None if initial_u is None else np.asarray(initial_u, dtype=float)
+    for tangent in tangents:
+        norm = float(np.linalg.norm(tangent))
+        if norm <= 1e-9:
+            tangent = np.array([0.0, 0.0, 1.0])
+        else:
+            tangent = tangent / norm
+        if previous_u is not None:
+            u = previous_u - float(np.dot(previous_u, tangent)) * tangent
+        else:
+            helper = np.array([1.0, 0.0, 0.0])
+            if abs(float(np.dot(tangent, helper))) > 0.85:
+                helper = np.array([0.0, 1.0, 0.0])
+            u = np.cross(tangent, helper)
+        if float(np.linalg.norm(u)) <= 1e-7:
+            helper = np.array([0.0, 1.0, 0.0])
+            if abs(float(np.dot(tangent, helper))) > 0.85:
+                helper = np.array([0.0, 0.0, 1.0])
+            u = np.cross(tangent, helper)
+        u = u / np.linalg.norm(u)
+        v = np.cross(tangent, u)
+        v = v / np.linalg.norm(v)
+        if previous_u is not None and float(np.dot(u, previous_u)) < 0:
+            u = -u
+            v = -v
+        bases.append((tangent, u, v))
+        previous_u = u
+    return bases
+
+
 def sample_nearest(volume, xyz):
     xyz = np.asarray(xyz, dtype=float)
     x = np.clip(np.rint(xyz[..., 0]).astype(int), 0, volume.shape[2] - 1)
@@ -411,6 +445,157 @@ def select_registration_constrained_path(candidate_planes, expected_area_pixels,
     return path
 
 
+def fit_tracked_centerline(registered_centers, selected_path, registered_u,
+                           registered_v, smoothing_sigma=0.65):
+    """Interpolate a smooth global 3D CT path from the bootstrap plane track.
+
+    The registered centers determine only longitudinal ordering. Transverse
+    offsets come from CT components selected by the continuity-constrained
+    bootstrap. Missing offsets are interpolated (or held at the nearest
+    supported value at an end) before light smoothing supplies local tangents.
+    """
+    registered_centers = np.asarray(registered_centers, dtype=float)
+    count = len(registered_centers)
+    offsets_u = np.full(count, np.nan, dtype=float)
+    offsets_v = np.full(count, np.nan, dtype=float)
+    supported = np.zeros(count, dtype=bool)
+    for index, item in enumerate(selected_path):
+        candidate = item.get("candidate")
+        if candidate is None:
+            continue
+        offsets_u[index] = float(candidate["centroid_u"])
+        offsets_v[index] = float(candidate["centroid_v"])
+        supported[index] = True
+    indices = np.flatnonzero(supported)
+    if not indices.size:
+        return None
+    target = np.arange(count, dtype=float)
+    offsets_u = np.interp(target, indices, offsets_u[indices])
+    offsets_v = np.interp(target, indices, offsets_v[indices])
+    if count >= 3 and smoothing_sigma > 0:
+        offsets_u = ndimage.gaussian_filter1d(
+            offsets_u, sigma=smoothing_sigma, mode="nearest"
+        )
+        offsets_v = ndimage.gaussian_filter1d(
+            offsets_v, sigma=smoothing_sigma, mode="nearest"
+        )
+    centers = (
+        registered_centers
+        + offsets_u[:, None] * np.asarray(registered_u, dtype=float)
+        + offsets_v[:, None] * np.asarray(registered_v, dtype=float)
+    )
+    if count == 1:
+        tangents = np.asarray([[0.0, 0.0, 1.0]])
+    else:
+        tangents = np.gradient(centers, axis=0, edge_order=1)
+    norms = np.linalg.norm(tangents, axis=1)
+    nonzero = norms > 1e-9
+    tangents[nonzero] /= norms[nonzero, None]
+    if not np.all(nonzero):
+        fallback = registered_centers[-1] - registered_centers[0]
+        fallback /= max(float(np.linalg.norm(fallback)), 1e-9)
+        tangents[~nonzero] = fallback
+    return {
+        "centers": centers,
+        "tangents": tangents,
+        "bootstrap_supported": supported,
+    }
+
+
+def select_local_tangent_component(mask, axis, spacing, search_radius,
+                                   expected_area_pixels):
+    """Select material near a predicted 3D path center on a local-tangent plane."""
+    candidates = enumerate_component_candidates(
+        mask,
+        axis,
+        search_radius,
+        spacing,
+        max_candidates=8,
+        search_uv=(0.0, 0.0),
+        allow_distant_centroid=True,
+    )
+    scored = []
+    for original in candidates:
+        candidate = dict(original)
+        contaminated = False
+        raw_area = int(candidate["area_pixels"])
+        if (
+            expected_area_pixels
+            and candidate["area_pixels"] > 1.8 * expected_area_pixels
+        ):
+            core, _, trimmed = trim_merged_component(
+                candidate["selected"],
+                axis,
+                (0.0, 0.0),
+                expected_area_pixels,
+                raw_area_factor=1.8,
+            )
+            if trimmed and np.count_nonzero(core) >= 3:
+                yy, xx = np.nonzero(core)
+                candidate["selected"] = core
+                candidate["area_pixels"] = int(core.sum())
+                candidate["centroid_u"] = float(axis[xx].mean())
+                candidate["centroid_v"] = float(axis[yy].mean())
+                candidate["registered_distance"] = float(math.hypot(
+                    candidate["centroid_u"], candidate["centroid_v"]
+                ))
+                boundary = core & ~ndimage.binary_erosion(
+                    core, structure=np.ones((3, 3), dtype=bool)
+                )
+                perimeter = max(float(boundary.sum()) * spacing, spacing)
+                area = float(core.sum()) * spacing * spacing
+                candidate["circularity"] = float(np.clip(
+                    4.0 * math.pi * area / (perimeter * perimeter),
+                    0.0,
+                    1.0,
+                ))
+                contaminated = True
+        distance = math.hypot(
+            candidate["centroid_u"], candidate["centroid_v"]
+        )
+        if distance > search_radius:
+            continue
+        area_penalty = (
+            abs(math.log(
+                max(candidate["area_pixels"], 1.0)
+                / max(expected_area_pixels, 1.0)
+            ))
+            if expected_area_pixels else 0.0
+        )
+        if expected_area_pixels:
+            area_ratio = candidate["area_pixels"] / max(
+                expected_area_pixels, 1.0
+            )
+            if not 0.35 <= area_ratio <= 2.75:
+                continue
+        score = (
+            distance
+            + 0.70 * area_penalty
+            + 0.35 * (1.0 - candidate["circularity"])
+        )
+        scored.append((
+            float(score), candidate, contaminated, raw_area, area_penalty
+        ))
+    if not scored:
+        return None
+    scored.sort(key=lambda item: item[0])
+    best_score, candidate, contaminated, raw_area, area_penalty = scored[0]
+    margin = scored[1][0] - best_score if len(scored) > 1 else 2.5
+    distance = math.hypot(candidate["centroid_u"], candidate["centroid_v"])
+    confidence = (
+        (1.0 / (1.0 + math.exp(-margin)))
+        * math.exp(-0.025 * distance ** 2)
+        * math.exp(-0.12 * area_penalty)
+    )
+    return {
+        "candidate": candidate,
+        "confidence": float(np.clip(confidence, 0.0, 1.0)),
+        "candidate_count": len(candidates),
+        "junction_contaminated": bool(contaminated),
+        "raw_component_area_pixels": int(raw_area),
+    }
+
+
 def recover_bounded_path_gaps(selected_path, sampled_masks, axis, spacing,
                               expected_area_pixels, search_radius,
                               maximum_gap_planes=2, maximum_prediction_error=4.5,
@@ -609,7 +794,7 @@ def _longest_true_run(values):
 
 
 def add_registration_metrics(sections):
-    """Fit the smooth transverse registration correction for one strut."""
+    """Fit registration correction and a best-fit straight 3D CT centerline."""
     distance = np.asarray([s["distance_voxels"] for s in sections], dtype=float)
     u = np.asarray([s["centroid_u_voxels"] for s in sections], dtype=float)
     v = np.asarray([s["centroid_v_voxels"] for s in sections], dtype=float)
@@ -646,7 +831,40 @@ def add_registration_metrics(sections):
             keep = updated
         fit_u[:] = np.polyval(pu, distance)
         fit_v[:] = np.polyval(pv, distance)
-        residual[idx] = np.hypot(u[idx] - fit_u[idx], v[idx] - fit_v[idx])
+        global_points = np.asarray([
+            [
+                sections[i].get("tracked_center_x_voxels", float("nan")),
+                sections[i].get("tracked_center_y_voxels", float("nan")),
+                sections[i].get("tracked_center_z_voxels", float("nan")),
+            ]
+            for i in idx
+        ], dtype=float)
+        if np.all(np.isfinite(global_points)):
+            keep_3d = np.ones(idx.size, dtype=bool)
+            for _ in range(3):
+                selected = global_points[keep_3d]
+                center = np.mean(selected, axis=0)
+                _, _, vectors = np.linalg.svd(
+                    selected - center, full_matrices=False
+                )
+                line_direction = vectors[0]
+                delta = global_points - center
+                projected = np.outer(
+                    delta @ line_direction, line_direction
+                )
+                errors = np.linalg.norm(delta - projected, axis=1)
+                median = float(np.median(errors))
+                mad = float(np.median(np.abs(errors - median)))
+                limit = max(1.25, median + 3.0 * 1.4826 * mad)
+                updated = errors <= limit
+                if updated.sum() < 2 or np.array_equal(updated, keep_3d):
+                    break
+                keep_3d = updated
+            residual[idx] = errors
+        else:
+            residual[idx] = np.hypot(
+                u[idx] - fit_u[idx], v[idx] - fit_v[idx]
+            )
     elif valid.sum() == 1:
         fit_u[:] = u[valid][0]
         fit_v[:] = v[valid][0]
@@ -703,8 +921,19 @@ def add_curvature_metrics(sections, ignore_edge_sections=0):
     comes from changes in the CT-measured section centroid.
     """
     distance = np.asarray([s["distance_voxels"] for s in sections], dtype=float)
-    u = np.asarray([s["centroid_u_voxels"] for s in sections], dtype=float)
-    v = np.asarray([s["centroid_v_voxels"] for s in sections], dtype=float)
+    points = np.asarray([
+        [
+            s.get("tracked_center_x_voxels", float("nan")),
+            s.get("tracked_center_y_voxels", float("nan")),
+            s.get("tracked_center_z_voxels", float("nan")),
+        ]
+        for s in sections
+    ], dtype=float)
+    global_available = np.all(np.isfinite(points), axis=1)
+    if not np.any(global_available):
+        u = np.asarray([s["centroid_u_voxels"] for s in sections], dtype=float)
+        v = np.asarray([s["centroid_v_voxels"] for s in sections], dtype=float)
+        points = np.column_stack((distance, u, v))
     eligible = np.asarray(
         [s.get("measurement_eligible", True) for s in sections], dtype=bool
     )
@@ -712,7 +941,7 @@ def add_curvature_metrics(sections, ignore_edge_sections=0):
         [s.get("tracking_confidence", 1.0) for s in sections], dtype=float
     )
     valid = (
-        np.isfinite(distance) & np.isfinite(u) & np.isfinite(v) & eligible &
+        np.isfinite(distance) & np.all(np.isfinite(points), axis=1) & eligible &
         (confidence >= 0.45)
     )
     curvature = np.full(len(sections), np.nan, dtype=float)
@@ -721,11 +950,21 @@ def add_curvature_metrics(sections, ignore_edge_sections=0):
         # Polynomial smoothing prevents half-voxel centroid quantization from
         # becoming a high-curvature false positive.
         degree = min(3, idx.size - 1)
-        pu = np.polyfit(distance[idx], u[idx], degree)
-        pv = np.polyfit(distance[idx], v[idx], degree)
-        d2u = np.polyval(np.polyder(pu, 2), distance[idx])
-        d2v = np.polyval(np.polyder(pv, 2), distance[idx])
-        curvature[idx] = np.hypot(d2u, d2v)
+        polynomials = [
+            np.polyfit(distance[idx], points[idx, dimension], degree)
+            for dimension in range(3)
+        ]
+        first = np.column_stack([
+            np.polyval(np.polyder(poly, 1), distance[idx])
+            for poly in polynomials
+        ])
+        second = np.column_stack([
+            np.polyval(np.polyder(poly, 2), distance[idx])
+            for poly in polynomials
+        ])
+        numerator = np.linalg.norm(np.cross(first, second), axis=1)
+        denominator = np.maximum(np.linalg.norm(first, axis=1) ** 3, 1e-9)
+        curvature[idx] = numerator / denominator
     for section, value in zip(sections, curvature):
         section["curvature_inverse_voxels"] = float(value)
     edge = int(max(0, ignore_edge_sections))
@@ -994,35 +1233,167 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
         expected_area_pixels,
         search_radius,
     )
+    bootstrap_path = selected_path
+    centerline_model = fit_tracked_centerline(
+        section_centers, bootstrap_path, u, v
+    )
     tracked = []
-    for path_item in selected_path:
-        candidate = path_item["candidate"]
-        if candidate is None:
-            tracked.append({
-                "selected": np.zeros((grid_size, grid_size), dtype=bool),
-                "raw_component_area_pixels": 0,
-                "junction_contaminated": False,
-                "tracking_confidence": 0.0,
-                "candidate_count": 0,
-                "tracking_recovered": False,
-            })
-            continue
-        selected, raw_area, contaminated = trim_merged_component(
-            candidate["selected"], axis,
-            (candidate["centroid_u"], candidate["centroid_v"]),
-            expected_area_pixels,
+    if centerline_model is not None:
+        local_bases = make_transported_bases(
+            centerline_model["tangents"], initial_u=u
         )
-        tracked.append({
-            "selected": selected,
-            "raw_component_area_pixels": int(raw_area),
-            "junction_contaminated": bool(contaminated),
-            "tracking_confidence": float(path_item["confidence"]),
-            "candidate_count": 0,
-            "tracking_recovered": bool(path_item.get("recovered", False)),
-        })
-    for index, candidates in enumerate(candidate_planes):
-        if index < len(tracked):
-            tracked[index]["candidate_count"] = len(candidates)
+        refined_planes = []
+        for index, (plane_center, local_basis) in enumerate(zip(
+            centerline_model["centers"], local_bases
+        )):
+            local_tangent, local_u, local_v = local_basis
+            local_offsets = (
+                uu[..., None] * local_u + vv[..., None] * local_v
+            )
+            xyz = np.asarray(plane_center) + local_offsets
+            intensities = sample_nearest(
+                volume, xyz.reshape(-1, 3)
+            ).reshape(grid_size, grid_size)
+            mask = intensities >= threshold
+            refined_planes.append((intensities, mask))
+            boundary_interference = bool(
+                valid_z_range is not None and
+                not (
+                    valid_z_range[0] <= plane_center[2]
+                    <= valid_z_range[1]
+                )
+            )
+            local_result = (
+                None if boundary_interference else
+                select_local_tangent_component(
+                    mask,
+                    axis,
+                    spacing,
+                    search_radius,
+                    expected_area_pixels,
+                )
+            )
+            if local_result is None:
+                tracked.append({
+                    "selected": np.zeros(
+                        (grid_size, grid_size), dtype=bool
+                    ),
+                    "raw_component_area_pixels": 0,
+                    "junction_contaminated": False,
+                    "tracking_confidence": 0.0,
+                    "candidate_count": 0,
+                    "tracking_recovered": False,
+                    "sampling_plane_center": np.asarray(plane_center),
+                    "local_tangent": np.asarray(local_tangent),
+                    "local_u": np.asarray(local_u),
+                    "local_v": np.asarray(local_v),
+                    "tracked_center": np.full(3, np.nan),
+                    "registered_centroid_u": float("nan"),
+                    "registered_centroid_v": float("nan"),
+                    "dense_boundary_interference": boundary_interference,
+                    "tracking_method": "3d_centerline_local_tangent",
+                })
+                continue
+            candidate = local_result["candidate"]
+            local_centroid_u = float(candidate["centroid_u"])
+            local_centroid_v = float(candidate["centroid_v"])
+            tracked_center = (
+                np.asarray(plane_center)
+                + local_centroid_u * local_u
+                + local_centroid_v * local_v
+            )
+            registered_delta = tracked_center - section_centers[index]
+            tracked.append({
+                "selected": candidate["selected"],
+                "raw_component_area_pixels": local_result[
+                    "raw_component_area_pixels"
+                ],
+                "junction_contaminated": local_result[
+                    "junction_contaminated"
+                ],
+                "tracking_confidence": local_result["confidence"],
+                "candidate_count": local_result["candidate_count"],
+                "tracking_recovered": bool(
+                    bootstrap_path[index]["candidate"] is None
+                    or bootstrap_path[index].get("recovered", False)
+                ),
+                "sampling_plane_center": np.asarray(plane_center),
+                "local_tangent": np.asarray(local_tangent),
+                "local_u": np.asarray(local_u),
+                "local_v": np.asarray(local_v),
+                "tracked_center": tracked_center,
+                "registered_centroid_u": float(np.dot(
+                    registered_delta, u
+                )),
+                "registered_centroid_v": float(np.dot(
+                    registered_delta, v
+                )),
+                "dense_boundary_interference": boundary_interference,
+                "tracking_method": "3d_centerline_local_tangent",
+            })
+        sampled_planes = refined_planes
+    else:
+        for index, path_item in enumerate(bootstrap_path):
+            candidate = path_item["candidate"]
+            boundary_interference = bool(
+                valid_z_range is not None and
+                not (
+                    valid_z_range[0] <= section_centers[index][2]
+                    <= valid_z_range[1]
+                )
+            )
+            if candidate is None:
+                tracked.append({
+                    "selected": np.zeros(
+                        (grid_size, grid_size), dtype=bool
+                    ),
+                    "raw_component_area_pixels": 0,
+                    "junction_contaminated": False,
+                    "tracking_confidence": 0.0,
+                    "candidate_count": len(candidate_planes[index]),
+                    "tracking_recovered": False,
+                    "sampling_plane_center": section_centers[index],
+                    "local_tangent": direction,
+                    "local_u": u,
+                    "local_v": v,
+                    "tracked_center": np.full(3, np.nan),
+                    "registered_centroid_u": float("nan"),
+                    "registered_centroid_v": float("nan"),
+                    "dense_boundary_interference": boundary_interference,
+                    "tracking_method": "registered_axis_bootstrap_fallback",
+                })
+                continue
+            selected, raw_area, contaminated = trim_merged_component(
+                candidate["selected"],
+                axis,
+                (candidate["centroid_u"], candidate["centroid_v"]),
+                expected_area_pixels,
+            )
+            yy_selected, xx_selected = np.nonzero(selected)
+            centroid_u = float(axis[xx_selected].mean())
+            centroid_v = float(axis[yy_selected].mean())
+            tracked_center = (
+                section_centers[index] + centroid_u * u + centroid_v * v
+            )
+            tracked.append({
+                "selected": selected,
+                "raw_component_area_pixels": int(raw_area),
+                "junction_contaminated": bool(contaminated),
+                "tracking_confidence": float(path_item["confidence"]),
+                "candidate_count": len(candidate_planes[index]),
+                "tracking_recovered": bool(
+                    path_item.get("recovered", False)
+                ),
+                "sampling_plane_center": section_centers[index],
+                "local_tangent": direction,
+                "local_u": u,
+                "local_v": v,
+                "tracked_center": tracked_center,
+                "registered_centroid_u": centroid_u,
+                "registered_centroid_v": centroid_v,
+                "dense_boundary_interference": boundary_interference,
+                "tracking_method": "registered_axis_bootstrap_fallback",
+            })
 
     sections = []
     for index, position in enumerate(positions):
@@ -1040,15 +1411,19 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
         radius = math.sqrt(area / math.pi) if area else float("nan")
         if selected.any():
             yy, xx = np.nonzero(selected)
-            centroid_u = float(axis[xx].mean())
-            centroid_v = float(axis[yy].mean())
+            local_centroid_u = float(axis[xx].mean())
+            local_centroid_v = float(axis[yy].mean())
+            centroid_u = float(record["registered_centroid_u"])
+            centroid_v = float(record["registered_centroid_v"])
             contour_list = find_contours(selected.astype(float), 0.5)
             contour = max(contour_list, key=len) if contour_list else np.empty((0, 2))
             contour_uv = [[float(np.interp(point[1], np.arange(grid_size), axis)),
                            float(np.interp(point[0], np.arange(grid_size), axis))]
                           for point in contour]
             contour_array = np.asarray(contour_uv, dtype=float)
-            radial = (np.sqrt(((contour_array - np.array([centroid_u, centroid_v])) ** 2).sum(axis=1))
+            radial = (np.sqrt(((contour_array - np.array([
+                local_centroid_u, local_centroid_v
+            ])) ** 2).sum(axis=1))
                       if contour_uv else np.array([]))
             radius_min = float(radial.min()) if radial.size else float("nan")
             radius_max = float(radial.max()) if radial.size else float("nan")
@@ -1066,6 +1441,7 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
             ))
         else:
             centroid_u = centroid_v = float("nan")
+            local_centroid_u = local_centroid_v = float("nan")
             contour_uv = []
             radius_min = radius_max = radius_mean = float("nan")
             radial_cv = circularity = float("nan")
@@ -1081,6 +1457,24 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
             "cross_section_circularity": circularity,
             "centroid_u_voxels": centroid_u,
             "centroid_v_voxels": centroid_v,
+            "local_plane_centroid_u_voxels": local_centroid_u,
+            "local_plane_centroid_v_voxels": local_centroid_v,
+            "tracked_center_x_voxels": float(record["tracked_center"][0]),
+            "tracked_center_y_voxels": float(record["tracked_center"][1]),
+            "tracked_center_z_voxels": float(record["tracked_center"][2]),
+            "sampling_plane_center_x_voxels": float(
+                record["sampling_plane_center"][0]
+            ),
+            "sampling_plane_center_y_voxels": float(
+                record["sampling_plane_center"][1]
+            ),
+            "sampling_plane_center_z_voxels": float(
+                record["sampling_plane_center"][2]
+            ),
+            "local_tangent_x": float(record["local_tangent"][0]),
+            "local_tangent_y": float(record["local_tangent"][1]),
+            "local_tangent_z": float(record["local_tangent"][2]),
+            "tracking_method": record["tracking_method"],
             "foreground_fraction": float(selected.mean()),
             "plane_material_fraction": float(mask.mean()),
             "raw_component_area_pixels": record["raw_component_area_pixels"],
@@ -1089,8 +1483,7 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
             "tracking_candidate_count": record["candidate_count"],
             "tracking_recovered": record["tracking_recovered"],
             "dense_boundary_interference": bool(
-                valid_z_range is not None and
-                not (valid_z_range[0] <= section_centers[index][2] <= valid_z_range[1])
+                record["dense_boundary_interference"]
             ),
             "contour_uv": contour_uv,
             "intensity_min": float(intensities.min()),
@@ -1163,13 +1556,13 @@ def write_html(path, sections, strut_id, threshold, extent, summary):
 <html><head><meta charset="utf-8"><title>Strut STRUT_ID cross-section viewer</title>
 <style>body{font-family:Arial,sans-serif;margin:24px;color:#222}canvas{border:1px solid #bbb;max-width:100%;height:auto}.row{display:flex;gap:24px;flex-wrap:wrap}label{display:block;margin:8px 0}#metrics{font-family:monospace;margin:10px 0}</style></head>
 <body><h1>Strut STRUT_ID cross-section viewer</h1>
-<p>Original TIFF is unchanged. The plane is sampled perpendicular to the registered strut axis.</p>
+<p>Original TIFF is unchanged. Final planes are centered on the tracked 3D CT path and sampled perpendicular to its local tangent.</p>
 <label>Position along strut: <input id="pos" type="range" min="0" max="COUNT_MINUS_ONE" value="0"><span id="posLabel"></span></label>
 <div id="metrics"></div><div class="row"><canvas id="contour" width="520" height="520"></canvas><canvas id="overlay" width="520" height="520"></canvas><canvas id="profile" width="720" height="360"></canvas></div>
 <script>
 const sections=SECTIONS; const summary=SUMMARY; const extent=EXTENT; const pos=document.getElementById('pos'); const posLabel=document.getElementById('posLabel'); const metrics=document.getElementById('metrics'); const contour=document.getElementById('contour'); const overlay=document.getElementById('overlay'); const profile=document.getElementById('profile');
 function path(c,s,cx,cy,scale){c.beginPath();(s.contour_uv||[]).forEach((q,j)=>{let x=cx+q[0]*scale,y=cy-q[1]*scale;if(j)c.lineTo(x,y);else c.moveTo(x,y)});c.closePath();c.stroke()}
-function draw(){const i=Number(pos.value),s=sections[i],cx=260,cy=260,scale=220/extent;const deviation=Number.isFinite(s.radius_deviation_fraction)?(s.radius_deviation_fraction*100).toFixed(1)+'%':'N/A (provide ideal diameter in voxels)';posLabel.textContent=(s.position_fraction*100).toFixed(0)+'%';metrics.textContent='classification='+summary.classification+' | distance='+s.distance_voxels.toFixed(1)+' voxels | radius='+s.equivalent_radius_voxels.toFixed(2)+' voxels | curvature='+s.curvature_inverse_voxels.toFixed(5)+' 1/voxel | radius deviation='+deviation;let c=contour.getContext('2d');c.clearRect(0,0,520,520);c.strokeStyle='#9b59b6';c.lineWidth=3;path(c,s,cx,cy,scale);c.fillStyle='#e67e22';c.beginPath();c.arc(cx+s.centroid_u_voxels*scale,cy-s.centroid_v_voxels*scale,4,0,2*Math.PI);c.fill();c.strokeStyle='#e67e22';c.beginPath();c.moveTo(cx+s.centroid_u_voxels*scale,cy-s.centroid_v_voxels*scale);c.lineTo(cx+(s.centroid_u_voxels+s.equivalent_radius_voxels)*scale,cy-s.centroid_v_voxels*scale);c.stroke();c.fillStyle='#222';c.fillText('actual CT contour; orange = measured center/radius',16,24);let o=overlay.getContext('2d');o.clearRect(0,0,520,520);o.strokeStyle='rgba(52,152,219,.30)';o.lineWidth=2;sections.forEach(x=>path(o,x,cx,cy,scale));o.strokeStyle='#e74c3c';o.lineWidth=4;path(o,s,cx,cy,scale);o.fillStyle='#222';o.fillText('all interior contours overlaid',16,24);let p=profile.getContext('2d');p.clearRect(0,0,720,360);p.strokeStyle='#777';p.beginPath();p.moveTo(45,20);p.lineTo(45,320);p.lineTo(700,320);p.stroke();p.strokeStyle='#2980b9';p.lineWidth=2;p.beginPath();sections.forEach((x,j)=>{let xx=45+j/(sections.length-1)*655,yy=320-(x.equivalent_radius_voxels/(extent||1))*280;if(j)p.lineTo(xx,yy);else p.moveTo(xx,yy)});p.stroke();p.fillStyle='#222';p.fillText('radius profile along strut',50,16);p.fillText('position',640,345);p.save();p.translate(12,220);p.rotate(-Math.PI/2);p.fillText('radius (voxels)',0,0);p.restore()}
+function draw(){const i=Number(pos.value),s=sections[i],cx=260,cy=260,scale=220/extent,centerU=Number.isFinite(s.local_plane_centroid_u_voxels)?s.local_plane_centroid_u_voxels:s.centroid_u_voxels,centerV=Number.isFinite(s.local_plane_centroid_v_voxels)?s.local_plane_centroid_v_voxels:s.centroid_v_voxels;const deviation=Number.isFinite(s.radius_deviation_fraction)?(s.radius_deviation_fraction*100).toFixed(1)+'%':'N/A (provide ideal diameter in voxels)';posLabel.textContent=(s.position_fraction*100).toFixed(0)+'%';metrics.textContent='classification='+summary.classification+' | distance='+s.distance_voxels.toFixed(1)+' voxels | radius='+s.equivalent_radius_voxels.toFixed(2)+' voxels | curvature='+s.curvature_inverse_voxels.toFixed(5)+' 1/voxel | radius deviation='+deviation;let c=contour.getContext('2d');c.clearRect(0,0,520,520);c.strokeStyle='#9b59b6';c.lineWidth=3;path(c,s,cx,cy,scale);c.fillStyle='#e67e22';c.beginPath();c.arc(cx+centerU*scale,cy-centerV*scale,4,0,2*Math.PI);c.fill();c.strokeStyle='#e67e22';c.beginPath();c.moveTo(cx+centerU*scale,cy-centerV*scale);c.lineTo(cx+(centerU+s.equivalent_radius_voxels)*scale,cy-centerV*scale);c.stroke();c.fillStyle='#222';c.fillText('actual CT contour; orange = measured center/radius',16,24);let o=overlay.getContext('2d');o.clearRect(0,0,520,520);o.strokeStyle='rgba(52,152,219,.30)';o.lineWidth=2;sections.forEach(x=>path(o,x,cx,cy,scale));o.strokeStyle='#e74c3c';o.lineWidth=4;path(o,s,cx,cy,scale);o.fillStyle='#222';o.fillText('all interior contours overlaid',16,24);let p=profile.getContext('2d');p.clearRect(0,0,720,360);p.strokeStyle='#777';p.beginPath();p.moveTo(45,20);p.lineTo(45,320);p.lineTo(700,320);p.stroke();p.strokeStyle='#2980b9';p.lineWidth=2;p.beginPath();sections.forEach((x,j)=>{let xx=45+j/(sections.length-1)*655,yy=320-(x.equivalent_radius_voxels/(extent||1))*280;if(j)p.lineTo(xx,yy);else p.moveTo(xx,yy)});p.stroke();p.fillStyle='#222';p.fillText('radius profile along strut',50,16);p.fillText('position',640,345);p.save();p.translate(12,220);p.rotate(-Math.PI/2);p.fillText('radius (voxels)',0,0);p.restore()}
 pos.addEventListener('input',draw);draw();
 </script></body></html>"""
     html = (template.replace("STRUT_ID", str(strut_id))

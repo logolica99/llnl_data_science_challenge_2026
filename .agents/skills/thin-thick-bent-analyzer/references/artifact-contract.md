@@ -21,6 +21,12 @@ strut/sample IDs, normalized position, equivalent-area radius, tracked CT
 center, best-fit-centerline deviation, curvature, confidence, validity, and
 exclusion reason.
 
+The registered-axis plane pass is a bounded bootstrap only. Final radii are
+measured on planes centered on the tracked 3D CT path and perpendicular to its
+smoothed local tangent. Per-section rows preserve the sampling-plane center,
+local tangent, and `tracking_method`. Best-fit-centerline deviation is computed
+from the tracked global CT centers against a robust straight 3D CT line.
+
 Valid exclusion reasons are:
 
 - `near_junction`

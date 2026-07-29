@@ -1,3 +1,4 @@
+import math
 import sys
 import unittest
 from pathlib import Path
@@ -30,6 +31,17 @@ def cylinder_volume(broken=False, junction_flare=False):
     return volume
 
 
+def bent_cylinder_volume(amplitude=5.0):
+    volume = np.zeros((81, 64, 64), dtype=np.uint16)
+    yy, xx = np.indices((64, 64))
+    for z in range(5, 76):
+        phase = math.pi * (z - 5) / 70.0
+        center_x = 28.0 + amplitude * math.sin(phase)
+        disk = (xx - center_x) ** 2 + (yy - 28.0) ** 2 <= 3.0 ** 2
+        volume[z][disk] = 1000
+    return volume
+
+
 def registration_metrics(sections):
     return {
         key: sections[0][key] for key in (
@@ -41,6 +53,37 @@ def registration_metrics(sections):
 
 
 class RegistrationTolerantScreeningTests(unittest.TestCase):
+    def test_final_measurements_follow_3d_centerline_local_tangents(self):
+        sections, _, _ = extract_cross_sections(
+            bent_cylinder_volume(),
+            np.array([28.0, 28.0, 5.0]),
+            np.array([28.0, 28.0, 75.0]),
+            threshold=500,
+            positions=np.linspace(0.1, 0.9, 11),
+            extent=10,
+            grid_size=41,
+            tracking_radius_voxels=6,
+        )
+        eligible = [
+            section for section in sections
+            if section["measurement_eligible"]
+            and section["tracking_confidence"] >= 0.45
+        ]
+        self.assertGreaterEqual(len(eligible), 9)
+        self.assertTrue(all(
+            section["tracking_method"] == "3d_centerline_local_tangent"
+            for section in eligible
+        ))
+        tangent_x = np.asarray([
+            section["local_tangent_x"] for section in eligible
+        ])
+        self.assertGreater(float(tangent_x[0]), 0.05)
+        self.assertLess(float(tangent_x[-1]), -0.05)
+        radii = np.asarray([
+            section["equivalent_radius_voxels"] for section in eligible
+        ])
+        self.assertLess(float(np.std(radii) / np.mean(radii)), 0.15)
+
     def test_tracking_confidence_is_conditional_on_supported_planes(self):
         sections = [
             {

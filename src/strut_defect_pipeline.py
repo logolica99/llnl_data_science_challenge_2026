@@ -67,6 +67,13 @@ SECTION_FIELDS = [
     "center_z_voxels",
     "tracked_center_u_voxels",
     "tracked_center_v_voxels",
+    "sampling_plane_center_x_voxels",
+    "sampling_plane_center_y_voxels",
+    "sampling_plane_center_z_voxels",
+    "local_tangent_x",
+    "local_tangent_y",
+    "local_tangent_z",
+    "tracking_method",
     "centerline_deviation_voxels",
     "centerline_deviation_mm",
     "curvature_inverse_voxels",
@@ -236,11 +243,19 @@ def _max_turn_angle(sections: list[dict]):
     for section in sections:
         if not section["_valid"]:
             continue
-        points.append(np.asarray([
-            section["distance_voxels"],
-            section["centroid_u_voxels"],
-            section["centroid_v_voxels"],
-        ], dtype=float))
+        global_point = np.asarray([
+            section.get("tracked_center_x_voxels", float("nan")),
+            section.get("tracked_center_y_voxels", float("nan")),
+            section.get("tracked_center_z_voxels", float("nan")),
+        ], dtype=float)
+        if np.all(np.isfinite(global_point)):
+            points.append(global_point)
+        else:
+            points.append(np.asarray([
+                section["distance_voxels"],
+                section["centroid_u_voxels"],
+                section["centroid_v_voxels"],
+            ], dtype=float))
     if len(points) < 3:
         return None
     vectors = np.diff(np.asarray(points), axis=0)
@@ -338,13 +353,12 @@ def compute_strut_metrics(
                 radii.append(radius)
             if valid and deviation is not None:
                 deviations.append(deviation)
-            registered_center = start + section["position_fraction"] * (end - start)
             if radius is not None:
-                ct_center = (
-                    registered_center
-                    + u * float(section["centroid_u_voxels"])
-                    + v * float(section["centroid_v_voxels"])
-                )
+                ct_center = np.asarray([
+                    section["tracked_center_x_voxels"],
+                    section["tracked_center_y_voxels"],
+                    section["tracked_center_z_voxels"],
+                ], dtype=float)
             else:
                 ct_center = np.full(3, np.nan)
             section_rows.append({
@@ -363,6 +377,19 @@ def compute_strut_metrics(
                 "center_z_voxels": _finite(ct_center[2]),
                 "tracked_center_u_voxels": _finite(section["centroid_u_voxels"]),
                 "tracked_center_v_voxels": _finite(section["centroid_v_voxels"]),
+                "sampling_plane_center_x_voxels": _finite(
+                    section["sampling_plane_center_x_voxels"]
+                ),
+                "sampling_plane_center_y_voxels": _finite(
+                    section["sampling_plane_center_y_voxels"]
+                ),
+                "sampling_plane_center_z_voxels": _finite(
+                    section["sampling_plane_center_z_voxels"]
+                ),
+                "local_tangent_x": _finite(section["local_tangent_x"]),
+                "local_tangent_y": _finite(section["local_tangent_y"]),
+                "local_tangent_z": _finite(section["local_tangent_z"]),
+                "tracking_method": section["tracking_method"],
                 "centerline_deviation_voxels": deviation,
                 "centerline_deviation_mm": (
                     deviation * voxel_size_mm
@@ -491,6 +518,12 @@ def compute_strut_metrics(
             "axis_mapping": "[x,y,z] -> volume[z,y,x]",
             "registered_json_role": "soft spatial prior",
             "radius_definition": "sqrt(segmented_cross_section_area/pi)",
+            "tracking_method": "3d_centerline_local_tangent",
+            "bootstrap_method": "registered_axis_continuity_path",
+            "centerline_deviation_definition": (
+                "orthogonal distance from tracked CT center to robust "
+                "best-fit straight 3D CT line"
+            ),
         },
         "volume": {
             "shape_zyx": list(map(int, volume.shape)),
@@ -618,6 +651,10 @@ def _measurement_provenance(strut_sections_csv):
         "tracking_radius_voxels": _finite(
             config.get("tracking_radius_voxels")
         ),
+        "tracking_method": config.get("tracking_method"),
+        "centerline_deviation_definition": config.get(
+            "centerline_deviation_definition"
+        ),
         "section_measurements_sha256": (
             artifact.get("sha256") or _sha256(strut_sections_csv)
         ),
@@ -637,6 +674,19 @@ def _typed_profile_sample(row):
         "center_z_voxels": _as_float(row.get("center_z_voxels")),
         "center_u_voxels": _as_float(row.get("tracked_center_u_voxels")),
         "center_v_voxels": _as_float(row.get("tracked_center_v_voxels")),
+        "sampling_plane_center_x_voxels": _as_float(
+            row.get("sampling_plane_center_x_voxels")
+        ),
+        "sampling_plane_center_y_voxels": _as_float(
+            row.get("sampling_plane_center_y_voxels")
+        ),
+        "sampling_plane_center_z_voxels": _as_float(
+            row.get("sampling_plane_center_z_voxels")
+        ),
+        "local_tangent_x": _as_float(row.get("local_tangent_x")),
+        "local_tangent_y": _as_float(row.get("local_tangent_y")),
+        "local_tangent_z": _as_float(row.get("local_tangent_z")),
+        "tracking_method": row.get("tracking_method", ""),
         "deviation_voxels": _as_float(
             row.get("centerline_deviation_voxels")
         ),
