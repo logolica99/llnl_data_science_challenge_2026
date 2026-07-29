@@ -171,7 +171,12 @@ class ThinThickBentPipelineTests(unittest.TestCase):
         self.assertTrue(recovered[1]["tracking_recovered"])
         self.assertEqual(
             recovered[1]["tracking_method"],
-            "3d_centerline_local_tangent_component_recovery",
+            "3d_centerline_local_tangent_subvoxel_component_recovery",
+        )
+        self.assertEqual(
+            recovered[1]["tracking_recovery_reason"],
+            "recovered_from_connected_3d_component_with_"
+            "trilinear_raw_tiff_sampling",
         )
 
         broken = volume.copy()

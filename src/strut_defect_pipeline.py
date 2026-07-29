@@ -82,6 +82,8 @@ SECTION_FIELDS = [
     "tracking_confidence",
     "tracking_recovered",
     "tracking_recovery_reason",
+    "tracking_recovery_area_ratio",
+    "tracking_recovery_area_voxels_squared",
     "valid",
     "exclusion_reason",
     "junction_excluded",
@@ -429,6 +431,14 @@ def compute_strut_metrics(
                 ),
                 "tracking_recovery_reason": section.get(
                     "tracking_recovery_reason", ""
+                ),
+                "tracking_recovery_area_ratio": _finite(
+                    section.get("tracking_recovery_area_ratio")
+                ),
+                "tracking_recovery_area_voxels_squared": _finite(
+                    section.get(
+                        "tracking_recovery_area_voxels_squared"
+                    )
                 ),
                 "valid": valid,
                 "exclusion_reason": reason,
@@ -781,6 +791,12 @@ def _typed_profile_sample(row):
         "tracking_recovered": _as_bool(row.get("tracking_recovered")),
         "tracking_recovery_reason": row.get(
             "tracking_recovery_reason", ""
+        ),
+        "tracking_recovery_area_ratio": _as_float(
+            row.get("tracking_recovery_area_ratio")
+        ),
+        "tracking_recovery_area_voxels_squared": _as_float(
+            row.get("tracking_recovery_area_voxels_squared")
         ),
         "valid": _as_bool(row.get("valid")),
         "exclusion_reason": row.get("exclusion_reason", ""),

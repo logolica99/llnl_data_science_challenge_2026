@@ -440,6 +440,12 @@ def _embedded_profile(payload):
                 raw.get("confidence", raw.get("tracking_confidence"))
             ),
             "tracking_recovered": bool(raw.get("tracking_recovered", False)),
+            "tracking_recovery_reason": str(
+                raw.get("tracking_recovery_reason", "")
+            ),
+            "tracking_recovery_area_ratio": finite_or_none(
+                raw.get("tracking_recovery_area_ratio")
+            ),
             "valid": bool(raw.get("valid", False)),
             "exclusion_reason": str(raw.get("exclusion_reason", "")),
         })

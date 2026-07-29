@@ -836,10 +836,14 @@ def recover_refined_tangent_gaps_from_3d_component(
         selected = np.asarray(record["selected"], dtype=bool)
         if not np.any(selected):
             return {}
+        record_uu = record.get("measurement_uu", uu)
+        record_vv = record.get("measurement_vv", vv)
         plane_xyz = (
             np.asarray(record["sampling_plane_center"], dtype=float)
-            + uu[..., None] * np.asarray(record["local_u"], dtype=float)
-            + vv[..., None] * np.asarray(record["local_v"], dtype=float)
+            + record_uu[..., None]
+            * np.asarray(record["local_u"], dtype=float)
+            + record_vv[..., None]
+            * np.asarray(record["local_v"], dtype=float)
         )
         local_xyz = np.rint(plane_xyz[selected]).astype(int) - crop_min
         crop_shape_xyz = np.asarray(
@@ -958,6 +962,14 @@ def recover_refined_tangent_gaps_from_3d_component(
                 left_labels[value], right_labels[value]
             ),
         )
+        component_zyx = np.argwhere(labels == component_label)
+        component_xyz = (
+            component_zyx[:, [2, 1, 0]].astype(float) + crop_min
+        )
+        crop_float = np.asarray(crop, dtype=np.float32)
+        component_float = np.asarray(
+            labels == component_label, dtype=np.float32
+        )
 
         span = stop - (start - 1)
         bridge_tangent = bridge_delta / bridge_length
@@ -971,54 +983,146 @@ def recover_refined_tangent_gaps_from_3d_component(
         bridge_planes = []
         for plane_index in range(start, stop):
             fraction = (plane_index - (start - 1)) / span
-            plane_center = (
+            interpolated_center = (
                 (1.0 - fraction) * left_center
                 + fraction * right_center
             )
-            # The smoothed path tangent can be the cause of the failed plane
-            # on a sharp bend. For a bounded gap, the measured CT centers on
-            # both sides provide the most local data-supported direction.
-            local_tangent = bridge_tangent
+            component_axial = (
+                component_xyz - left_center
+            ) @ bridge_tangent
+            target_axial = float(
+                np.dot(
+                    interpolated_center - left_center,
+                    bridge_tangent,
+                )
+            )
+            center_slab = component_xyz[
+                np.abs(component_axial - target_axial) <= 1.0
+            ]
+            tangent_half_window = max(
+                3.0, 1.5 * expected_radius_voxels
+            )
+            tangent_support = component_xyz[
+                np.abs(component_axial - target_axial)
+                <= tangent_half_window
+            ]
+            if len(center_slab) < 3 or len(tangent_support) < 6:
+                mark_gap_reason(
+                    start,
+                    stop,
+                    "insufficient_3d_component_centerline_support",
+                )
+                bridge_records = []
+                break
+            plane_center = np.mean(center_slab, axis=0)
+            center_shift = float(np.linalg.norm(
+                plane_center - interpolated_center
+            ))
+            if center_shift > corridor_radius:
+                mark_gap_reason(
+                    start,
+                    stop,
+                    "3d_component_center_shift_out_of_range",
+                )
+                bridge_records = []
+                break
+            _, _, tangent_vectors = np.linalg.svd(
+                tangent_support - np.mean(tangent_support, axis=0),
+                full_matrices=False,
+            )
+            local_tangent = tangent_vectors[0]
+            if float(np.dot(local_tangent, bridge_tangent)) < 0.0:
+                local_tangent = -local_tangent
+            if float(np.dot(local_tangent, bridge_tangent)) < 0.35:
+                mark_gap_reason(
+                    start,
+                    stop,
+                    "3d_component_tangent_out_of_range",
+                )
+                bridge_records = []
+                break
             local_tangent, local_u, local_v = make_transported_bases(
                 [local_tangent],
                 initial_u=left["local_u"],
             )[0]
+            # Oblique nearest-neighbor planes can alias a real voxel component
+            # into a spuriously tiny or oversized section. Remeasure only this
+            # already-connected gap at fixed 4x transverse resolution using
+            # trilinear raw-TIFF intensity and component occupancy sampling.
+            subpixel_factor = 4
+            measurement_axis = np.linspace(
+                float(axis[0]),
+                float(axis[-1]),
+                (len(axis) - 1) * subpixel_factor + 1,
+            )
+            measurement_spacing = float(
+                measurement_axis[1] - measurement_axis[0]
+            )
+            measurement_uu, measurement_vv = np.meshgrid(
+                measurement_axis, measurement_axis, indexing="xy"
+            )
             plane_xyz = (
                 plane_center
-                + uu[..., None] * local_u
-                + vv[..., None] * local_v
+                + measurement_uu[..., None] * local_u
+                + measurement_vv[..., None] * local_v
             )
-            intensities = sample_nearest(
-                volume, plane_xyz.reshape(-1, 3)
-            ).reshape(len(axis), len(axis))
+            local_xyz = plane_xyz - crop_min
+            sample_coordinates = np.vstack([
+                local_xyz[..., 2].ravel(),
+                local_xyz[..., 1].ravel(),
+                local_xyz[..., 0].ravel(),
+            ])
+            intensities = ndimage.map_coordinates(
+                crop_float,
+                sample_coordinates,
+                order=1,
+                mode="constant",
+                cval=0.0,
+                prefilter=False,
+            ).reshape(len(measurement_axis), len(measurement_axis))
+            component_occupancy = ndimage.map_coordinates(
+                component_float,
+                sample_coordinates,
+                order=1,
+                mode="constant",
+                cval=0.0,
+                prefilter=False,
+            ).reshape(len(measurement_axis), len(measurement_axis))
             mask = intensities >= threshold
-            local_xyz = np.rint(plane_xyz).astype(int) - crop_min
-            inside = np.all(
-                (local_xyz >= 0) & (local_xyz < crop_shape_xyz), axis=-1
+            selected = mask & (component_occupancy >= 0.5)
+            selected_area_pixels = int(np.count_nonzero(selected))
+            selected_area_voxels = (
+                selected_area_pixels * measurement_spacing ** 2
             )
-            selected = np.zeros_like(mask, dtype=bool)
-            selected[inside] = (
-                labels[
-                    local_xyz[..., 2][inside],
-                    local_xyz[..., 1][inside],
-                    local_xyz[..., 0][inside],
-                ]
-                == component_label
-            )
-            selected &= mask
-            selected_area = int(np.count_nonzero(selected))
             area_ratio = (
-                selected_area / max(float(expected_area_pixels), 1.0)
+                selected_area_voxels
+                / max(expected_area_voxels, 1e-9)
             )
-            if selected_area < 3 or not 0.35 <= area_ratio <= 2.75:
+            if (
+                selected_area_pixels < 3
+                or not 0.35 <= area_ratio <= 2.75
+            ):
+                for gap_index in range(start, stop):
+                    recovered[gap_index][
+                        "tracking_recovery_area_ratio"
+                    ] = float(area_ratio)
+                    recovered[gap_index][
+                        "tracking_recovery_area_voxels_squared"
+                    ] = float(selected_area_voxels)
                 mark_gap_reason(
-                    start, stop, "3d_component_plane_area_out_of_range"
+                    start,
+                    stop,
+                    "subvoxel_3d_component_plane_area_out_of_range",
                 )
                 bridge_records = []
                 break
             yy_selected, xx_selected = np.nonzero(selected)
-            local_centroid_u = float(axis[xx_selected].mean())
-            local_centroid_v = float(axis[yy_selected].mean())
+            local_centroid_u = float(
+                measurement_axis[xx_selected].mean()
+            )
+            local_centroid_v = float(
+                measurement_axis[yy_selected].mean()
+            )
             tracked_center = (
                 plane_center
                 + local_centroid_u * local_u
@@ -1045,7 +1149,9 @@ def recover_refined_tangent_gaps_from_3d_component(
             )
             bridge_records.append({
                 "selected": selected,
-                "raw_component_area_pixels": selected_area,
+                "raw_component_area_pixels": int(round(
+                    selected_area_voxels / max(spacing ** 2, 1e-9)
+                )),
                 "junction_contaminated": False,
                 "tracking_confidence": float(confidence),
                 "candidate_count": len(common_labels),
@@ -1063,11 +1169,16 @@ def recover_refined_tangent_gaps_from_3d_component(
                 )),
                 "dense_boundary_interference": False,
                 "tracking_method": (
-                    "3d_centerline_local_tangent_component_recovery"
+                    "3d_centerline_local_tangent_subvoxel_component_recovery"
                 ),
                 "tracking_recovery_reason": (
-                    "recovered_from_connected_3d_component"
+                    "recovered_from_connected_3d_component_with_"
+                    "trilinear_raw_tiff_sampling"
                 ),
+                "measurement_axis": measurement_axis,
+                "measurement_spacing": measurement_spacing,
+                "measurement_uu": measurement_uu,
+                "measurement_vv": measurement_vv,
             })
             bridge_planes.append((intensities, mask))
 
@@ -1945,18 +2056,34 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
             "tracking_recovered": False,
         }
         selected = record["selected"]
-        area = float(selected.sum() * spacing * spacing)
+        measurement_axis = np.asarray(
+            record.get("measurement_axis", axis), dtype=float
+        )
+        measurement_spacing = float(
+            record.get("measurement_spacing", spacing)
+        )
+        area = float(
+            selected.sum() * measurement_spacing * measurement_spacing
+        )
         radius = math.sqrt(area / math.pi) if area else float("nan")
         if selected.any():
             yy, xx = np.nonzero(selected)
-            local_centroid_u = float(axis[xx].mean())
-            local_centroid_v = float(axis[yy].mean())
+            local_centroid_u = float(measurement_axis[xx].mean())
+            local_centroid_v = float(measurement_axis[yy].mean())
             centroid_u = float(record["registered_centroid_u"])
             centroid_v = float(record["registered_centroid_v"])
             contour_list = find_contours(selected.astype(float), 0.5)
             contour = max(contour_list, key=len) if contour_list else np.empty((0, 2))
-            contour_uv = [[float(np.interp(point[1], np.arange(grid_size), axis)),
-                           float(np.interp(point[0], np.arange(grid_size), axis))]
+            contour_uv = [[float(np.interp(
+                               point[1],
+                               np.arange(len(measurement_axis)),
+                               measurement_axis,
+                           )),
+                           float(np.interp(
+                               point[0],
+                               np.arange(len(measurement_axis)),
+                               measurement_axis,
+                           ))]
                           for point in contour]
             contour_array = np.asarray(contour_uv, dtype=float)
             radial = (np.sqrt(((contour_array - np.array([
@@ -1973,7 +2100,10 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
             boundary = selected & ~ndimage.binary_erosion(
                 selected, structure=np.ones((3, 3), dtype=bool)
             )
-            perimeter = max(float(boundary.sum()) * spacing, spacing)
+            perimeter = max(
+                float(boundary.sum()) * measurement_spacing,
+                measurement_spacing,
+            )
             circularity = float(np.clip(
                 4.0 * math.pi * area / (perimeter * perimeter), 0.0, 1.0
             ))
@@ -2022,6 +2152,12 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
             "tracking_recovered": record["tracking_recovered"],
             "tracking_recovery_reason": record.get(
                 "tracking_recovery_reason", ""
+            ),
+            "tracking_recovery_area_ratio": record.get(
+                "tracking_recovery_area_ratio", float("nan")
+            ),
+            "tracking_recovery_area_voxels_squared": record.get(
+                "tracking_recovery_area_voxels_squared", float("nan")
             ),
             "dense_boundary_interference": bool(
                 record["dense_boundary_interference"]

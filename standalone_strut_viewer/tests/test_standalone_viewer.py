@@ -102,6 +102,13 @@ class StandaloneViewerTests(unittest.TestCase):
                                     "tracking_method": (
                                         "3d_centerline_local_tangent"
                                     ),
+                                    "tracking_recovered": True,
+                                    "tracking_recovery_reason": (
+                                        "recovered_from_connected_3d_"
+                                        "component_with_trilinear_raw_"
+                                        "tiff_sampling"
+                                    ),
+                                    "tracking_recovery_area_ratio": 0.9,
                                     "deviation_voxels": 1.25,
                                     "confidence": 0.9,
                                     "valid": True,
@@ -146,6 +153,13 @@ class StandaloneViewerTests(unittest.TestCase):
             self.assertEqual(
                 profile["profile"][0]["tracking_method"],
                 "3d_centerline_local_tangent",
+            )
+            self.assertTrue(
+                profile["profile"][0]["tracking_recovered"]
+            )
+            self.assertEqual(
+                profile["profile"][0]["tracking_recovery_area_ratio"],
+                0.9,
             )
         finally:
             state.clear()

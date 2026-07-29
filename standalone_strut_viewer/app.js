@@ -330,10 +330,26 @@ function drawSeriesGraph(canvasId, profile, field, color, ylabel, reference = nu
     if (!Number.isFinite(item[field])) return;
     const x = pad.left + item.fraction * graphWidth;
     const y = pad.top + (1 - item[field] / maximum) * graphHeight;
-    context.fillStyle = color;
     context.beginPath();
-    context.arc(x, y, 3.3, 0, Math.PI * 2);
-    context.fill();
+    if (item.tracking_recovered) {
+      context.fillStyle = "#ffffff";
+      context.strokeStyle = "#e58e26";
+      context.lineWidth = 2.2;
+      context.arc(x, y, 4.5, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+    } else if (!item.valid) {
+      context.fillStyle = "#ffffff";
+      context.strokeStyle = "#94a3b8";
+      context.lineWidth = 1.8;
+      context.arc(x, y, 4.0, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+    } else {
+      context.fillStyle = color;
+      context.arc(x, y, 3.3, 0, Math.PI * 2);
+      context.fill();
+    }
   });
   context.fillStyle = "#64748b";
   context.font = "11px system-ui";

@@ -21,7 +21,10 @@ strut/sample IDs, normalized position, equivalent-area radius, tracked CT
 center, best-fit-centerline deviation, curvature, confidence, validity, and
 exclusion reason. Recovered samples also preserve a bounded
 `tracking_recovery_reason`; component-guided recovery must identify the same
-26-neighbor material component on both sides of an isolated gap.
+26-neighbor material component on both sides of an isolated gap. Its final
+fallback samples raw TIFF intensities at fixed 4x transverse resolution with
+trilinear interpolation, while the component label limits which material can
+contribute to the measured area.
 
 The registered-axis plane pass is a bounded bootstrap only. Final radii are
 measured on planes centered on the tracked 3D CT path and perpendicular to its

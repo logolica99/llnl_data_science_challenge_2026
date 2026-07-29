@@ -183,6 +183,9 @@ main { padding: 30px clamp(18px, 4vw, 64px) 64px; }
 .card-title p { margin: 0; color: var(--muted); font-size: 11px; }
 .graph-key { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
 .graph-key span { width: 22px; height: 3px; border-radius: 2px; background: var(--blue); }
+.graph-keys { display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex-wrap: wrap; }
+.recovered-key span { width: 9px; height: 9px; border: 2px solid #e58e26; border-radius: 50%; background: #fff; }
+.excluded-key span { width: 9px; height: 9px; border: 2px solid #94a3b8; border-radius: 50%; background: #fff; }
 #radiusGraph, #deviationGraph { display: block; width: 100%; height: 300px; margin-top: 16px; }
 .deviation-key span { background: #8b4db5; }
 .metadata-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 17px; }

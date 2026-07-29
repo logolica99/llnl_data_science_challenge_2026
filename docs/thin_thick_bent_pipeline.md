@@ -93,6 +93,10 @@ Reliable bending evidence can therefore be classified even when radius
 variation is too high for a thin/thick decision. Short one- or two-section gaps
 are recovered both before and after local-tangent refinement, but only when a
 unique, area-consistent CT bridge exists between confident tracked sections.
+If the ordinary refined plane remains unresolved, the same 3D component may be
+remeasured at fixed 4x transverse resolution with trilinear raw-TIFF sampling;
+this remains subject to the existing area, confidence, step, and continuity
+gates.
 
 Continuity has priority over all three specialist defect labels. A narrow tube
 following the measured global CT centers is labeled in the original voxel grid

@@ -118,7 +118,11 @@
                 <h3>Radius along strut</h3>
                 <p>Area-equivalent radius from each perpendicular CT section.</p>
               </div>
-              <div class="graph-key"><span></span> tracked radius</div>
+              <div class="graph-keys">
+                <div class="graph-key"><span></span> accepted measurement</div>
+                <div class="graph-key recovered-key"><span></span> 3D recovered</div>
+                <div class="graph-key excluded-key"><span></span> excluded</div>
+              </div>
             </div>
             <canvas id="radiusGraph" aria-label="Radius profile graph"></canvas>
           </section>
@@ -129,7 +133,10 @@
                 <h3>Deviation from best-fit straight CT centerline</h3>
                 <p>Distance between the tracked CT center and its best-fit straight centerline.</p>
               </div>
-              <div class="graph-key deviation-key"><span></span> centerline deviation</div>
+              <div class="graph-keys">
+                <div class="graph-key deviation-key"><span></span> accepted measurement</div>
+                <div class="graph-key recovered-key"><span></span> 3D recovered</div>
+              </div>
             </div>
             <canvas id="deviationGraph" aria-label="Centerline deviation graph"></canvas>
           </section>
