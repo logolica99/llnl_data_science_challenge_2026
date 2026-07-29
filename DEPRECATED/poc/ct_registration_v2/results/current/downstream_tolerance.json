@@ -1,0 +1,12 @@
+{
+  "estimated_registration_uncertainty_voxels": 3.0557492723985393,
+  "measured_strut_radius_voxels": 2.0,
+  "recommended_corridor_margin_voxels": 2.0,
+  "uncertainty_to_measured_radius_ratio": 1.5278746361992697,
+  "gates": {
+    "uncertainty_within_corridor_margin": false,
+    "uncertainty_within_measured_radius_ratio": false
+  },
+  "overall_pass": false,
+  "classification_allowed": false
+}

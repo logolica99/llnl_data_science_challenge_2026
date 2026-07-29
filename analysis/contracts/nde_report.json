@@ -1,0 +1,58 @@
+{
+  "schema_version": "agent-stage-contract/1.0.0",
+  "stage_number": 4,
+  "stage": "nde_report",
+  "owner": "report_agent",
+  "invoked_by": "orchestrator",
+  "execution_kind": "agent_judgment",
+  "maximum_attempts": 2,
+  "one_shot": false,
+  "required_dependencies": {
+    "agents": [{"name": "report_agent", "contract_version": "agent-stage-contract/1.0.0"}],
+    "mcp_tools": [
+      {"server": "segmentation-tools", "name": "get_strut_report", "response_schema_version": "part2-mcp-response/1.0.0"},
+      {"server": "segmentation-tools", "name": "render_lattice_3d", "response_schema_version": "part2-mcp-response/1.0.0"},
+      {"server": "segmentation-tools", "name": "compute_spatial_stats", "response_schema_version": "part2-mcp-response/1.0.0"}
+    ]
+  },
+  "required_inputs": ["verified_stage_3_receipt", "analysis_ready_specimen_manifest", "registration_qa", "per_strut_metrics", "classified_struts", "classification_thresholds", "classifier_verifier_report", "evidence_packets"],
+  "optional_inputs": [],
+  "required_outputs": ["spatial_statistics", "lattice_3d_render", "nde_report", "number_crosscheck", "presentation_checklist"],
+  "forbidden_operations": ["scientific_metric_recomputation_in_prose", "training_or_evaluation_label_access", "intentional_vs_unintentional_attribution_without_a_specimen_specific_design", "mcp_cli_or_direct_import_fallback"],
+  "input_artifacts": {
+    "allowed": [
+      {"role": "stage_handoff", "path": "analysis/<specimen_id>/handoffs/stage_4_nde_report_attempt_<attempt>.json", "consumers": ["report_agent"]},
+      {"role": "analysis_ready_specimen_manifest", "path": "analysis/<specimen_id>/config/specimen_manifest.json", "consumers": ["report_agent"]},
+      {"role": "registration_qa", "path": "analysis/<specimen_id>/qa/registration_qa.json", "consumers": ["report_agent"]},
+      {"role": "per_strut_metrics", "path": "analysis/<specimen_id>/struts/per_strut_metrics.csv", "consumers": ["report_agent", "get_strut_report", "compute_spatial_stats"]},
+      {"role": "classified_struts", "path": "analysis/<specimen_id>/struts/classified_struts.json", "consumers": ["report_agent", "get_strut_report", "render_lattice_3d", "compute_spatial_stats"]},
+      {"role": "classification_thresholds", "path": "analysis/<specimen_id>/struts/thresholds.json", "consumers": ["report_agent", "get_strut_report"]},
+      {"role": "classifier_verifier_report", "path": "analysis/<specimen_id>/struts/verifier_report.json", "consumers": ["report_agent"]},
+      {"role": "evidence_packets", "path": "analysis/<specimen_id>/evidence/strut_<id>/**", "allow_multiple": true, "consumers": ["report_agent", "get_strut_report"]},
+      {"role": "localized_graph", "path": "analysis/<specimen_id>/registration/localized_graph.json", "consumers": ["render_lattice_3d", "compute_spatial_stats"]}
+    ],
+    "required_roles": ["stage_handoff", "analysis_ready_specimen_manifest", "registration_qa", "per_strut_metrics", "classified_struts", "classification_thresholds", "classifier_verifier_report", "evidence_packets", "localized_graph"],
+    "forbidden": [
+      {"role": "development_labels", "path": "**/dev_split.json"},
+      {"role": "sealed_labels", "path": "**/sealed_split.json"},
+      {"role": "intentional_deletion_labels", "path": "**/intentional_deletions_*.json"}
+    ]
+  },
+  "output_artifacts": {
+    "allowed": [
+      {"role": "manual_review_evidence", "path": "analysis/<specimen_id>/reviews/stage_4_attempt_<attempt>/**", "allow_multiple": true},
+      {"role": "spatial_statistics", "path": "analysis/<specimen_id>/report/spatial_statistics.json"},
+      {"role": "spatial_statistics_figure", "path": "analysis/<specimen_id>/report/spatial_statistics.png"},
+      {"role": "lattice_3d_render", "path": "analysis/<specimen_id>/report/lattice_defects_3d.png"},
+      {"role": "nde_report", "path": "analysis/<specimen_id>/report/nde_report.md"},
+      {"role": "number_crosscheck", "path": "analysis/<specimen_id>/report/number_crosscheck.json"},
+      {"role": "presentation_checklist", "path": "analysis/<specimen_id>/report/presentation_checklist.json"}
+    ],
+    "required_roles": ["spatial_statistics", "spatial_statistics_figure", "lattice_3d_render", "nde_report", "number_crosscheck", "presentation_checklist"]
+  },
+  "required_receipt_assertions": ["contract_version_matches", "stage_3_receipt_hash_matches", "frozen_config_hash_matches", "classifier_verifier_binding_matches", "report_uses_only_committed_artifact_values", "intentional_attribution_not_claimed", "training_or_evaluation_labels_not_accessed", "number_crosscheck_passed", "output_artifact_hashes_match"],
+  "next_stage": "pipeline_complete",
+  "unlock_condition": {"terminal_state": "pass", "completion_receipt_verified": true, "pipeline_terminal_state": "pass"},
+  "manual_review_conditions": ["report_crosscheck_requires_scientist_disposition"],
+  "halt_conditions": ["missing_or_schema_incompatible_dependency", "number_crosscheck_failure", "training_or_evaluation_label_access", "receipt_or_artifact_hash_mismatch", "attempt_limit_reached"]
+}

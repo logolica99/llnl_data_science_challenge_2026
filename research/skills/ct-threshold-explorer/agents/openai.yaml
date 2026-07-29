@@ -1,0 +1,14 @@
+interface:
+  display_name: "CT Threshold Explorer"
+  short_description: "Compare bounded research-only CT thresholds"
+  default_prompt: "Use $ct-threshold-explorer for an isolated Otsu-centered CT threshold comparison."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools-research"
+      description: "Disabled-by-default research CT and evaluation tools"
+      transport: "stdio"
+
+policy:
+  allow_implicit_invocation: false

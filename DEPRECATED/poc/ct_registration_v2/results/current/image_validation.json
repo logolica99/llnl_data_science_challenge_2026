@@ -1,0 +1,74 @@
+{
+  "junctions": {
+    "record_count": 10206,
+    "mean_5x5x5_foreground_fraction": 0.92309308250049,
+    "median_5x5x5_foreground_fraction": 1.0,
+    "nodes_with_any_foreground_fraction": 0.9587497550460513
+  },
+  "candidate_holdout": {
+    "candidate_count": 705,
+    "median_distance_to_predicted_unique_node_voxels": 1.5539341774597937,
+    "p95_distance_to_predicted_unique_node_voxels": 26.071852550816182
+  },
+  "corridors": {
+    "edge_count": 18468,
+    "axial_samples_per_edge": 9,
+    "maximum_sampled_radius_voxels": 6,
+    "median_foreground_fraction": 0.3854875283446712,
+    "p10_foreground_fraction": 0.2653061224489796,
+    "p90_foreground_fraction": 0.5260770975056689,
+    "edges_with_complete_axial_gap_fraction": 0.020359540827377086,
+    "high_confidence_edge_threshold": 0.4557823129251701,
+    "high_confidence_edge_count": 4706,
+    "radial_foreground_probability": [
+      0.9171720453396867,
+      0.8814661396289076,
+      0.7153635116598079,
+      0.40887541212427503,
+      0.1849836353572546,
+      0.09417039684258657,
+      0.06047096479195244
+    ],
+    "measured_strut_radius_voxels": 2.0
+  },
+  "spatial_bias": {
+    "x": {
+      "bin_median_corridor_foreground_fraction": [
+        0.38095238095238093,
+        0.4013605442176871,
+        0.3945578231292517,
+        0.3922902494331066,
+        0.36281179138321995
+      ],
+      "median_range": 0.038548752834467126
+    },
+    "y": {
+      "bin_median_corridor_foreground_fraction": [
+        0.37188208616780044,
+        0.3832199546485261,
+        0.3832199546485261,
+        0.40589569160997735,
+        0.3877551020408163
+      ],
+      "median_range": 0.03401360544217691
+    },
+    "z": {
+      "bin_median_corridor_foreground_fraction": [
+        0.4467120181405896,
+        0.3832199546485261,
+        0.3786848072562358,
+        0.36281179138321995,
+        0.3832199546485261
+      ],
+      "median_range": 0.08390022675736963
+    }
+  },
+  "gates": {
+    "junction_foreground_sufficient": true,
+    "corridor_foreground_sufficient": true,
+    "spatial_bias_within_limit": true,
+    "holdout_candidates_supported": true,
+    "measured_radius_positive": true
+  },
+  "overall_pass": true
+}

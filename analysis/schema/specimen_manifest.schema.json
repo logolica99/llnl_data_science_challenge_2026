@@ -1,0 +1,1556 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ImDannyVilla/llnl_data_science_challenge_2026/schemas/specimen_manifest.schema.json",
+  "title": "Part 2 specimen manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "specimen_id",
+    "design_id",
+    "lifecycle_state",
+    "unresolved_fields",
+    "inputs",
+    "analysis_parameters",
+    "analysis_parameters_sha256",
+    "derived"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.1.0"
+    },
+    "specimen_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "design_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "lifecycle_state": {
+      "enum": [
+        "provisional",
+        "ready_for_data_prep",
+        "analysis_ready"
+      ]
+    },
+    "unresolved_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ct",
+        "ct_metadata",
+        "design_graph"
+      ],
+      "properties": {
+        "ct": {
+          "$ref": "#/$defs/artifact"
+        },
+        "design_graph": {
+          "$ref": "#/$defs/artifact"
+        },
+        "normalized_nominal_graph": {
+          "$ref": "#/$defs/artifact"
+        },
+        "design_transform_declaration": {
+          "$ref": "#/$defs/artifact"
+        },
+        "aligned_graph": {
+          "$ref": "#/$defs/artifact"
+        },
+        "canonical_mask": {
+          "$ref": "#/$defs/canonicalMaskArtifact"
+        },
+        "cad": {
+          "$ref": "#/$defs/artifact"
+        },
+        "ct_metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "format",
+            "shape",
+            "dtype",
+            "byte_order",
+            "array_axes"
+          ],
+          "properties": {
+            "format": {
+              "enum": [
+                "tiff",
+                "npy"
+              ]
+            },
+            "shape": {
+              "$ref": "#/$defs/positiveIntegerTriplet"
+            },
+            "dtype": {
+              "type": "string",
+              "pattern": "^(?:bool|u?int(?:8|16|32|64)|float(?:16|32|64))$"
+            },
+            "byte_order": {
+              "enum": [
+                "big",
+                "little",
+                "native",
+                "not_applicable"
+              ]
+            },
+            "array_axes": {
+              "oneOf": [
+                {
+                  "const": [
+                    "z",
+                    "y",
+                    "x"
+                  ]
+                },
+                {
+                  "const": "unknown"
+                }
+              ]
+            },
+            "voxel_spacing": {
+              "$ref": "#/$defs/intakeVoxelSpacing"
+            }
+          }
+        }
+      }
+    },
+    "intake": {
+      "$ref": "#/$defs/intakeRecord"
+    },
+    "analysis_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested_analysis_scope",
+        "registration",
+        "coordinates",
+        "segmentation",
+        "localization_policy",
+        "qa_policy",
+        "budgets",
+        "artifact_schema_versions"
+      ],
+      "properties": {
+        "requested_analysis_scope": {
+          "enum": [
+            "roi_screening",
+            "direct_metrology"
+          ]
+        },
+        "registration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "local_recenter_required"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "challenge_aligned_json",
+                "autonomous_v2"
+              ]
+            },
+            "local_recenter_required": {
+              "type": "boolean"
+            }
+          }
+        },
+        "coordinates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "graph_axes",
+            "array_axes",
+            "numpy_index_expression",
+            "aligned_graph_units"
+          ],
+          "properties": {
+            "graph_axes": {
+              "oneOf": [
+                {
+                  "const": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
+                },
+                {
+                  "const": "unknown"
+                }
+              ]
+            },
+            "array_axes": {
+              "oneOf": [
+                {
+                  "const": [
+                    "z",
+                    "y",
+                    "x"
+                  ]
+                },
+                {
+                  "const": "unknown"
+                }
+              ]
+            },
+            "numpy_index_expression": {
+              "enum": [
+                "volume[round(z), round(y), round(x)]",
+                "unknown"
+              ]
+            },
+            "aligned_graph_units": {
+              "enum": [
+                "voxel",
+                "simulation_voxel",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "segmentation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "method_version",
+            "comparison",
+            "histogram_bins",
+            "histogram_encoding",
+            "edge_slices_excluded",
+            "chunk_depth",
+            "coarse_bins",
+            "peak_smoothing_sigma_bins",
+            "peak_prominence_fraction",
+            "minimum_significant_peaks",
+            "minimum_foreground_fraction",
+            "maximum_foreground_fraction",
+            "minimum_otsu_separability",
+            "minimum_class_mean_separation_sigma"
+          ],
+          "properties": {
+            "method": {
+              "const": "exact_histogram_otsu"
+            },
+            "method_version": {
+              "const": "2.0.0"
+            },
+            "comparison": {
+              "const": "value >= threshold"
+            },
+            "histogram_bins": {
+              "const": 65536
+            },
+            "histogram_encoding": {
+              "enum": [
+                "native_uint16",
+                "full_volume_affine_uint16"
+              ]
+            },
+            "edge_slices_excluded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "chunk_depth": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "coarse_bins": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 65536
+            },
+            "peak_smoothing_sigma_bins": {
+              "type": "number",
+              "minimum": 0
+            },
+            "peak_prominence_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_significant_peaks": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minimum_foreground_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_foreground_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_otsu_separability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_class_mean_separation_sigma": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "localization_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "patch_radius_voxels",
+            "search_radius_voxels",
+            "maximum_shift_voxels",
+            "smoothing_sigma_voxels",
+            "mean_shift_bandwidth_voxels",
+            "mean_shift_max_iterations",
+            "mean_shift_tolerance_voxels",
+            "seed_perturbation_voxels",
+            "seed_cluster_radius_voxels",
+            "minimum_seed_consensus_fraction",
+            "minimum_candidate_support",
+            "minimum_relative_support_improvement",
+            "incident_sample_distances_voxels",
+            "core_support_weight",
+            "incident_support_weight",
+            "minimum_primary_or_stable_coarse_fraction",
+            "maximum_fallback_fraction",
+            "maximum_ambiguous_fraction",
+            "maximum_rejected_fraction",
+            "maximum_boundary_limited_fraction"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "stage2-localization-policy/1.1.0"
+            },
+            "patch_radius_voxels": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "search_radius_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "maximum_shift_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "smoothing_sigma_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "mean_shift_bandwidth_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "mean_shift_max_iterations": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mean_shift_tolerance_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "seed_perturbation_voxels": {
+              "type": "number",
+              "minimum": 0
+            },
+            "seed_cluster_radius_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "minimum_seed_consensus_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_candidate_support": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_relative_support_improvement": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "incident_sample_distances_voxels": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "core_support_weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "incident_support_weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_primary_or_stable_coarse_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_fallback_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_ambiguous_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_rejected_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_boundary_limited_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "qa_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "junction_patch_radius_voxels",
+            "corridor_axial_samples",
+            "corridor_radius_voxels",
+            "corridor_angular_samples",
+            "roi_padding_fraction",
+            "spatial_bins_per_axis",
+            "radial_foreground_probability",
+            "minimum_mean_junction_foreground_fraction",
+            "minimum_median_corridor_foreground_fraction",
+            "maximum_spatial_bin_median_range",
+            "minimum_roi_in_bounds_fraction",
+            "maximum_uncertainty_to_radius_ratio"
+          ],
+          "properties": {
+            "schema_version": {
+              "const": "stage2-qa-policy/1.1.0"
+            },
+            "junction_patch_radius_voxels": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "corridor_axial_samples": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "corridor_radius_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "corridor_angular_samples": {
+              "type": "integer",
+              "minimum": 3
+            },
+            "roi_padding_fraction": {
+              "type": "number",
+              "minimum": 0
+            },
+            "spatial_bins_per_axis": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "radial_foreground_probability": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_mean_junction_foreground_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_median_corridor_foreground_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_spatial_bin_median_range": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minimum_roi_in_bounds_fraction": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maximum_uncertainty_to_radius_ratio": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "budgets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "local_recenter_radius_voxels",
+            "roi_padding_fraction",
+            "metrology_uncertainty_voxels",
+            "maximum_agent_retries"
+          ],
+          "properties": {
+            "local_recenter_radius_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "roi_padding_fraction": {
+              "type": "number",
+              "minimum": 0
+            },
+            "metrology_uncertainty_voxels": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "maximum_agent_retries": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "artifact_schema_versions": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          }
+        }
+      }
+    },
+    "analysis_parameters_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "derived": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "graph_summary": {
+          "unevaluatedProperties": false,
+          "allOf": [
+            {
+              "$ref": "#/$defs/derivedRecord"
+            },
+            {
+              "type": "object",
+              "required": [
+                "values"
+              ],
+              "properties": {
+                "values": {
+                  "$ref": "#/$defs/graphSummary"
+                },
+                "aligned_values": {
+                  "$ref": "#/$defs/graphSummary"
+                }
+              }
+            }
+          ]
+        },
+        "voxel_spacing": {
+          "unevaluatedProperties": false,
+          "allOf": [
+            {
+              "$ref": "#/$defs/derivedRecord"
+            },
+            {
+              "type": "object",
+              "required": [
+                "values"
+              ],
+              "properties": {
+                "values": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "spacing",
+                    "axes",
+                    "unit"
+                  ],
+                  "properties": {
+                    "spacing": {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      ],
+                      "items": false
+                    },
+                    "axes": {
+                      "const": [
+                        "z",
+                        "y",
+                        "x"
+                      ]
+                    },
+                    "unit": {
+                      "enum": [
+                        "millimeter",
+                        "simulation_voxel"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "segmentation_result": {
+          "unevaluatedProperties": false,
+          "allOf": [
+            {
+              "$ref": "#/$defs/derivedRecord"
+            },
+            {
+              "type": "object",
+              "required": [
+                "values"
+              ],
+              "properties": {
+                "values": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "threshold",
+                    "voxel_count",
+                    "foreground_voxel_count",
+                    "foreground_fraction",
+                    "otsu_separability",
+                    "background_mean",
+                    "foreground_mean",
+                    "class_mean_separation_sigma",
+                    "significant_modes",
+                    "histogram_sha256",
+                    "overall_pass"
+                  ],
+                  "properties": {
+                    "threshold": {
+                      "type": "number"
+                    },
+                    "voxel_count": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "foreground_voxel_count": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "foreground_fraction": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "otsu_separability": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "background_mean": {
+                      "type": "number"
+                    },
+                    "foreground_mean": {
+                      "type": "number"
+                    },
+                    "class_mean_separation_sigma": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "significant_modes": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "histogram_sha256": {
+                      "$ref": "#/$defs/sha256"
+                    },
+                    "overall_pass": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "registration_result": {
+          "unevaluatedProperties": false,
+          "allOf": [
+            {
+              "$ref": "#/$defs/derivedRecord"
+            },
+            {
+              "type": "object",
+              "required": [
+                "values"
+              ],
+              "properties": {
+                "values": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "specimen_id",
+                    "design_id",
+                    "aligned_graph_state",
+                    "requested_analysis_scope",
+                    "overall_pass",
+                    "local_recenter_complete",
+                    "roi_gate_pass",
+                    "metrology_gate_status",
+                    "authorized_outputs",
+                    "unauthorized_outputs",
+                    "roi_gate_results",
+                    "localization_quality_counts",
+                    "reason_codes"
+                  ],
+                  "properties": {
+                    "specimen_id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+                    },
+                    "design_id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+                    },
+                    "aligned_graph_state": {
+                      "enum": [
+                        "input",
+                        "pending",
+                        "derived"
+                      ]
+                    },
+                    "requested_analysis_scope": {
+                      "enum": [
+                        "roi_screening",
+                        "direct_metrology"
+                      ]
+                    },
+                    "overall_pass": {
+                      "type": "boolean"
+                    },
+                    "local_recenter_complete": {
+                      "type": "boolean"
+                    },
+                    "roi_gate_pass": {
+                      "type": "boolean"
+                    },
+                    "metrology_gate_status": {
+                      "enum": [
+                        "pass",
+                        "fail",
+                        "insufficient_evidence",
+                        "not_authorized"
+                      ]
+                    },
+                    "authorized_outputs": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "segmentation",
+                          "registration",
+                          "node_localization",
+                          "coarse_region_screening",
+                          "padded_roi_definition",
+                          "absolute_metrology",
+                          "direct_dimensional_measurement"
+                        ]
+                      }
+                    },
+                    "unauthorized_outputs": {
+                      "type": "array",
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "segmentation",
+                          "registration",
+                          "node_localization",
+                          "coarse_region_screening",
+                          "padded_roi_definition",
+                          "absolute_metrology",
+                          "direct_dimensional_measurement"
+                        ]
+                      }
+                    },
+                    "roi_gate_results": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/canonicalRoiGateResults"
+                        },
+                        {
+                          "$ref": "#/$defs/productionRoiGateResults"
+                        }
+                      ]
+                    },
+                    "localization_quality_counts": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/canonicalLocalizationQualityCounts"
+                        },
+                        {
+                          "$ref": "#/$defs/productionLocalizationQualityCounts"
+                        }
+                      ]
+                    },
+                    "reason_codes": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "ROI_GATES_PASS",
+                          "METROLOGY_NOT_AUTHORIZED",
+                          "METROLOGY_GATES_PASS"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "analysis_parameters": {
+            "properties": {
+              "registration": {
+                "properties": {
+                  "mode": {
+                    "const": "challenge_aligned_json"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "required": [
+              "aligned_graph"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_state": {
+            "enum": [
+              "ready_for_data_prep",
+              "analysis_ready"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "unresolved_fields": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_state": {
+            "const": "analysis_ready"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "inputs": {
+            "required": [
+              "aligned_graph",
+              "canonical_mask"
+            ]
+          },
+          "derived": {
+            "required": [
+              "graph_summary",
+              "voxel_spacing",
+              "segmentation_result",
+              "registration_result"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "positiveIntegerTriplet": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        }
+      ],
+      "items": false
+    },
+    "intakeVoxelSpacing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "z",
+        "y",
+        "x"
+      ],
+      "properties": {
+        "z": {
+          "$ref": "#/$defs/intakeVoxelSpacingAxis"
+        },
+        "y": {
+          "$ref": "#/$defs/intakeVoxelSpacingAxis"
+        },
+        "x": {
+          "$ref": "#/$defs/intakeVoxelSpacingAxis"
+        }
+      }
+    },
+    "intakeVoxelSpacingAxis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "unit",
+        "provenance"
+      ],
+      "properties": {
+        "value": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "const": "unknown"
+            }
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "field",
+            "raw_value"
+          ],
+          "properties": {
+            "source": {
+              "type": ["string", "number"]
+            },
+            "field": {
+              "type": ["string", "number"]
+            },
+            "raw_value": {
+              "type": ["string", "number"]
+            },
+            "resolution_unit": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "intakeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "association",
+        "registration_mode_selection",
+        "graph_inspection",
+        "volume_metadata"
+      ],
+      "properties": {
+        "association": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "confirmed",
+            "ct_to_specimen"
+          ],
+          "properties": {
+            "source": {
+              "const": "scientist_explicit"
+            },
+            "confirmed": {
+              "const": true
+            },
+            "design_graph_to_cad": {
+              "const": true
+            },
+            "ct_to_specimen": {
+              "const": true
+            }
+          }
+        },
+        "registration_mode_selection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "source"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "challenge_aligned_json",
+                "autonomous_v2"
+              ]
+            },
+            "source": {
+              "const": "scientist_explicit"
+            }
+          }
+        },
+        "cad_inspection": {
+          "$ref": "#/$defs/cadInspection"
+        },
+        "graph_inspection": {
+          "$ref": "#/$defs/graphInspection"
+        },
+        "volume_metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "method_version",
+            "output_schema_version"
+          ],
+          "properties": {
+            "method": {
+              "const": "volume_metadata"
+            },
+            "method_version": {
+              "type": "string"
+            },
+            "output_schema_version": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "cadInspection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "method_version",
+        "path",
+        "sha256",
+        "format",
+        "vertex_count",
+        "face_count",
+        "bounds",
+        "units",
+        "units_provenance",
+        "readable"
+      ],
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "method_version": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "format": {
+          "const": "stl"
+        },
+        "vertex_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "face_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bounds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minimum",
+            "maximum"
+          ],
+          "properties": {
+            "minimum": {
+              "$ref": "#/$defs/numberTriplet"
+            },
+            "maximum": {
+              "$ref": "#/$defs/numberTriplet"
+            }
+          }
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1
+        },
+        "units_provenance": {
+          "type": "string",
+          "minLength": 1
+        },
+        "readable": {
+          "const": true
+        }
+      }
+    },
+    "graphInspection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "method_version",
+        "path",
+        "sha256",
+        "junction_count",
+        "strut_count",
+        "unit_cell_count",
+        "topology_sha256",
+        "id_reference_integrity",
+        "extra_top_level_keys"
+      ],
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "method_version": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "junction_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "strut_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit_cell_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "topology_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "id_reference_integrity": {
+          "const": true
+        },
+        "extra_top_level_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "numberTriplet": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "role",
+        "retention"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "role": {
+          "enum": [
+            "ct_volume",
+            "design_graph",
+            "normalized_nominal_graph",
+            "aligned_graph",
+            "derived_aligned_graph",
+            "design_transform_declaration",
+            "cad"
+          ]
+        },
+        "retention": {
+          "enum": [
+            "committed",
+            "external",
+            "regenerable"
+          ]
+        }
+      }
+    },
+    "canonicalRoiGateResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "image_support",
+        "localization_quality",
+        "coarse_region_support",
+        "padded_roi_in_bounds"
+      ],
+      "properties": {
+        "image_support": {
+          "type": "boolean"
+        },
+        "localization_quality": {
+          "type": "boolean"
+        },
+        "coarse_region_support": {
+          "type": "boolean"
+        },
+        "padded_roi_in_bounds": {
+          "type": "boolean"
+        }
+      }
+    },
+    "productionRoiGateResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "production_image_qa_pass",
+        "coarse_capture_pass",
+        "localization_binding_pass",
+        "localization_quantitative_gate_pass",
+        "padded_roi_capture_pass",
+        "overall_pass"
+      ],
+      "properties": {
+        "production_image_qa_pass": {
+          "type": "boolean"
+        },
+        "coarse_capture_pass": {
+          "type": "boolean"
+        },
+        "localization_binding_pass": {
+          "type": "boolean"
+        },
+        "localization_quantitative_gate_pass": {
+          "type": "boolean"
+        },
+        "padded_roi_capture_pass": {
+          "type": "boolean"
+        },
+        "overall_pass": {
+          "type": "boolean"
+        }
+      }
+    },
+    "canonicalLocalizationQualityCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary",
+        "stable_coarse",
+        "fallback",
+        "ambiguous",
+        "rejected",
+        "boundary_limited"
+      ],
+      "properties": {
+        "primary": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_coarse": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "boundary_limited": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "productionLocalizationQualityCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_nodes",
+        "stable_coarse_nodes",
+        "fallback_nodes",
+        "ambiguous_nodes",
+        "rejected_or_low_confidence_nodes",
+        "boundary_limited_nodes",
+        "primary_edges",
+        "stable_coarse_edges",
+        "fallback_edges",
+        "ambiguous_edges",
+        "roi_screening_usable_edges",
+        "direct_metrology_usable_edges"
+      ],
+      "properties": {
+        "primary_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_coarse_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejected_or_low_confidence_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "boundary_limited_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "primary_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stable_coarse_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "roi_screening_usable_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "direct_metrology_usable_edges": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "canonicalMaskArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "role",
+        "retention",
+        "dtype",
+        "shape",
+        "array_axes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "role": {
+          "const": "canonical_segmentation_mask"
+        },
+        "retention": {
+          "const": "committed"
+        },
+        "dtype": {
+          "const": "uint8"
+        },
+        "shape": {
+          "$ref": "#/$defs/positiveIntegerTriplet"
+        },
+        "array_axes": {
+          "const": ["z", "y", "x"]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "input_sha256",
+        "config_sha256"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input_sha256": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/sha256"
+          }
+        },
+        "config_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "derivedRecord": {
+      "type": "object",
+      "required": [
+        "method",
+        "method_version",
+        "provenance"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        }
+      }
+    },
+    "graphSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "junction_count",
+        "strut_count",
+        "unit_cell_count",
+        "topology_sha256"
+      ],
+      "properties": {
+        "junction_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "strut_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit_cell_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "topology_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

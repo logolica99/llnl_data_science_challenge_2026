@@ -1,0 +1,1424 @@
+{
+  "keep_fraction": 0.7,
+  "best_start_index": 0,
+  "best_objective": 2.167003739225462,
+  "near_optimal_start_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "near_optimal_p95_prediction_spread_voxels": 0.0,
+  "near_optimal_converged_fraction": 1.0,
+  "gates": {
+    "enough_near_optimal_starts": true,
+    "near_optimal_starts_agree": true,
+    "converged_start_fraction_sufficient": true
+  },
+  "overall_pass": true,
+  "starts": [
+    {
+      "start_index": 0,
+      "initial": {
+        "scale": 39.269999999999996,
+        "rotation_matrix": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          59.57000000000079,
+          44.56999999999999,
+          26.57000000000005
+        ],
+        "rotation_deg": 0.0,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 1,
+      "initial": {
+        "scale": 39.269999999999996,
+        "rotation_matrix": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.9998476951563913,
+            -0.01745240643728351
+          ],
+          [
+            0.0,
+            0.01745240643728351,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          59.57000000000079,
+          50.79203310800568,
+          20.45562509374753
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 2,
+      "initial": {
+        "scale": 39.269999999999996,
+        "rotation_matrix": [
+          [
+            1.0,
+            -0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.9998476951563913,
+            0.01745240643728351
+          ],
+          [
+            -0.0,
+            -0.01745240643728351,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          59.57000000000079,
+          38.45562509374747,
+          32.79203310800574
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 5,
+      "final_iteration": {
+        "iteration": 4,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 3,
+      "initial": {
+        "scale": 39.269999999999996,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            0.0,
+            0.01745240643728351
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            -0.01745240643728351,
+            0.0,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          53.45562509374827,
+          44.56999999999999,
+          32.79203310800574
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 4,
+      "initial": {
+        "scale": 39.269999999999996,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            -0.0,
+            -0.01745240643728351
+          ],
+          [
+            0.0,
+            1.0,
+            -0.0
+          ],
+          [
+            0.01745240643728351,
+            0.0,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          65.79203310800648,
+          44.56999999999999,
+          20.45562509374753
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 5,
+      "final_iteration": {
+        "iteration": 4,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 5,
+      "initial": {
+        "scale": 39.269999999999996,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            -0.01745240643728351,
+            0.0
+          ],
+          [
+            0.01745240643728351,
+            0.9998476951563913,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          65.79203310800648,
+          38.45562509374747,
+          26.57000000000005
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 5,
+      "final_iteration": {
+        "iteration": 4,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 6,
+      "initial": {
+        "scale": 39.269999999999996,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            0.01745240643728351,
+            0.0
+          ],
+          [
+            -0.01745240643728351,
+            0.9998476951563913,
+            -0.0
+          ],
+          [
+            -0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          53.45562509374827,
+          50.79203310800568,
+          26.57000000000005
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 5,
+      "final_iteration": {
+        "iteration": 4,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 7,
+      "initial": {
+        "scale": 39.666666666666664,
+        "rotation_matrix": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          56.00000000000074,
+          40.99999999999994,
+          23.0
+        ],
+        "rotation_deg": 0.0,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 8,
+      "initial": {
+        "scale": 39.666666666666664,
+        "rotation_matrix": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.9998476951563913,
+            -0.01745240643728351
+          ],
+          [
+            0.0,
+            0.01745240643728351,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          56.00000000000074,
+          47.28488192727849,
+          16.82386373105811
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 9,
+      "initial": {
+        "scale": 39.666666666666664,
+        "rotation_matrix": [
+          [
+            1.0,
+            -0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.9998476951563913,
+            0.01745240643728351
+          ],
+          [
+            -0.0,
+            -0.01745240643728351,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          56.00000000000074,
+          34.823863731058054,
+          29.284881927278548
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 7,
+      "final_iteration": {
+        "iteration": 6,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 10,
+      "initial": {
+        "scale": 39.666666666666664,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            0.0,
+            0.01745240643728351
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            -0.01745240643728351,
+            0.0,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          49.82386373105885,
+          40.99999999999994,
+          29.284881927278548
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 11,
+      "initial": {
+        "scale": 39.666666666666664,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            -0.0,
+            -0.01745240643728351
+          ],
+          [
+            0.0,
+            1.0,
+            -0.0
+          ],
+          [
+            0.01745240643728351,
+            0.0,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          62.28488192727929,
+          40.99999999999994,
+          16.82386373105811
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 12,
+      "initial": {
+        "scale": 39.666666666666664,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            -0.01745240643728351,
+            0.0
+          ],
+          [
+            0.01745240643728351,
+            0.9998476951563913,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          62.28488192727929,
+          34.823863731058054,
+          23.0
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 13,
+      "initial": {
+        "scale": 39.666666666666664,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            0.01745240643728351,
+            0.0
+          ],
+          [
+            -0.01745240643728351,
+            0.9998476951563913,
+            -0.0
+          ],
+          [
+            -0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          49.82386373105885,
+          47.28488192727849,
+          23.0
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 14,
+      "initial": {
+        "scale": 40.06333333333333,
+        "rotation_matrix": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          52.430000000000746,
+          37.42999999999995,
+          19.430000000000007
+        ],
+        "rotation_deg": 0.0,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 7,
+      "final_iteration": {
+        "iteration": 6,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 15,
+      "initial": {
+        "scale": 40.06333333333333,
+        "rotation_matrix": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.9998476951563913,
+            -0.01745240643728351
+          ],
+          [
+            0.0,
+            0.01745240643728351,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          52.430000000000746,
+          43.77773074655124,
+          13.192102368368694
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 7,
+      "final_iteration": {
+        "iteration": 6,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 16,
+      "initial": {
+        "scale": 40.06333333333333,
+        "rotation_matrix": [
+          [
+            1.0,
+            -0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.9998476951563913,
+            0.01745240643728351
+          ],
+          [
+            -0.0,
+            -0.01745240643728351,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          52.430000000000746,
+          31.192102368368637,
+          25.7777307465513
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 7,
+      "final_iteration": {
+        "iteration": 6,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 17,
+      "initial": {
+        "scale": 40.06333333333333,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            0.0,
+            0.01745240643728351
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            -0.01745240643728351,
+            0.0,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          46.19210236836943,
+          37.42999999999995,
+          25.7777307465513
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 7,
+      "final_iteration": {
+        "iteration": 6,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 18,
+      "initial": {
+        "scale": 40.06333333333333,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            -0.0,
+            -0.01745240643728351
+          ],
+          [
+            0.0,
+            1.0,
+            -0.0
+          ],
+          [
+            0.01745240643728351,
+            0.0,
+            0.9998476951563913
+          ]
+        ],
+        "translation": [
+          58.77773074655204,
+          37.42999999999995,
+          13.192102368368694
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 19,
+      "initial": {
+        "scale": 40.06333333333333,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            -0.01745240643728351,
+            0.0
+          ],
+          [
+            0.01745240643728351,
+            0.9998476951563913,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          58.77773074655204,
+          31.192102368368637,
+          19.430000000000007
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 7,
+      "final_iteration": {
+        "iteration": 6,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    },
+    {
+      "start_index": 20,
+      "initial": {
+        "scale": 40.06333333333333,
+        "rotation_matrix": [
+          [
+            0.9998476951563913,
+            0.01745240643728351,
+            0.0
+          ],
+          [
+            -0.01745240643728351,
+            0.9998476951563913,
+            -0.0
+          ],
+          [
+            -0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "translation": [
+          46.19210236836943,
+          43.77773074655124,
+          19.430000000000007
+        ],
+        "rotation_deg": 0.9999999999999002,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "fitted": {
+        "scale": 39.14301283292532,
+        "rotation_matrix": [
+          [
+            0.9999707606836168,
+            0.006479227514601463,
+            -0.004061697753726034
+          ],
+          [
+            -0.006476424814926404,
+            0.9999787807682138,
+            0.0007028050465033809
+          ],
+          [
+            0.004066165201414668,
+            -0.0006764792168414119,
+            0.9999915043021237
+          ]
+        ],
+        "translation": [
+          61.67226100936347,
+          55.62392046026014,
+          29.696678484966583
+        ],
+        "rotation_deg": 0.4399276350696184,
+        "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+      },
+      "objective": 2.167003739225462,
+      "iterations": 6,
+      "final_iteration": {
+        "iteration": 5,
+        "kept_pairs": 2401,
+        "trimmed_mean_residual_voxels": 2.167003739225462,
+        "all_pair_median_residual_voxels": 2.003261561173546,
+        "cutoff_voxels": 26.55656465292383
+      }
+    }
+  ]
+}

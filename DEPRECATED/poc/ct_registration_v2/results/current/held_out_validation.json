@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "validation_only_ground_truth": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/data/missing_struts/registered_jsons/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json",
+  "ground_truth_sha256": "8e422e1ceece719bdc1d0aa1b6f42273c4dea5bff6ee2ebba76e85ffddba99c7",
+  "ground_truth_read_phase": "after FIT_COMPLETE.json and all CT-only artifact hashes verified",
+  "ground_truth_read_unix_time": 1784826427.632023,
+  "ground_truth_used_for_fit": false,
+  "fit_completion_marker": {
+    "fit_manifest": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/fit_manifest.json",
+      "sha256": "76afcd6764664640f81c237f2d5fe6369bec420df05947e887df9eb372256323",
+      "bytes": 5767
+    },
+    "fitted_transform": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/fitted_transform.json",
+      "sha256": "aceedcfde6428c56c0e44674a1251f6283f4dbba5f4f07baa773e427215c1e82",
+      "bytes": 4090
+    },
+    "our_registered": {
+      "path": "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026/poc/ct_registration_v2/results/current/our_registered.json",
+      "sha256": "f33d038f6609bdf829b27c67d985f2fd47979ceb93c39468f8b00481cb47bdee",
+      "bytes": 4958705
+    },
+    "ground_truth_used_for_fit": false,
+    "fit_completed_before_ground_truth_access": true
+  },
+  "node_count": 10206,
+  "node_error_voxels": {
+    "median": 3.7045761092995706,
+    "mean": 3.627033604202933,
+    "p95": 5.709630394645644,
+    "p99": 6.397758191473836,
+    "maximum": 7.542150699315211
+  },
+  "signed_axis_error_voxels": {
+    "mean_xyz": [
+      -1.5069011021023702,
+      -0.4932107957242584,
+      1.9014588627638995
+    ],
+    "median_xyz": [
+      -1.506901102102404,
+      -0.49321079572430904,
+      1.9014588627638602
+    ],
+    "minimum_xyz": [
+      -5.432578519713388,
+      -4.485849433398357,
+      -2.3862761006968185
+    ],
+    "maximum_xyz": [
+      2.4187763155087367,
+      3.499427841949796,
+      6.189193826224649
+    ]
+  },
+  "fitted_transform": {
+    "scale": 39.17874005836384,
+    "rotation_matrix": [
+      [
+        0.9999760297027437,
+        0.0063127991050923446,
+        -0.0028440441972954053
+      ],
+      [
+        -0.006311194227820791,
+        0.9999799200958073,
+        0.0005729158757932359
+      ],
+      [
+        0.0028476037919881987,
+        -0.000554952827508283,
+        0.9999957915811455
+      ]
+    ],
+    "translation": [
+      60.922422494271586,
+      55.6823213286857,
+      29.656709529305203
+    ],
+    "rotation_deg": 0.3980255548179882,
+    "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+  },
+  "held_out_transform": {
+    "scale": 39.48880949493017,
+    "rotation_matrix": [
+      [
+        0.999986728616512,
+        0.005087147630571754,
+        -0.0008145672659472733
+      ],
+      [
+        -0.005084872943297161,
+        0.9999832336528703,
+        0.0027706461880856815
+      ],
+      [
+        0.0008286482948206045,
+        -0.0027664674467264305,
+        0.9999958299912404
+      ]
+    ],
+    "translation": [
+      59.33960418617096,
+      52.1828934867313,
+      26.46173195820751
+    ],
+    "rotation_deg": 0.33510849611461374,
+    "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation"
+  },
+  "transform_error": {
+    "relative_scale": 0.007852083679710242,
+    "rotation_magnitude_degrees": 0.06291705870337444,
+    "rotation_matrix_delta_degrees": 0.18531443894593636,
+    "translation_delta_xyz": [
+      1.5828183081006273,
+      3.4994278419544003,
+      3.194977571097695
+    ],
+    "translation_delta_norm_voxels": 4.9959174029722995
+  },
+  "spatial_error": {
+    "x": {
+      "quintile_median_node_error_voxels": [
+        2.5602730727246246,
+        2.681594863003427,
+        3.318119371935973,
+        4.059377703116396,
+        5.141389101430155
+      ],
+      "range": 2.5811160287055306
+    },
+    "y": {
+      "quintile_median_node_error_voxels": [
+        3.7762819264758716,
+        3.091014548955178,
+        3.2579746029984387,
+        3.8314083110709722,
+        4.354530490487414
+      ],
+      "range": 1.2635159415322357
+    },
+    "z": {
+      "quintile_median_node_error_voxels": [
+        4.744508878795584,
+        3.77221046370542,
+        3.1915480682094524,
+        2.8835279421208897,
+        3.126524895519245
+      ],
+      "range": 1.8609809366746939
+    }
+  },
+  "downstream_tolerance": {
+    "held_out_p95_error_voxels": 5.709630394645644,
+    "measured_strut_radius_voxels": 2.0,
+    "recommended_corridor_margin_voxels": 2.0,
+    "p95_within_radius_plus_margin": false,
+    "median_within_measured_radius": false,
+    "overall_pass": false
+  },
+  "gates": {
+    "median_node_error": true,
+    "p95_node_error": true,
+    "relative_scale_error": true,
+    "rotation_magnitude_error": true,
+    "translation_error": true,
+    "independent_node_foreground": true,
+    "downstream_tolerance_against_held_out": false
+  },
+  "overall_pass": false,
+  "elapsed_seconds": 0.10706329095410183
+}

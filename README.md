@@ -16,6 +16,25 @@ The goal of this challenge is to build an AI-assisted workflow for analyzing X-r
 
 By the end of the challenge, participants should understand how to move from standalone scientific scripts toward reusable, agent-driven workflows that can reason over data, call tools, and produce traceable analysis outputs.
 
+## Part 2 Orchestration Demo
+
+An interactive local demonstrator under
+[`demo/part2-orchestrator`](demo/part2-orchestrator) shows the production Part 2
+control plane advancing through its immutable Stage 0–4 handoffs. Production
+accepts a nominal lattice graph JSON and its specimen CT volume; graph
+normalization now occurs during intake. It includes
+verified walkthrough, manual-review, tampered-receipt, and missing-dependency
+scenarios. The orchestration and integrity checks are real; specialist outputs
+are clearly labeled deterministic fixtures, and no scientific algorithm runs.
+
+```bash
+cd demo/part2-orchestrator
+npm install
+npm run demo
+```
+
+Then open <http://localhost:3000>.
+
 ## Repository Contents
 
 - `DATA_SCIENCE_CHALLENGE_2026.md/pdf` - main challenge instructions
@@ -25,6 +44,7 @@ By the end of the challenge, participants should understand how to move from sta
 - `presentation/` - introductory challenge slides
 - `.agents/skills/` - project-specific Codex skills
 - `.codex/agents/` - project-specific Codex subagent definitions
+- `demo/part2-orchestrator/` - live visual demonstrator for the Part 2 control plane
 
 ## Contact
 
@@ -120,7 +140,65 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
-The server script in this repository, `src/mcp_server.py`, should follow this pattern as you add each tool.
+The production entry point, `src/llnl_nde/server.py`, only assembles the server.
+Tool adapters are grouped by immutable pipeline ownership in
+`src/llnl_nde/mcp_tools/`, using descriptive names ending in `_stage0.py`
+through `_stage4.py`. Shared path policy and closed response handling live in
+`src/llnl_nde/mcp_tools/common.py`; scientific implementations remain
+MCP-independent under `src/llnl_nde/core/`; control-plane code lives under
+`src/llnl_nde/orchestration/`; and supported command-line entry points live
+under `src/llnl_nde/cli/`. Add a new tool to its owning stage module and stage
+contract rather than expanding the server entry point. Contract tests require
+the registered production tool set to match the declared stage dependencies
+exactly. Previous top-level import paths remain compatibility aliases only.
+
+The server also exposes `inspect_volume_metadata`, a structured Part 2 tool
+used by the `volume-metadata` skill. It constrains NPY/TIFF inputs to the
+repository, performs header-only inspection plus streaming SHA-256 by default,
+and atomically persists a closed response plus a separate closed call receipt.
+For Stage 0 those paths are
+`analysis/<specimen_id>/config/ct_metadata_response.json` and
+`analysis/<specimen_id>/config/ct_metadata_mcp_call_receipt.json`. The ingest
+command requires both paths and both exact SHA-256 values through
+`--ct-metadata-response`, `--ct-metadata-response-sha256`,
+`--ct-metadata-call-receipt`, and `--ct-metadata-call-receipt-sha256`. It
+rejects non-pass, preview, open, stale, cross-path, non-3-D, CT-hash-mismatched,
+or response/receipt-disagreeing evidence. The receipt binds the normalized
+request, header facts, CT hash, response path, and response hash. This is an
+integrity and lineage chain, not a cryptographic signature or authenticated
+proof of process identity; a writer with the same filesystem authority remains
+inside the trust boundary. The intake core does not import or call the volume
+inspector. Before Stage 0 can complete, the orchestrator semantically
+revalidates the output bundle against the closed, self-hashed scientist intake
+request and the current nominal graph and CT bytes.
+The metadata files are Stage 0 outputs, not pre-start inputs. The skill owns the
+scientific policy and call sequence; the MCP tool owns deterministic file
+inspection.
+
+The production server owns threshold-mask comparison and graph-aware Stage 4
+reporting through `compare_segmentation_masks`, `get_strut_report`,
+`compute_spatial_stats`, and `render_lattice_3d`. These tools keep voxel and
+graph arrays out of agent context and return compact, hash-bound artifact
+metadata.
+
+Labeled evaluation, bounded threshold exploration, and the historical
+voxel/skeleton report tools live on the disabled-by-default
+`segmentation-tools-research` server in `research/mcp_server.py`. Research
+outputs are restricted to `research/runs/` and cannot mutate production runs.
+
+Repository skills require their declared MCP dependencies. If a required
+server or tool is unavailable, the skill must stop and ask the user to
+configure the server or restart the client. Skills must not silently replace an
+MCP tool with a CLI, direct Python import, or improvised local implementation.
+Deterministic volume, mask, skeleton, comparison, and rendering operations live
+behind MCP tools rather than executable scripts bundled inside project skills.
+See `AGENTS.md` for the repository-wide rule.
+
+> [!NOTE]
+> The Part 1 tutorial below is retained for challenge history. Its data,
+> illustrations, evaluation records, and retired segmentation agent now live
+> under [`DEPRECATED/`](DEPRECATED/README.md) and are not part of the production
+> Part 2 pipeline.
 
 #### Basic Image Processing Terms
 Before starting Tasks 1-3, here are a few image-processing terms you will use with respect to a volume/image:
@@ -133,7 +211,7 @@ The images below show the same 2D slice from the `9x9x9_octet_lattice` dataset a
 
 | Raw CT slice | Segmentation mask | Extracted skeleton |
 | --- | --- | --- |
-| <img src="images/slice.png" alt="Raw CT slice from the 9x9x9 octet lattice dataset" width="260"> | <img src="images/segmentation.png" alt="Binary segmentation mask for the same CT slice" width="260"> | <img src="images/skeleton.png" alt="Extracted skeleton for the same segmented slice" width="260"> |
+| <img src="DEPRECATED/part1/images/slice.png" alt="Raw CT slice from the 9x9x9 octet lattice dataset" width="260"> | <img src="DEPRECATED/part1/images/segmentation.png" alt="Binary segmentation mask for the same CT slice" width="260"> | <img src="DEPRECATED/part1/images/skeleton.png" alt="Extracted skeleton for the same segmented slice" width="260"> |
 
 ### Task 1: Tool Calling with MCP
 
@@ -148,7 +226,7 @@ Add the MCP tools to your Codex CLI configuration file at `~/.codex/config.toml`
 ```toml
 [mcp_servers.segmentation-tools]
 command = "<PATH_TO_PYTHON_EXE>"
-args = ["<PATH_TO_DSSI_CHALLENGE>/src/mcp_server.py"]
+args = ["<PATH_TO_DSSI_CHALLENGE>/src/llnl_nde/server.py"]
 env = {}
 ```
 
@@ -160,7 +238,7 @@ You can test if the MCP tool is available in Codex by starting the Codex CLI fro
 Refer to the Codex configuration reference for more details: [Codex configuration](https://developers.openai.com/codex/config-reference)
 
 To test your tool, ask Codex CLI to segment the dataset, for example: 
-> "Please segment the dataset in `data/unitcell/unitcell.npy` with a threshold of ..."
+> "Please segment the archived dataset in `DEPRECATED/part1/data/unitcell/unitcell.npy` with a threshold of ..."
 
 ### Task 2: Multiple MCP tools
 
@@ -177,7 +255,9 @@ After implementing and adding the tool, test it again in the Codex CLI. You shou
 
 In the previous tasks, you created custom functions specifically for the LLM to invoke. However, MCP tools were often utilized as wrappers to expose existing functions from a software's API. This enables the LLM to effectively "control" the software without needing to rewrite its core logic. 
 
-To demonstrate this, create a third MCP tool that exposes the `skeletonize_mask` function from the provided `skeletonization.py` script to simulate an API wrapper:
+Historically, this task exposed `skeletonize_mask` as a third MCP tool. That
+exercise is now isolated on the disabled research server in
+`research/mcp_server.py`; it is not a production tool:
 
 ```python
 def skeletonize(input_filepath: str, output_filepath: str) -> str:
@@ -192,28 +272,33 @@ While MCP provides a powerful way to equip LLMs with tools, it does have limitat
 
 Skills can help mitigate these issues by providing focused, domain-specific instruction sets and tools designed for particular workflows. In this task, we will provide the LLM with a specific skill that allows it to write a detailed Non-Destructive Evaluation (NDE) report based on the analysis. 
 
-This project-specific skill is already located in the `.agents/skills/nde_report_expert` directory. To utilize this skill, you must run the Codex CLI from the root directory of this project so it can detect the local `.agents/skills` folder.
+The production reporting skill is located in
+`.agents/skills/nde-report-generator`. It is invoked by `report_agent` during
+Stage 4 and uses only frozen graph, metric, classification, evidence, and QA
+artifacts.
 
 > [!IMPORTANT]
 > After adding or editing project skills, close and restart the Codex CLI from the root of this repository. Codex CLI does not currently reload skills inside an existing session.
 
-This skill is designed to demonstrate three core capabilities:
-1. It runs a local Python script (`3d_visualize`).
-2. It can autonomously invoke your custom MCP functions (`segment_ct_dataset()` and `skeletonize()`).
-3. It contains specific system instructions on how to structure and generate the final report.
+This skill demonstrates three production capabilities:
+1. It invokes `compute_spatial_stats` and `render_lattice_3d` through MCP.
+2. It retrieves cited findings through `get_strut_report` without recomputation.
+3. It creates a hash-bound number crosscheck, presentation checklist, and final report.
 
 To trigger this skill, tell Codex: 
-> "Please create an NDE report from the files in ./data"
+> "Use $nde-report-generator for the current Stage 4 handoff."
 
 ### Task 5: Custom Skills
 
-Now that you've seen how to trigger a project-specific skill, it's time to build your own! Create a new subdirectory under `.agents/skills/` (e.g., `.agents/skills/my_custom_skill`) and add a `SKILL.md` file to define its behavior. Check the `nde_report_expert` skill to see how scripts and MCP tools are invoked. 
+Now that you've seen how to trigger a project-specific skill, it's time to build your own! Create a new subdirectory under `.agents/skills/` (e.g., `.agents/skills/my-custom-skill`) and add a `SKILL.md` file to define its behavior. Check `nde-report-generator` to see how deterministic work is delegated to required MCP tools.
 
 After creating or changing a skill, close and restart Codex CLI before trying to use it.
 
 Here are a few ideas for skills you could build for this dataset:
 *   **Metadata Extractor:** A skill that loads a generated `.npy` file and simply prints out basic metadata like its shape, data type, and the maximum and minimum values to the terminal.
-*   **Threshold Optimizer:** A skill that calls the `segment_ct_dataset()` MCP tool multiple times with different threshold values (e.g., 0.3, 0.5, 0.7) and saves the results in separate files for comparison.
+*   **Threshold Explorer:** Keep threshold experiments outside production. The
+    explicit research-only example is in
+    `research/skills/ct-threshold-explorer/` and calls the disabled research MCP.
 
 ### Task 6: Subagents
 
@@ -261,7 +346,9 @@ LLM evaluations are essential to ensure that the agent produces correct results 
 
 In this task, we will evaluate the results generated by your Segmentation Subagent using an LLM. You will create an evaluation rubric to compare the **Result Image**, which comes from the previous task where your agent generated it, against the **Ground Truth Image** (located at `data/9x9x9_octet_lattice/ground_truth_segmentation_slice_380.png`).
 
-Create a new file named `rubric_segmentation_1.md` in the `evals` folder. In this file, you should define your rubric based on these guidelines to instruct the LLM:
+The historical rubric is archived at
+`DEPRECATED/part1/evals/rubric_segmentation_1.md`. In the original task, this
+file was created in `evals/` using the following guidelines:
 
 #### Criteria:
 1. **Structural Integrity**: Does the result capture the connectivity of the lattice struts compared to the ground truth?
@@ -285,8 +372,8 @@ Once your rubric is created in the `evals` folder, you can run the evaluation us
 ```bash
 codex \
   -i data/9x9x9_octet_lattice/ground_truth_segmentation_slice_380.png \
-  -i data/9x9x9_octet_lattice/segmentation/slice_380.png \
-  "Use evals/rubric_segmentation_1.md as the rubric. The first attached image is the ground truth. The second attached image is the result. Return only JSON with reasoning and score."
+  -i DEPRECATED/historical/9x9x9_octet_lattice/segmentation/slice_380.png \
+  "Use DEPRECATED/part1/evals/rubric_segmentation_1.md as the rubric. The first attached image is the ground truth. The second attached image is the result. Return only JSON with reasoning and score."
 ```
 
 ## Part 2: Open-Ended Agentic AI for Materials Science Project
@@ -316,6 +403,14 @@ Tran, B. et al., [“Resonant ultrasound spectroscopy measurement and modeling o
 
 > **Note:** The STL file is not aligned/registered with the TIF or JSON file. Registration is a problem by itself. If you do not want to work on registration, `210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.json` is already aligned with the respective TIF file of the same name.
 
+The four STL designs and their known missing-strut percentages are useful for
+research and retrospective benchmarking, but they are outside the production
+analysis boundary. Production accepts one nominal graph JSON and one specimen
+CT volume, then registers the nominal graph to CT autonomously without known
+defect labels or pre-aligned coordinates. See
+[`data/missing_struts/analysis/0_5_stl_heatmap/README.md`](data/missing_struts/analysis/0_5_stl_heatmap/README.md)
+for the historical research method and its coordinate-transform details.
+
 ### Project Goals
 
 Your objective is to implement a multi-agent system that can visualize, analyze, and reason about this dataset. You should build upon what you learned in Part 1 (MCP tools, skills, subagents) but aim for a higher level of autonomy and integration.
@@ -342,7 +437,7 @@ Here are some suggested tracks for your multi-agent system. You can choose one o
 
 ## Appendix: Starter Python Code
 
-### `src/mcp_server.py`
+### `src/llnl_nde/server.py`
 
 ```python
 from fastmcp import FastMCP
@@ -400,7 +495,7 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
-### `src/skeletonization.py`
+### Historical `research/skeletonization.py`
 
 ```python
 import numpy as np

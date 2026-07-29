@@ -1,0 +1,6 @@
+# Keep the downloaded dataset local. Only its documentation and integrity
+# manifest are tracked because one volume exceeds every GitHub LFS file limit.
+/*
+!/.gitignore
+!/README.md
+!/SHA256SUMS

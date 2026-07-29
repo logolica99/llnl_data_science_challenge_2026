@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="diagram-title diagram-desc">
+  <title id="diagram-title">Production Agent to Skill to MCP Map</title>
+  <desc id="diagram-desc">The orchestrator and five production stages mapped to policy skills and deterministic MCP tools. Design comparison and labeled evaluation are outside the production boundary.</desc>
+  <defs>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#845ef7"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4dabf7"/></marker>
+  </defs>
+  <rect width="1600" height="760" fill="#ffffff"/>
+  <text x="60" y="55" fill="#1e1e1e" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="32">Agent → Skill → MCP Map</text>
+  <text x="60" y="88" fill="#757575" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18">Production boundary: nominal graph JSON + specimen CT</text>
+  <text x="60" y="135" fill="#6d28d9" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18">AGENT</text>
+  <text x="365" y="135" fill="#b45309" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18">SKILL</text>
+  <text x="820" y="135" fill="#2563eb" font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" font-size="18">MCP TOOLS</text>
+  <g stroke-width="2">
+    <g fill="none"><path d="M 280 190 L 355 190" stroke="#845ef7" marker-end="url(#arrow-purple)"/><path d="M 725 190 L 810 190" stroke="#4dabf7" marker-end="url(#arrow-blue)"/><path d="M 280 288 L 355 288" stroke="#845ef7" marker-end="url(#arrow-purple)"/><path d="M 725 288 L 810 288" stroke="#4dabf7" marker-end="url(#arrow-blue)"/><path d="M 280 386 L 355 386" stroke="#845ef7" marker-end="url(#arrow-purple)"/><path d="M 725 386 L 810 386" stroke="#4dabf7" marker-end="url(#arrow-blue)"/><path d="M 280 484 L 355 484" stroke="#845ef7" marker-end="url(#arrow-purple)"/><path d="M 725 484 L 810 484" stroke="#4dabf7" marker-end="url(#arrow-blue)"/><path d="M 280 582 L 355 582" stroke="#845ef7" marker-end="url(#arrow-purple)"/><path d="M 725 582 L 810 582" stroke="#4dabf7" marker-end="url(#arrow-blue)"/><path d="M 280 680 L 355 680" stroke="#845ef7" marker-end="url(#arrow-purple)"/><path d="M 725 680 L 810 680" stroke="#4dabf7" marker-end="url(#arrow-blue)"/></g>
+    <g font-family="Virgil, 'Segoe Print', 'Comic Sans MS', sans-serif" text-anchor="middle" fill="#1e1e1e">
+      <rect x="60" y="154" width="220" height="72" rx="14" fill="#ffe8a1" stroke="#f59f00"/><text x="170" y="196" font-size="18">Orchestrator</text>
+      <rect x="365" y="154" width="360" height="72" rx="14" fill="#fff3bf" stroke="#f59f00"/><text x="545" y="196" font-size="16">part2-pipeline-runbook</text>
+      <rect x="820" y="154" width="720" height="72" rx="14" fill="#f1f3f5" stroke="#adb5bd"/><text x="1180" y="196" font-size="16">No direct MCP — sequences agents and receipts</text>
+
+      <rect x="60" y="252" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7"/><text x="170" y="280" font-size="17">0  Specimen Ingest</text><text x="170" y="302" font-size="14">+ graph validation</text>
+      <rect x="365" y="252" width="360" height="72" rx="14" fill="#fff3bf" stroke="#f59f00"/><text x="545" y="294" font-size="16">volume-metadata</text>
+      <rect x="820" y="252" width="720" height="72" rx="14" fill="#a5d8ff" stroke="#4dabf7"/><text x="1180" y="294" font-size="16">inspect_volume_metadata  •  load_lattice_graph</text>
+
+      <rect x="60" y="350" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7"/><text x="170" y="392" font-size="18">1  Data Prep</text>
+      <rect x="365" y="350" width="360" height="72" rx="14" fill="#fff3bf" stroke="#f59f00"/><text x="545" y="392" font-size="16">ct-registration</text>
+      <rect x="820" y="350" width="720" height="72" rx="14" fill="#a5d8ff" stroke="#4dabf7"/><text x="1180" y="380" font-size="14">Otsu + segmentation  •  autonomous registration</text><text x="1180" y="402" font-size="14">localize nodes  •  registration QA</text>
+
+      <rect x="60" y="448" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7" stroke-dasharray="9 7"/><text x="170" y="490" font-size="18">2  Strut Metrics</text>
+      <rect x="365" y="448" width="360" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-dasharray="9 7"/><text x="545" y="490" font-size="16">strut-defect-analyzer</text>
+      <rect x="820" y="448" width="720" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-dasharray="9 7"/><text x="1180" y="490" font-size="16">compute_strut_metrics</text>
+
+      <rect x="60" y="546" width="220" height="72" rx="14" fill="#b197fc" stroke="#7048e8" stroke-dasharray="9 7"/><text x="170" y="588" font-size="18">3  Defect Team</text>
+      <rect x="365" y="546" width="360" height="72" rx="14" fill="#fff9db" stroke="#f59f00" stroke-dasharray="9 7"/><text x="545" y="588" font-size="16">strut-defect-analyzer</text>
+      <rect x="820" y="546" width="720" height="72" rx="14" fill="#dbe4ff" stroke="#4dabf7" stroke-dasharray="9 7"/><text x="1180" y="588" font-size="16">classify_struts  •  render_strut_evidence</text>
+
+      <rect x="60" y="644" width="220" height="72" rx="14" fill="#d0bfff" stroke="#845ef7"/><text x="170" y="686" font-size="18">4  Report Agent</text>
+      <rect x="365" y="644" width="360" height="72" rx="14" fill="#fff3bf" stroke="#f59f00"/><text x="545" y="686" font-size="16">nde-report-generator</text>
+      <rect x="820" y="644" width="720" height="72" rx="14" fill="#a5d8ff" stroke="#4dabf7"/><text x="1180" y="676" font-size="14">get_strut_report  •  compute_spatial_stats</text><text x="1180" y="698" font-size="14">render_lattice_3d</text>
+    </g>
+  </g>
+</svg>

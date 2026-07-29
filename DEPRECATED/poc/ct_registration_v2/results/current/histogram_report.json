@@ -1,0 +1,28 @@
+{
+  "threshold": 40054,
+  "voxel_count": 519119955,
+  "foreground_voxel_count": 58653410,
+  "foreground_fraction": 0.11298623648555371,
+  "otsu_separability": 0.814158617485167,
+  "background_mean": 32615.08340378344,
+  "foreground_mean": 47493.56062968888,
+  "class_mean_separation_sigma": 4.321652770590698,
+  "significant_peak_count": 2,
+  "significant_peak_centers_uint16": [
+    32288.0,
+    48992.0
+  ],
+  "significant_peak_prominences": [
+    13489161.556964777,
+    49530.42069270057
+  ],
+  "gates": {
+    "foreground_fraction_plausible": true,
+    "otsu_separability_sufficient": true,
+    "class_mean_separation_sufficient": true,
+    "histogram_not_unimodal": true
+  },
+  "overall_pass": true,
+  "source_voxel_count": 519119955,
+  "elapsed_seconds": 0.9228293330525048
+}

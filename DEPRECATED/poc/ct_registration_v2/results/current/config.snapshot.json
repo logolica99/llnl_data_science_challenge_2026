@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "random_seed": 20260723,
+  "histogram": {
+    "chunk_depth": 16,
+    "edge_slices_excluded": 0,
+    "coarse_bins": 1024,
+    "peak_smoothing_sigma_bins": 2.0,
+    "peak_prominence_fraction": 0.003,
+    "minimum_significant_peaks": 2,
+    "minimum_foreground_fraction": 0.01,
+    "maximum_foreground_fraction": 0.35,
+    "minimum_otsu_separability": 0.45,
+    "minimum_class_mean_separation_sigma": 0.75
+  },
+  "detection": {
+    "downsample_factor": 2,
+    "central_z_margin_fraction": 0.065,
+    "edt_peak_threshold_downsampled_voxels": 2.0,
+    "minimum_component_voxels": 2,
+    "maximum_component_voxels": 999,
+    "candidate_holdout_fraction": 0.2
+  },
+  "fitting": {
+    "icp_keep_fraction": 0.7,
+    "icp_max_iterations": 60,
+    "icp_convergence_epsilon": 1e-05,
+    "scale_multipliers": [
+      0.99,
+      1.0,
+      1.01
+    ],
+    "rotation_perturbations_degrees_xyz": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        -1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ],
+      [
+        0.0,
+        0.0,
+        -1.0
+      ]
+    ],
+    "near_optimal_objective_fraction": 0.05,
+    "minimum_near_optimal_starts": 3,
+    "maximum_multistart_p95_spread_voxels": 1.0,
+    "minimum_converged_start_fraction": 0.5
+  },
+  "refinement": {
+    "passes": 2,
+    "patch_radius_voxels": 14,
+    "search_radius_voxels": 8.0,
+    "minimum_local_edt_voxels": 2.5,
+    "maximum_local_edt_voxels": 10.0,
+    "maximum_local_shift_voxels": 7.5,
+    "keep_fraction": 0.8
+  },
+  "robustness": {
+    "threshold_offsets": [
+      -80,
+      0,
+      80
+    ],
+    "edt_peak_thresholds": [
+      1.75,
+      2.0,
+      2.25
+    ],
+    "icp_keep_fractions": [
+      0.65,
+      0.7,
+      0.75
+    ],
+    "bootstrap_repeats": 4,
+    "bootstrap_fraction": 0.8,
+    "maximum_p95_prediction_shift_voxels": 2.0
+  },
+  "image_validation": {
+    "junction_patch_radius_voxels": 2,
+    "corridor_axial_samples": 9,
+    "corridor_max_radius_voxels": 6,
+    "corridor_angular_samples": 8,
+    "corridor_chunk_edges": 128,
+    "radial_foreground_probability": 0.5,
+    "high_confidence_edge_quantile": 0.75,
+    "spatial_bins_per_axis": 5,
+    "minimum_mean_junction_foreground_fraction": 0.85,
+    "minimum_median_corridor_foreground_fraction": 0.08,
+    "maximum_spatial_bin_median_range": 0.25,
+    "maximum_holdout_candidate_median_distance_voxels": 6.0
+  },
+  "downstream_gate": {
+    "corridor_margin_radius_fraction": 1.0,
+    "minimum_corridor_margin_voxels": 2.0,
+    "maximum_uncertainty_to_measured_radius_ratio": 1.0
+  },
+  "synthetic": {
+    "case_count": 12,
+    "noise_sigma_voxels": 0.35,
+    "missing_fraction": 0.2,
+    "outlier_fraction": 0.25,
+    "maximum_relative_scale_error": 0.01,
+    "maximum_rotation_error_degrees": 0.5,
+    "maximum_translation_error_voxels": 2.0,
+    "minimum_pass_fraction": 0.9
+  },
+  "held_out_validation": {
+    "maximum_median_node_error_voxels": 5.0,
+    "maximum_p95_node_error_voxels": 7.0,
+    "maximum_relative_scale_error": 0.01,
+    "maximum_rotation_magnitude_error_degrees": 0.2,
+    "maximum_translation_error_norm_voxels": 6.0,
+    "minimum_node_foreground_fraction": 0.85
+  },
+  "external_validation": {
+    "minimum_independent_scans": 3,
+    "minimum_distinct_geometries": 2,
+    "minimum_case_pass_fraction": 0.9
+  }
+}

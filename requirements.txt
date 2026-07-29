@@ -1,7 +1,12 @@
-numpy
-matplotlib
-fastmcp
-PyYAML
-scipy
-scikit-image
-tifffile
+# Direct runtime pins. `uv.lock` freezes the complete transitive environment.
+fastmcp==3.4.4
+jsonschema==4.26.0
+matplotlib==3.11.1
+napari[pyqt6]==0.8.0
+numpy==2.5.1
+pandas==3.0.5
+pyvista==0.48.4
+scikit-image==0.26.0
+scipy==1.18.0
+tifffile==2026.7.14
+trimesh==4.12.2

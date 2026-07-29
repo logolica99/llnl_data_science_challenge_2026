@@ -1,0 +1,37 @@
+{
+  "threshold": 0.0055621545633924,
+  "voxel_count": 1728000000,
+  "foreground_voxel_count": 97755064,
+  "foreground_fraction": 0.05657121759259259,
+  "otsu_separability": 0.9352826118909207,
+  "background_mean": 15276.246814418566,
+  "foreground_mean": 50243.81293409004,
+  "class_mean_separation_sigma": 9.471390870891002,
+  "significant_peak_count": 2,
+  "significant_peak_centers_uint16": [
+    15072.0,
+    53984.0
+  ],
+  "significant_peak_prominences": [
+    124354828.89732626,
+    852057.830380498
+  ],
+  "gates": {
+    "foreground_fraction_plausible": true,
+    "otsu_separability_sufficient": true,
+    "class_mean_separation_sufficient": true,
+    "histogram_not_unimodal": true
+  },
+  "overall_pass": true,
+  "threshold_histogram_bin": 32760,
+  "histogram_encoding": {
+    "encoding": "full_volume_affine_uint16",
+    "native_dtype": "float32",
+    "native_min": -0.0047421883791685104,
+    "native_max": 0.015871215611696243,
+    "native_units_per_bin": 3.1454038286205467e-07,
+    "bin_count": 65536
+  },
+  "source_voxel_count": 1728000000,
+  "elapsed_seconds": 8.862502167001367
+}

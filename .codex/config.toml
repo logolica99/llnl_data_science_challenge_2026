@@ -1,0 +1,17 @@
+[mcp_servers.segmentation-tools]
+command = "uv"
+args = ["run", "python", "src/llnl_nde/server.py"]
+enabled = true
+required = true
+startup_timeout_sec = 20
+tool_timeout_sec = 3600
+default_tools_approval_mode = "approve"
+
+[mcp_servers.segmentation-tools-research]
+command = "uv"
+args = ["run", "python", "research/mcp_server.py"]
+enabled = false
+required = false
+startup_timeout_sec = 20
+tool_timeout_sec = 3600
+default_tools_approval_mode = "approve"

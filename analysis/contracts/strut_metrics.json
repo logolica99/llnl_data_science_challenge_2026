@@ -1,0 +1,245 @@
+{
+  "schema_version": "agent-stage-contract/1.0.0",
+  "stage_number": 2,
+  "stage": "strut_metrics",
+  "owner": "strut_metrics",
+  "invoked_by": "orchestrator",
+  "execution_kind": "deterministic",
+  "maximum_attempts": 1,
+  "one_shot": false,
+  "required_dependencies": {
+    "agents": [
+      {
+        "name": "strut_metrics",
+        "contract_version": "agent-stage-contract/1.0.0"
+      }
+    ],
+    "mcp_tools": [
+      {
+        "server": "segmentation-tools",
+        "name": "compute_strut_metrics",
+        "response_schema_version": "part2-mcp-response/1.0.0"
+      }
+    ]
+  },
+  "required_inputs": [
+    "verified_stage_1_receipt_hash_in_control_metadata",
+    "analysis_ready_specimen_manifest",
+    "data_prep_completion_receipt",
+    "requested_analysis_scope_and_authorized_outputs",
+    "attempt_scoped_stage_2_handoff",
+    "frozen_analysis_config",
+    "ct_volume",
+    "independently_localized_graph",
+    "registration_qa",
+    "exact_otsu_result",
+    "canonical_segmentation_mask_contract"
+  ],
+  "optional_inputs": [],
+  "required_outputs": [
+    "analysis/<specimen_id>/struts/corridor_calibration.json",
+    "analysis/<specimen_id>/struts/per_strut_metrics.csv",
+    "analysis/<specimen_id>/struts/per_strut_profiles.json",
+    "analysis/<specimen_id>/struts/metrics_report.json"
+  ],
+  "forbidden_operations": [
+    "defect_label_access",
+    "development_split_access",
+    "sealed_split_access",
+    "registration_recomputation",
+    "node_position_modification",
+    "threshold_modification",
+    "defect_classification",
+    "sealed_evaluation",
+    "mcp_cli_or_direct_import_fallback"
+  ],
+  "input_artifacts": {
+    "allowed": [
+      {
+        "role": "stage_handoff",
+        "path": "analysis/<specimen_id>/handoffs/stage_2_strut_metrics_attempt_<attempt>.json",
+        "consumers": [
+          "strut_metrics"
+        ]
+      },
+      {
+        "role": "analysis_config",
+        "path": "analysis/<specimen_id>/config/analysis_config.json",
+        "consumers": [
+          "strut_metrics",
+          "compute_strut_metrics"
+        ]
+      },
+      {
+        "role": "analysis_ready_specimen_manifest",
+        "path": "analysis/<specimen_id>/config/specimen_manifest.json",
+        "consumers": [
+          "strut_metrics"
+        ]
+      },
+      {
+        "role": "data_prep_completion_receipt",
+        "path": "analysis/<specimen_id>/config/data_prep_completion_receipt.json",
+        "consumers": [
+          "strut_metrics"
+        ]
+      },
+      {
+        "role": "ct_volume",
+        "path": "<manifest-declared-ct-volume>",
+        "consumers": [
+          "compute_strut_metrics"
+        ]
+      },
+      {
+        "role": "localized_graph",
+        "path": "analysis/<specimen_id>/registration/localized_graph.json",
+        "consumers": [
+          "strut_metrics",
+          "compute_strut_metrics"
+        ]
+      },
+      {
+        "role": "registration_qa",
+        "path": "analysis/<specimen_id>/qa/registration_qa.json",
+        "consumers": [
+          "strut_metrics",
+          "compute_strut_metrics"
+        ]
+      },
+      {
+        "role": "otsu_report",
+        "path": "analysis/<specimen_id>/segmentation/histogram_report.json",
+        "consumers": [
+          "strut_metrics"
+        ]
+      },
+      {
+        "role": "canonical_segmentation_mask",
+        "path": "analysis/<specimen_id>/segmentation/canonical_mask.npy",
+        "dtype": "uint8",
+        "shape_source": "specimen_manifest.inputs.ct_metadata.shape",
+        "array_axes": ["z", "y", "x"],
+        "retention": "committed",
+        "consumers": [
+          "strut_metrics",
+          "compute_strut_metrics"
+        ]
+      },
+      {
+        "role": "segmentation_mask_comparison",
+        "path": "analysis/<specimen_id>/segmentation/mask_comparison.json",
+        "consumers": [
+          "strut_metrics"
+        ]
+      }
+    ],
+    "required_roles": [
+      "stage_handoff",
+      "analysis_ready_specimen_manifest",
+      "data_prep_completion_receipt",
+      "analysis_config",
+      "ct_volume",
+      "localized_graph",
+      "registration_qa",
+      "otsu_report",
+      "canonical_segmentation_mask",
+      "segmentation_mask_comparison"
+    ],
+    "forbidden": [
+      {
+        "role": "intentional_deletion_labels",
+        "path": "analysis/<specimen_id>/labels/intentional_deletions_*.json"
+      },
+      {
+        "role": "development_labels",
+        "path": "analysis/<specimen_id>/labels/dev_split.json"
+      },
+      {
+        "role": "sealed_labels",
+        "path": "evals/labels/sealed_split.json"
+      },
+      {
+        "role": "classification_artifact",
+        "path": "analysis/<specimen_id>/struts/classified_struts.json"
+      }
+    ]
+  },
+  "output_artifacts": {
+    "allowed": [
+      {
+        "role": "manual_review_evidence",
+        "path": "analysis/<specimen_id>/reviews/stage_2_attempt_<attempt>/**",
+        "allow_multiple": true
+      },
+      {
+        "role": "corridor_calibration",
+        "path": "analysis/<specimen_id>/struts/corridor_calibration.json"
+      },
+      {
+        "role": "per_strut_metrics",
+        "path": "analysis/<specimen_id>/struts/per_strut_metrics.csv"
+      },
+      {
+        "role": "per_strut_profiles",
+        "path": "analysis/<specimen_id>/struts/per_strut_profiles.json"
+      },
+      {
+        "role": "metrics_report",
+        "path": "analysis/<specimen_id>/struts/metrics_report.json"
+      }
+    ],
+    "required_roles": [
+      "corridor_calibration",
+      "per_strut_metrics",
+      "per_strut_profiles",
+      "metrics_report"
+    ]
+  },
+  "required_receipt_assertions": [
+    "contract_version_matches",
+    "stage_1_receipt_hash_matches",
+    "frozen_config_hash_matches",
+    "specimen_design_scope_and_stage_1_artifact_bindings_match",
+    "requested_output_is_present_in_stage_1_authorized_outputs",
+    "roi_screening_outputs_are_not_reported_as_absolute_or_direct_dimensional_metrology",
+    "stage_handoff_excludes_all_label_roles_paths_and_hashes",
+    "input_artifact_hashes_match",
+    "output_artifact_hashes_match",
+    "corridor_radius_derived_from_empirical_bootstrap",
+    "threshold_matches_stage_1_otsu_result",
+    "canonical_mask_path_role_dtype_shape_retention_and_hash_match_stage_1",
+    "localized_graph_hash_matches_stage_1",
+    "one_row_per_nominal_strut",
+    "metric_row_count_matches_manifest_edge_count",
+    "strut_ids_unique_and_exhaustive",
+    "every_roi_has_provenance_and_valid_bounds",
+    "axis_mapping_is_xyz_to_zyx",
+    "defect_labels_not_accessed",
+    "accessed_inputs_within_allowlist",
+    "forbidden_inputs_not_accessed"
+  ],
+  "next_stage": "defect_analysis",
+  "unlock_condition": {
+    "terminal_state": "pass",
+    "completion_receipt_verified": true,
+    "matching_hashes_required": true,
+    "frozen_config_hash_required": true,
+    "all_roi_and_row_gates_pass": true,
+    "next_stage_locked_until_verified": true
+  },
+  "manual_review_conditions": [
+    "bounded_roi_exception_requires_explicit_scientist_disposition"
+  ],
+  "halt_conditions": [
+    "missing_or_schema_incompatible_dependency",
+    "corridor_bootstrap_unavailable_or_invalid",
+    "metric_row_or_strut_id_gate_failure",
+    "roi_bounds_or_provenance_gate_failure",
+    "defect_label_access",
+    "deterministic_gate_failure_without_retry",
+    "receipt_or_artifact_hash_mismatch",
+    "frozen_config_hash_mismatch",
+    "stage_skip_detected"
+  ]
+}

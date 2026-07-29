@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/logolica99/llnl_data_science_challenge_2026/analysis/schema/strut_metrics_input.schema.json",
+  "title": "Frozen Stage 2 strut-metrics configuration",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["stage_2_strut_metrics"],
+  "properties": {
+    "stage_2_strut_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "otsu_threshold",
+        "axial_padding_fraction_total",
+        "interpolation_batch_size",
+        "junction_mask_radius_voxels",
+        "transverse_margin_fraction",
+        "minimum_transverse_margin_voxels",
+        "collar_fraction",
+        "endpoint_seed_half_length_voxels",
+        "collar_half_length_voxels",
+        "minimum_axial_foreground_fraction",
+        "centerline_smoothing_passes",
+        "minimum_valid_roi_fraction",
+        "corridor_bootstrap"
+      ],
+      "properties": {
+        "schema_version": {"const": "part2-strut-metrics-config/1.0.0"},
+        "otsu_threshold": {"type": "number"},
+        "axial_padding_fraction_total": {"const": 0.2},
+        "interpolation_batch_size": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "junction_mask_radius_voxels": {"type": "number", "exclusiveMinimum": 0},
+        "transverse_margin_fraction": {"type": "number", "minimum": 0},
+        "minimum_transverse_margin_voxels": {"type": "number", "minimum": 0},
+        "collar_fraction": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 0.5},
+        "endpoint_seed_half_length_voxels": {"type": "number", "exclusiveMinimum": 0},
+        "collar_half_length_voxels": {"type": "number", "exclusiveMinimum": 0},
+        "minimum_axial_foreground_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+        "centerline_smoothing_passes": {"type": "integer", "minimum": 0, "maximum": 20},
+        "minimum_valid_roi_fraction": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "corridor_bootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sample_count",
+            "minimum_valid_samples",
+            "minimum_valid_slice_fraction",
+            "central_fraction",
+            "calibration_half_width_voxels",
+            "maximum_axis_distance_voxels",
+            "radial_extent_quantile",
+            "radius_multiplier",
+            "radius_safety_voxels",
+            "minimum_radius_voxels",
+            "maximum_radius_voxels"
+          ],
+          "properties": {
+            "sample_count": {"type": "integer", "minimum": 4, "maximum": 4096},
+            "minimum_valid_samples": {"type": "integer", "minimum": 4},
+            "minimum_valid_slice_fraction": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "central_fraction": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "calibration_half_width_voxels": {"type": "number", "exclusiveMinimum": 0},
+            "maximum_axis_distance_voxels": {"type": "number", "minimum": 0},
+            "radial_extent_quantile": {"type": "number", "minimum": 0.5, "maximum": 1},
+            "radius_multiplier": {"type": "number", "minimum": 1},
+            "radius_safety_voxels": {"type": "number", "minimum": 0},
+            "minimum_radius_voxels": {"type": "number", "exclusiveMinimum": 0},
+            "maximum_radius_voxels": {"type": "number", "exclusiveMinimum": 0}
+          }
+        }
+      }
+    }
+  }
+}

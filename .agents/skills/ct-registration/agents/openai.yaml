@@ -1,0 +1,11 @@
+interface:
+  display_name: "CT Registration"
+  short_description: "Run exact Otsu, lattice registration, localization, and QA."
+  default_prompt: "Use $ct-registration to prepare a CT scan through exact Otsu, autonomous registration, independent node localization, and all-edge QA via segmentation-tools MCP only."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segmentation-tools"
+      description: "Production TIFF/NPY segmentation, registration, localization, and QA tools"
+      transport: "stdio"
