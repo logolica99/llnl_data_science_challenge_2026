@@ -1,7 +1,7 @@
 [mcp_servers.segmentation-tools]
 command = "uv"
 args = ["run", "--frozen", "python", "src/llnl_nde/server.py"]
-cwd = "."
+cwd = "/Users/dannyvillanueva/Documents/Livermore/llnl_data_science_challenge_2026"
 enabled = true
 required = true
 startup_timeout_sec = 20

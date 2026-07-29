@@ -21,7 +21,7 @@ class MCPConfigurationTests(unittest.TestCase):
         server = self.config["mcp_servers"]["segmentation-tools"]
         self.assertEqual("approve", server["default_tools_approval_mode"])
 
-    def test_server_configuration_is_clone_portable_and_frozen(self) -> None:
+    def test_server_configuration_is_frozen_and_resolves_entrypoints(self) -> None:
         expected = {
             "segmentation-tools": "src/llnl_nde/server.py",
             "segmentation-tools-research": "research/mcp_server.py",
@@ -33,7 +33,12 @@ class MCPConfigurationTests(unittest.TestCase):
                 self.assertEqual(
                     ["run", "--frozen", "python", entrypoint], server["args"]
                 )
-                self.assertEqual(".", server["cwd"])
+                expected_cwd = (
+                    str(REPOSITORY_ROOT)
+                    if name == "segmentation-tools"
+                    else "."
+                )
+                self.assertEqual(expected_cwd, server["cwd"])
                 self.assertEqual(
                     REPOSITORY_ROOT,
                     (REPOSITORY_ROOT / server["cwd"]).resolve(),
