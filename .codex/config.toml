@@ -1,6 +1,7 @@
 [mcp_servers.segmentation-tools]
 command = "uv"
-args = ["run", "python", "src/llnl_nde/server.py"]
+args = ["run", "--frozen", "python", "src/llnl_nde/server.py"]
+cwd = ".."
 enabled = true
 required = true
 startup_timeout_sec = 20
@@ -9,7 +10,8 @@ default_tools_approval_mode = "approve"
 
 [mcp_servers.segmentation-tools-research]
 command = "uv"
-args = ["run", "python", "research/mcp_server.py"]
+args = ["run", "--frozen", "python", "research/mcp_server.py"]
+cwd = ".."
 enabled = false
 required = false
 startup_timeout_sec = 20

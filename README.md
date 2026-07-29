@@ -221,19 +221,27 @@ def segment_ct_dataset(input_filepath: str, output_filepath: str, threshold: flo
     pass # Implementation goes here
 ```
 
-Add the MCP tools to your Codex CLI configuration file at `~/.codex/config.toml` and then test it in the Codex CLI. You should add the following block, making sure to use the absolute paths for your Python executable and the server script. Replace `<PATH_TO_PYTHON_EXE>` with the path to your Python executable and `<PATH_TO_DSSI_CHALLENGE>` with the path to your DSSI Challenge directory:
+The production MCP server is already configured in the checked-in
+`.codex/config.toml`; do not add a machine-specific copy to
+`~/.codex/config.toml`. Install `uv`, then create the locked environment from
+the root of any clone:
 
-```toml
-[mcp_servers.segmentation-tools]
-command = "<PATH_TO_PYTHON_EXE>"
-args = ["<PATH_TO_DSSI_CHALLENGE>/src/llnl_nde/server.py"]
-env = {}
+```shell
+uv sync --frozen
 ```
 
-You can test if the MCP tool is available in Codex by starting the Codex CLI from this repository and inspecting the configured MCP servers with the `/mcp` command. If you get an error, make sure you have the correct path to your MCP server script. This is adding the MCP server to your global Codex CLI configuration.
+Open the cloned repository itself as the Codex workspace, trust the project,
+and restart Codex. The project configuration launches the server with `uv run
+--frozen` and resolves its working directory relative to `.codex/`, so the
+clone may live at any filesystem path. Inspect `/mcp` after restart and confirm
+that `segmentation-tools` is connected. A personal
+`~/.codex/config.toml` entry with the same server name can mask a missing or
+untrusted project configuration and should be removed.
 
 > [!IMPORTANT]
-> After changing `~/.codex/config.toml`, close and restart the Codex CLI so the updated MCP server configuration takes effect.
+> Codex loads project `.codex/config.toml` only for trusted projects. Start
+> Codex from the repository and restart the client after pulling MCP
+> configuration or tool-schema changes.
 
 Refer to the Codex configuration reference for more details: [Codex configuration](https://developers.openai.com/codex/config-reference)
 
