@@ -601,6 +601,62 @@ def _derive_peer_baselines(rows, thresholds):
     return baselines
 
 
+def _measurement_provenance(strut_sections_csv):
+    manifest_path = strut_sections_csv.parent / "measurement_manifest.json"
+    manifest = {}
+    if manifest_path.is_file():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    config = manifest.get("config", {})
+    artifact = manifest.get("artifacts", {}).get("section_measurements", {})
+    return {
+        "schema_version": 1,
+        "source": "thin_thick_bent_pipeline",
+        "ct_threshold": _finite(config.get("threshold")),
+        "positions": _as_int(config.get("positions")),
+        "start_fraction": _finite(config.get("start_fraction")),
+        "end_fraction": _finite(config.get("end_fraction")),
+        "tracking_radius_voxels": _finite(
+            config.get("tracking_radius_voxels")
+        ),
+        "section_measurements_sha256": (
+            artifact.get("sha256") or _sha256(strut_sections_csv)
+        ),
+    }
+
+
+def _typed_profile_sample(row):
+    return {
+        "sample_index": _as_int(row.get("sample_index")),
+        "fraction": _as_float(row.get("axis_fraction")),
+        "distance_voxels": _as_float(row.get("distance_voxels")),
+        "radius_voxels": _as_float(row.get("radius_voxels")),
+        "radius_mm": _as_float(row.get("radius_mm")),
+        "area_voxels_squared": _as_float(row.get("area_voxels_squared")),
+        "center_x_voxels": _as_float(row.get("center_x_voxels")),
+        "center_y_voxels": _as_float(row.get("center_y_voxels")),
+        "center_z_voxels": _as_float(row.get("center_z_voxels")),
+        "center_u_voxels": _as_float(row.get("tracked_center_u_voxels")),
+        "center_v_voxels": _as_float(row.get("tracked_center_v_voxels")),
+        "deviation_voxels": _as_float(
+            row.get("centerline_deviation_voxels")
+        ),
+        "curvature_inverse_voxels": _as_float(
+            row.get("curvature_inverse_voxels")
+        ),
+        "confidence": _as_float(row.get("tracking_confidence")),
+        "tracking_recovered": _as_bool(row.get("tracking_recovered")),
+        "valid": _as_bool(row.get("valid")),
+        "exclusion_reason": row.get("exclusion_reason", ""),
+        "junction_excluded": _as_bool(row.get("junction_excluded")),
+        "junction_contaminated": _as_bool(
+            row.get("junction_contaminated")
+        ),
+        "dense_boundary_interference": _as_bool(
+            row.get("dense_boundary_interference")
+        ),
+    }
+
+
 def classify_struts(
     strut_summary_csv: str | Path,
     strut_sections_csv: str | Path,
@@ -619,13 +675,10 @@ def classify_struts(
     rows = [_typed_summary(row) for row in _read_csv(strut_summary_csv)]
     sections_by_strut = defaultdict(list)
     for row in _read_csv(strut_sections_csv):
-        sections_by_strut[int(row["strut_id"])].append({
-            "axis_fraction": float(row["axis_fraction"]),
-            "valid": _as_bool(row["valid"]),
-            "centerline_deviation_voxels": _as_float(
-                row["centerline_deviation_voxels"]
-            ),
-        })
+        sections_by_strut[int(row["strut_id"])].append(
+            _typed_profile_sample(row)
+        )
+    measurement_provenance = _measurement_provenance(strut_sections_csv)
     baselines = _derive_peer_baselines(rows, thresholds)
     classified = []
     findings = {"thin": [], "thick": [], "bent": []}
@@ -652,12 +705,12 @@ def classify_struts(
 
         profiles = sorted(
             sections_by_strut.get(row["strut_id"], []),
-            key=lambda item: item["axis_fraction"],
+            key=lambda item: item["fraction"],
         )
         deviation_mask = [
             item["valid"]
-            and item["centerline_deviation_voxels"] is not None
-            and item["centerline_deviation_voxels"]
+            and item["deviation_voxels"] is not None
+            and item["deviation_voxels"]
             >= thresholds["bent_adjacent_deviation_voxels"]
             for item in profiles
         ]
@@ -853,9 +906,20 @@ def classify_struts(
         }
         classified.append(result)
         for label in labels:
-            findings[label].append({
+            finding = {
                 key: result[key] for key in result if key != "evidence_png"
-            })
+            }
+            finding["measurement_profile"] = {
+                **measurement_provenance,
+                "length_voxels": row["length_voxels"],
+                "tracking_coverage": row["tracking_coverage"],
+                "median_radius_voxels": radius,
+                "centerline_deviation_rms_voxels": rms_deviation,
+                "centerline_deviation_max_voxels": max_deviation,
+                "curvature_rms_inverse_voxels": curvature,
+                "samples": profiles,
+            }
+            findings[label].append(finding)
 
     classified_path = output_dir / "classified_struts.csv"
     thresholds_path = output_dir / "thresholds.json"
@@ -872,6 +936,7 @@ def classify_struts(
             "schema_version": 1,
             "defect_class": defect_class,
             "thresholds_path": "thresholds.json",
+            "measurement_provenance": measurement_provenance,
             "findings": findings[defect_class],
         })
     counts = Counter(row["classification"] for row in classified)

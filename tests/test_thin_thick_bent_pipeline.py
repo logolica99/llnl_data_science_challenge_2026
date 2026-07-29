@@ -164,6 +164,20 @@ class ThinThickBentPipelineTests(unittest.TestCase):
             sections.extend(section_rows(7, 3.0, bent=True))
             write_csv(summary_path, SUMMARY_FIELDS, summary)
             write_csv(sections_path, SECTION_FIELDS, sections)
+            (root / "measurement_manifest.json").write_text(json.dumps({
+                "config": {
+                    "threshold": 500,
+                    "positions": 9,
+                    "start_fraction": 0.1,
+                    "end_fraction": 0.9,
+                    "tracking_radius_voxels": 6,
+                },
+                "artifacts": {
+                    "section_measurements": {
+                        "sha256": "fixture-section-hash",
+                    },
+                },
+            }), encoding="utf-8")
             thresholds_path = root / "test_thresholds.json"
             thresholds_path.write_text(json.dumps({
                 "minimum_peer_group_size": 4,
@@ -218,6 +232,16 @@ class ThinThickBentPipelineTests(unittest.TestCase):
                 bent_findings["findings"][0]["evidence_png"],
                 "../evidence/bent/strut_7_centerline.png",
             )
+            embedded = bent_findings["findings"][0]["measurement_profile"]
+            self.assertEqual(embedded["source"], "thin_thick_bent_pipeline")
+            self.assertEqual(embedded["ct_threshold"], 500.0)
+            self.assertEqual(
+                embedded["section_measurements_sha256"],
+                "fixture-section-hash",
+            )
+            self.assertEqual(len(embedded["samples"]), 9)
+            self.assertEqual(embedded["samples"][0]["fraction"], 0.1)
+            self.assertIn("deviation_voxels", embedded["samples"][0])
 
     def test_bent_primary_label_wins_close_radius_evidence(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -36,6 +36,8 @@ def json_bytes(payload):
 
 
 def finite_or_none(value):
+    if value in (None, ""):
+        return None
     value = float(value)
     return value if math.isfinite(value) else None
 
@@ -365,7 +367,9 @@ DEFECT_CLASSES = ("thin", "thick", "bent", "normal", "uncertain")
 def _flatten_fields(payload, prefix=""):
     fields = {}
     for key, value in payload.items():
-        if key in {"strut_id", "id", "profile", "sections"}:
+        if key in {
+            "strut_id", "id", "profile", "sections", "measurement_profile"
+        }:
             continue
         name = f"{prefix}{key}"
         if isinstance(value, dict):
@@ -373,6 +377,84 @@ def _flatten_fields(payload, prefix=""):
         elif not isinstance(value, (list, tuple)):
             fields[name] = value
     return fields
+
+
+def _embedded_profile(payload):
+    if not isinstance(payload, dict):
+        return None
+    raw_samples = payload.get("samples", payload.get("profile"))
+    if not isinstance(raw_samples, list):
+        return None
+    samples = []
+    for raw in raw_samples:
+        if not isinstance(raw, dict):
+            continue
+        samples.append({
+            "sample_index": raw.get("sample_index"),
+            "fraction": finite_or_none(
+                raw.get("fraction", raw.get("axis_fraction"))
+            ),
+            "distance_voxels": finite_or_none(raw.get("distance_voxels")),
+            "radius_voxels": finite_or_none(raw.get("radius_voxels")),
+            "area_voxels_squared": finite_or_none(
+                raw.get("area_voxels_squared")
+            ),
+            "center_x_voxels": finite_or_none(raw.get("center_x_voxels")),
+            "center_y_voxels": finite_or_none(raw.get("center_y_voxels")),
+            "center_z_voxels": finite_or_none(raw.get("center_z_voxels")),
+            "center_u_voxels": finite_or_none(
+                raw.get("center_u_voxels",
+                        raw.get("tracked_center_u_voxels"))
+            ),
+            "center_v_voxels": finite_or_none(
+                raw.get("center_v_voxels",
+                        raw.get("tracked_center_v_voxels"))
+            ),
+            "deviation_voxels": finite_or_none(
+                raw.get("deviation_voxels",
+                        raw.get("centerline_deviation_voxels"))
+            ),
+            "curvature_inverse_voxels": finite_or_none(
+                raw.get("curvature_inverse_voxels")
+            ),
+            "confidence": finite_or_none(
+                raw.get("confidence", raw.get("tracking_confidence"))
+            ),
+            "tracking_recovered": bool(raw.get("tracking_recovered", False)),
+            "valid": bool(raw.get("valid", False)),
+            "exclusion_reason": str(raw.get("exclusion_reason", "")),
+        })
+    if not samples:
+        return None
+    threshold = finite_or_none(
+        payload.get("ct_threshold", payload.get("threshold"))
+    )
+    return {
+        "profile_source": "embedded_pipeline",
+        "source": str(payload.get("source", "thin_thick_bent_pipeline")),
+        "schema_version": payload.get("schema_version", 1),
+        "threshold": threshold,
+        "section_measurements_sha256": payload.get(
+            "section_measurements_sha256"
+        ),
+        "length_voxels": finite_or_none(payload.get("length_voxels")),
+        "coverage": finite_or_none(
+            payload.get("tracking_coverage", payload.get("coverage"))
+        ),
+        "median_radius_voxels": finite_or_none(
+            payload.get("median_radius_voxels")
+        ),
+        "centerline_deviation_rms_voxels": finite_or_none(
+            payload.get("centerline_deviation_rms_voxels")
+        ),
+        "centerline_deviation_max_voxels": finite_or_none(
+            payload.get("centerline_deviation_max_voxels")
+        ),
+        "curvature_rms_inverse_voxels": finite_or_none(
+            payload.get("curvature_rms_inverse_voxels")
+        ),
+        "profile": samples,
+    }
 
 
 def _classification_tokens(item, hint=None):
@@ -513,6 +595,17 @@ class AppState:
                 for key, value in payload.items():
                     if isinstance(value, (str, int, float, bool)) or value is None:
                         self.thresholds[str(key)] = value
+            document_provenance = (
+                payload.get("measurement_provenance", {})
+                if isinstance(payload, dict) else {}
+            )
+            document_threshold = finite_or_none(
+                document_provenance.get(
+                    "ct_threshold", document_provenance.get("threshold")
+                )
+            )
+            if document_threshold is not None:
+                self.analysis_threshold = document_threshold
 
             added = 0
             for raw in rows:
@@ -527,12 +620,29 @@ class AppState:
                     ) from exc
                 classifications = _classification_tokens(raw, hint)
                 fields = _flatten_fields(raw)
+                embedded = _embedded_profile(raw.get("measurement_profile"))
                 row = self.result_rows.setdefault(strut_id, {
                     "strut_id": strut_id,
                     "classifications": set(),
                     "fields": {},
                     "sources": [],
+                    "measurement_profile": None,
                 })
+                existing = row.get("measurement_profile")
+                if embedded is not None and existing is not None:
+                    existing_hash = existing.get("section_measurements_sha256")
+                    incoming_hash = embedded.get("section_measurements_sha256")
+                    if (
+                        existing_hash and incoming_hash
+                        and existing_hash != incoming_hash
+                    ):
+                        raise ValueError(
+                            f"Conflicting embedded measurement profiles for "
+                            f"strut {strut_id}; upload findings from one "
+                            f"pipeline run."
+                        )
+                if embedded is not None:
+                    row["measurement_profile"] = embedded
                 row["classifications"].update(classifications)
                 row["fields"].update(fields)
                 if source_name not in row["sources"]:
@@ -578,6 +688,13 @@ class AppState:
                     "classification": classifications[0],
                     "confidence": confidence,
                     "sources": row["sources"],
+                    "has_embedded_measurements": bool(
+                        row.get("measurement_profile")
+                    ),
+                    "measurement_source": (
+                        row["measurement_profile"].get("source")
+                        if row.get("measurement_profile") else None
+                    ),
                 })
             effective_threshold = (
                 self.analysis_threshold
@@ -604,6 +721,12 @@ class AppState:
     def profile(self, strut_id, threshold):
         key = (int(strut_id), round(float(threshold), 6))
         with self.lock:
+            result_row = self.result_rows.get(int(strut_id))
+            if (
+                result_row is not None
+                and result_row.get("measurement_profile") is not None
+            ):
+                return result_row["measurement_profile"]
             if key in self.profile_cache:
                 result = self.profile_cache.pop(key)
                 self.profile_cache[key] = result
@@ -619,6 +742,8 @@ class AppState:
                 self.volume, start, end, float(threshold)
             )
             result.update({
+                "profile_source": "live_viewer_preview",
+                "source": "standalone_strut_viewer",
                 "strut_id": int(strut_id),
                 "start_xyz": [float(value) for value in start],
                 "end_xyz": [float(value) for value in end],

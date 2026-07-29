@@ -12,7 +12,7 @@
     <div>
       <p class="eyebrow">LOCAL CT REVIEW</p>
       <h1>Strut Scope</h1>
-      <p class="subtitle">Review JSON-classified struts, live radius profiles, centerline deviation, and CT evidence.</p>
+      <p class="subtitle">Review JSON-classified struts, pipeline measurement profiles, centerline deviation, and CT evidence.</p>
     </div>
     <div class="privacy-pill"><span></span> Files stay on this computer</div>
   </header>
@@ -89,7 +89,7 @@
           <div class="empty-mark"></div>
           <p class="step-label">03 / INSPECT</p>
           <h2>Select a strut</h2>
-          <p>Its live radius profile, centerline deviation, and uploaded JSON metadata will appear here.</p>
+          <p>Its pipeline radius profile, centerline deviation, and uploaded JSON metadata will appear here.</p>
         </div>
 
         <div id="strutDetail" hidden>
@@ -110,6 +110,8 @@
             <div><span>CT threshold</span><b id="thresholdMetric">—</b></div>
           </div>
 
+          <p id="profileSource" class="profile-source"></p>
+
           <section class="graph-card">
             <div class="card-title">
               <div>
@@ -124,7 +126,7 @@
           <section class="graph-card">
             <div class="card-title">
               <div>
-                <h3>Deviation from expected centerline</h3>
+                <h3>Deviation from best-fit straight CT centerline</h3>
                 <p>Distance between the tracked CT center and its best-fit straight centerline.</p>
               </div>
               <div class="graph-key deviation-key"><span></span> centerline deviation</div>

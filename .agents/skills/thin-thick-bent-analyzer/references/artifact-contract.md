@@ -49,6 +49,12 @@ Class-specific `findings_thin.json`, `findings_thick.json`, and
 `findings_bent.json` support bounded downstream consumers. `thresholds.json`
 and `decision_log.md` make the judgments reproducible.
 
+Every class-specific finding includes `measurement_profile`, containing the
+compact per-section radius, tracked center, centerline deviation, curvature,
+validity, exclusion reason, confidence, CT threshold, and
+`section_measurements_sha256`. This is the preferred graph source for viewers;
+it contains no TIFF arrays, crops, masks, or contours.
+
 ## Evidence
 
 - `evidence/thin/*_radius.png`

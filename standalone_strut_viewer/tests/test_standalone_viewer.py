@@ -70,8 +70,33 @@ class StandaloneViewerTests(unittest.TestCase):
             })
             state.set_result_json({
                 "defect_class": "thin",
+                "measurement_provenance": {"ct_threshold": 40129},
                 "findings": [
-                    {"strut_id": 10, "classification": "thin", "confidence": 0.92},
+                    {
+                        "strut_id": 10,
+                        "classification": "thin",
+                        "confidence": 0.92,
+                        "measurement_profile": {
+                            "source": "thin_thick_bent_pipeline",
+                            "ct_threshold": 40129,
+                            "section_measurements_sha256": "same-run",
+                            "tracking_coverage": 0.5,
+                            "median_radius_voxels": 2.5,
+                            "centerline_deviation_max_voxels": 1.25,
+                            "samples": [
+                                {
+                                    "sample_index": 0,
+                                    "fraction": 0.25,
+                                    "radius_voxels": 2.5,
+                                    "center_u_voxels": 1.0,
+                                    "center_v_voxels": 2.0,
+                                    "deviation_voxels": 1.25,
+                                    "confidence": 0.9,
+                                    "valid": True,
+                                },
+                            ],
+                        },
+                    },
                     {"strut_id": 99, "classification": "thin"},
                 ],
             }, "findings_thin.json")
@@ -88,6 +113,15 @@ class StandaloneViewerTests(unittest.TestCase):
             self.assertEqual(catalog["entries"][0]["fields"]["reason"], "curved")
             self.assertEqual(catalog["class_counts"]["thin"], 1)
             self.assertEqual(catalog["class_counts"]["bent"], 1)
+            self.assertEqual(catalog["threshold"], 40129)
+            self.assertTrue(
+                catalog["entries"][0]["has_embedded_measurements"]
+            )
+            profile = state.profile(10, threshold=123)
+            self.assertEqual(profile["profile_source"], "embedded_pipeline")
+            self.assertEqual(profile["threshold"], 40129)
+            self.assertEqual(profile["coverage"], 0.5)
+            self.assertEqual(profile["profile"][0]["radius_voxels"], 2.5)
         finally:
             state.clear()
 
@@ -146,10 +180,29 @@ class StandaloneViewerTests(unittest.TestCase):
             request("/api/registration", "POST", registration)
             findings = json.dumps({
                 "defect_class": "thin",
+                "measurement_provenance": {"ct_threshold": 40129},
                 "findings": [{
                     "strut_id": 10,
                     "classification": "thin",
                     "confidence": 0.9,
+                    "measurement_profile": {
+                        "source": "thin_thick_bent_pipeline",
+                        "ct_threshold": 40129,
+                        "section_measurements_sha256": "http-fixture",
+                        "tracking_coverage": 0.5,
+                        "median_radius_voxels": 2.75,
+                        "centerline_deviation_max_voxels": 1.5,
+                        "samples": [{
+                            "sample_index": 0,
+                            "fraction": 0.5,
+                            "radius_voxels": 2.75,
+                            "center_u_voxels": 4.0,
+                            "center_v_voxels": 0.0,
+                            "deviation_voxels": 1.5,
+                            "confidence": 0.9,
+                            "valid": True,
+                        }],
+                    },
                 }],
             }).encode()
             request("/api/results", "POST", findings)
@@ -164,7 +217,9 @@ class StandaloneViewerTests(unittest.TestCase):
                 f"/api/profile/10?threshold={threshold}"
             )
             profile = json.loads(profile_body)
-            self.assertGreater(profile["coverage"], 0.85)
+            self.assertEqual(profile["profile_source"], "embedded_pipeline")
+            self.assertEqual(profile["coverage"], 0.5)
+            self.assertEqual(profile["threshold"], 40129)
             self.assertIn("centerline_deviation_max_voxels", profile)
 
             _, headers, crop_body = request("/api/volume/10")

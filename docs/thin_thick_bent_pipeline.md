@@ -75,6 +75,12 @@ later agents. Bent plots show
 best-fit-centerline deviation and curvature; they do not use radius as primary
 bending evidence.
 
+Each class-specific findings JSON embeds the exact pipeline measurement profile
+for every finding: sampled radius, tracked center, best-fit-line deviation,
+curvature, validity, exclusion reason, confidence, CT threshold, and the
+section-measurement artifact hash. This allows review tools to render the
+classification evidence without reopening or recomputing the TIFF.
+
 Tracking-quality gates and radius-quality gates are evaluated separately.
 Reliable bending evidence can therefore be classified even when radius
 variation is too high for a thin/thick decision. Short one- or two-section gaps

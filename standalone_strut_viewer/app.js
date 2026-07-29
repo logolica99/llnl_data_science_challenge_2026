@@ -174,6 +174,12 @@ async function selectStrut(entry) {
   $("classificationMetric").textContent = entry.classifications.join(" + ");
   $("confidenceMetric").textContent = fmt(entry.confidence, 2);
   $("thresholdMetric").textContent = fmt(state.catalog.threshold, 1);
+  $("profileSource").textContent = entry.has_embedded_measurements
+    ? "Loading embedded pipeline measurements..."
+    : "No embedded profile—loading a viewer preview.";
+  $("profileSource").className = `profile-source ${
+    entry.has_embedded_measurements ? "pipeline" : "preview"
+  }`;
   renderMetadata({
     classifications: entry.classifications.join(", "),
     sources: entry.sources.join(", "),
@@ -203,11 +209,27 @@ async function selectStrut(entry) {
     $("coverageMetric").textContent = `${fmt(100 * payload.coverage, 0)}%`;
     $("radiusMetric").textContent = `${fmt(payload.median_radius_voxels, 2)} vox`;
     $("deviationMetric").textContent = `${fmt(payload.centerline_deviation_max_voxels, 2)} vox`;
+    if (Number.isFinite(Number(payload.threshold))) {
+      $("thresholdMetric").textContent = fmt(payload.threshold, 1);
+    }
+    const embedded = payload.profile_source === "embedded_pipeline";
+    $("profileSource").textContent = embedded
+      ? `Pipeline measurements · threshold ${fmt(payload.threshold, 1)} · ${
+          payload.section_measurements_sha256
+            ? `sections ${payload.section_measurements_sha256.slice(0, 12)}…`
+            : "verified profile"
+        }`
+      : "Viewer preview—not classification evidence";
+    $("profileSource").className = `profile-source ${
+      embedded ? "pipeline" : "preview"
+    }`;
     drawRadiusGraph(payload.profile, entry.fields);
     drawDeviationGraph(payload.profile);
   } catch (error) {
     if (error.name === "AbortError") return;
     $("coverageMetric").textContent = "Unavailable";
+    $("profileSource").textContent = "Measurement profile unavailable";
+    $("profileSource").className = "profile-source preview";
     setStatus(error.message || String(error), "error");
   }
 }

@@ -2,8 +2,9 @@
 
 This is a local website for reviewing thin, thick, and bent struts described by
 analysis JSON files against a 3D CT TIFF and its registered ideal structure. It
-calculates live cross-sectional radius and centerline-deviation profiles while
-preserving the uploaded pipeline classifications.
+uses embedded pipeline cross-sectional radius and centerline-deviation
+measurements when available, so the graphs match the uploaded classifications.
+Older JSONs without embedded measurements use a clearly labeled live preview.
 
 ## Required files
 
@@ -24,6 +25,8 @@ strut findings are merged by ID.
 For the thin/thick/bent pipeline, select files such as
 `findings_thin.json`, `findings_thick.json`, `findings_bent.json`,
 `thresholds.json`, `measurement_manifest.json`, and `handoff.json`.
+Current class-specific findings embed the exact sampled radii, tracked centers,
+deviations, confidence, exclusions, CT threshold, and section-artifact hash.
 
 ## Run with PowerShell
 
@@ -89,6 +92,9 @@ powershell -ExecutionPolicy Bypass -File .\start_viewer.ps1
   available, the uploaded peer median as a dashed reference.
 - The deviation graph shows distance from the tracked CT center to its best-fit
   straight centerline. A bent threshold is shown when supplied in JSON.
+- A green provenance banner identifies embedded pipeline measurements and their
+  CT threshold. An amber banner identifies a viewer preview that was not used
+  for classification.
 - **Open four views** displays XY, XZ, YZ, and perpendicular cross-sections.
 - **CT tracking** toggles the cyan measured/segmented location.
 - **Registered position** toggles the coral location expected from the JSON.
@@ -109,7 +115,8 @@ You can also click **Clear files** before stopping.
 - Files remain on this computer and are not uploaded to an external service.
 - The TIFF is streamed to temporary local storage and memory-mapped.
 - JSON metadata is kept in process memory.
-- Only the selected strut's local data and cross-sections are calculated.
+- Embedded profiles render without recalculating CT cross-sections. Older
+  result JSONs calculate a preview only for the selected strut.
 - Profiles use bounded browser/server caches. CT crops keep their native
   16-bit representation when possible and the browser retains only two crops.
 - Clicking **Clear files** or stopping the server deletes its temporary TIFF.
