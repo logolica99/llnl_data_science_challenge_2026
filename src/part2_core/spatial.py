@@ -19,7 +19,7 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 from .artifacts import read_json_object, sha256_file, sha256_json, write_json_atomic
 from .lattice import LatticeGraph, load_lattice_json
-from .struts import read_metrics_csv
+from .strut_metrics import read_metrics_csv
 
 
 SPATIAL_STATISTICS_SCHEMA_VERSION = "part2-spatial-statistics/1.0.0"

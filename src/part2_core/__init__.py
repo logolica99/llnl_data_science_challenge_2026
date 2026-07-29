@@ -4,6 +4,7 @@ This package has no MCP or agent dependencies.  The MCP server imports these
 functions and is responsible only for path policy and structured envelopes.
 """
 
+from .classification import classify_struts
 from .evidence import render_strut_evidence
 from .graph import GraphNormalizationError, normalize_lattice_graph
 from .localization import localize_lattice_nodes
@@ -45,7 +46,7 @@ from .response import (
     error_response,
     success_response,
 )
-from .struts import classify_struts, compute_strut_metrics, read_metrics_csv
+from .strut_metrics import compute_strut_metrics, read_metrics_csv
 from .volume import (
     AXIS_MAPPING,
     VolumeLoadError,

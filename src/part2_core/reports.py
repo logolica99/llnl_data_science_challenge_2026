@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifacts import read_json_object, sha256_file
-from .struts import read_metrics_csv
+from .strut_metrics import read_metrics_csv
 
 STRUT_REPORT_SCHEMA_VERSION = "part2-strut-report/1.0.0"
 

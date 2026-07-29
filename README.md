@@ -140,7 +140,14 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
-The server script in this repository, `src/mcp_server.py`, should follow this pattern as you add each tool.
+The production entry point, `src/mcp_server.py`, only assembles the server and
+preserves its public imports. Tool adapters are grouped by immutable pipeline
+stage in `src/mcp_tools/stage0.py` through `stage4.py`; shared path policy and
+closed response handling live in `src/mcp_tools/common.py`. Scientific
+implementations remain MCP-independent under `src/part2_core/`. Add a new tool
+to its owning stage module and stage contract rather than expanding the server
+entry point. Contract tests require the registered production tool set to match
+the declared stage dependencies exactly.
 
 The server also exposes `inspect_volume_metadata`, a structured Part 2 tool
 used by the `volume-metadata` skill. It constrains NPY/TIFF inputs to the

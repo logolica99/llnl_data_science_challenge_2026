@@ -26,6 +26,7 @@ from data_prep_handoff import (  # noqa: E402
     create_data_prep_handoff,
 )
 import mcp_server  # noqa: E402
+from mcp_tools import common as mcp_common  # noqa: E402
 from part2_core.otsu import replay_exact_otsu  # noqa: E402
 from part2_core.segmentation import compare_segmentation_masks  # noqa: E402
 from specimen_ingest import ingest_specimen, inspect_lattice_graph  # noqa: E402
@@ -457,7 +458,7 @@ class DataPrepHandoffTests(unittest.TestCase):
             repository_root=self.root,
         )
         self.assertEqual("pass", comparison["gate"])
-        with patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             verification = mcp_server.verify_canonical_segmentation(
                 specimen_id=manifest["specimen_id"],
                 design_id=manifest["design_id"],
@@ -919,7 +920,7 @@ class DataPrepHandoffTests(unittest.TestCase):
         )
         self.assertEqual("pass", fabricated_comparison["gate"])
         self.segmentation_verification.unlink()
-        with patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             verification = mcp_server.verify_canonical_segmentation(
                 specimen_id="handoff_specimen",
                 design_id="handoff_design",
@@ -1140,7 +1141,7 @@ class DataPrepHandoffTests(unittest.TestCase):
             self.assertFalse(call.is_error)
             return call.structured_content
 
-        with patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+        with patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
             response = asyncio.run(invoke())
             replay = asyncio.run(invoke())
         self.assertEqual("ok", response["status"])
@@ -1196,7 +1197,7 @@ class DataPrepHandoffTests(unittest.TestCase):
         )
 
         def verify() -> object:
-            with patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+            with patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
                 return mcp_server.verify_canonical_segmentation(
                     specimen_id="handoff_specimen",
                     design_id="handoff_design",
@@ -1284,7 +1285,7 @@ class DataPrepHandoffTests(unittest.TestCase):
         comparison = load_json(self.mask_comparison)
 
         def verify() -> object:
-            with patch.object(mcp_server, "REPOSITORY_ROOT", self.root):
+            with patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
                 return mcp_server.verify_canonical_segmentation(
                     specimen_id="handoff_specimen",
                     design_id="handoff_design",
