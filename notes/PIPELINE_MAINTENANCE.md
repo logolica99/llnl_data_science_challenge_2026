@@ -58,7 +58,7 @@ Repository-wide stale-reference audit:
 
 ```bash
 rg -n "design_diff|Design Diff|stage_5|stage_6|Stage 5|Stage 6|dev_split|sealed_split" \
-  AGENTS.md .codex .agents analysis/contracts notes src scripts tests demo
+  AGENTS.md .codex .agents analysis/contracts notes src scripts tests
 ```
 
 Any remaining match must be explicitly marked research-only or historical and

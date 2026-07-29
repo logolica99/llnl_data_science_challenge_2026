@@ -36,8 +36,6 @@ ignored instead of being copied into Git history:
 
 - `analysis/brian_tran_9x9x9_runtime_*`
 - `analysis/lawrence_registration/`
-- `demo/part2-orchestrator/proof-evidence/`
-- `demo/part2-orchestrator/runtime-evidence/`
 - `data/missing_struts/failed_unwanted/`
 - `data/missing_struts/reconstruction/`
 - caches and editor/OS metadata

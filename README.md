@@ -16,25 +16,6 @@ The goal of this challenge is to build an AI-assisted workflow for analyzing X-r
 
 By the end of the challenge, participants should understand how to move from standalone scientific scripts toward reusable, agent-driven workflows that can reason over data, call tools, and produce traceable analysis outputs.
 
-## Part 2 Orchestration Demo
-
-An interactive local demonstrator under
-[`demo/part2-orchestrator`](demo/part2-orchestrator) shows the production Part 2
-control plane advancing through its immutable Stage 0–4 handoffs. Production
-accepts a nominal lattice graph JSON and its specimen CT volume; graph
-normalization now occurs during intake. It includes
-verified walkthrough, manual-review, tampered-receipt, and missing-dependency
-scenarios. The orchestration and integrity checks are real; specialist outputs
-are clearly labeled deterministic fixtures, and no scientific algorithm runs.
-
-```bash
-cd demo/part2-orchestrator
-npm install
-npm run demo
-```
-
-Then open <http://localhost:3000>.
-
 ## Repository Contents
 
 - `DATA_SCIENCE_CHALLENGE_2026.md/pdf` - main challenge instructions
@@ -44,7 +25,6 @@ Then open <http://localhost:3000>.
 - `presentation/` - introductory challenge slides
 - `.agents/skills/` - project-specific Codex skills
 - `.codex/agents/` - project-specific Codex subagent definitions
-- `demo/part2-orchestrator/` - live visual demonstrator for the Part 2 control plane
 
 ## Contact
 

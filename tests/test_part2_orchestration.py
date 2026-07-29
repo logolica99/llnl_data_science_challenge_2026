@@ -131,6 +131,22 @@ class ProductionPipelineTopologyTests(unittest.TestCase):
             receipt_rule["path"],
         )
 
+    def test_runtime_request_is_a_required_stage_zero_handoff_input(self) -> None:
+        contracts = _load_contracts(self.root, "analysis/contracts")
+        intake = contracts[0]["document"]
+        self.assertIn(
+            "scientist_intake_request",
+            intake["input_artifacts"]["required_roles"],
+        )
+        rule = next(
+            item
+            for item in intake["input_artifacts"]["allowed"]
+            if item["role"] == "scientist_intake_request"
+        )
+        self.assertEqual(
+            "analysis/<specimen_id>/config/runtime_request.json", rule["path"]
+        )
+
     def test_research_contracts_are_not_loaded_as_production_stages(self) -> None:
         contracts = _load_contracts(self.root, "analysis/contracts")
         loaded_paths = {Path(item["path"]).name for item in contracts}
