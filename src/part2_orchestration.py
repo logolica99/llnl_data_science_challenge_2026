@@ -256,6 +256,22 @@ MCP_TOOL_ARGUMENT_FIELDS = {
             "overwrite",
         }
     ),
+    "compute_strut_metrics": frozenset(
+        {
+            "stage_2_handoff_filepath",
+            "analysis_ready_specimen_manifest_filepath",
+            "data_prep_completion_receipt_filepath",
+            "analysis_config_filepath",
+            "ct_filepath",
+            "localized_graph_filepath",
+            "registration_qa_filepath",
+            "otsu_report_filepath",
+            "canonical_segmentation_mask_filepath",
+            "segmentation_mask_comparison_filepath",
+            "output_directory",
+            "overwrite",
+        }
+    ),
 }
 OUTPUT_BINDING_FIELDS = frozenset(
     {

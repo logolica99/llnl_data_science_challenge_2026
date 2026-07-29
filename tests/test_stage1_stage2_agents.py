@@ -15,7 +15,13 @@ class IntakeAndDataPrepAgentTests(unittest.TestCase):
     def test_only_production_stage_agents_are_discoverable(self) -> None:
         agent_names = {path.stem for path in (ROOT / ".codex" / "agents").glob("*.toml")}
         self.assertEqual(
-            {"orchestrator", "specimen_ingest", "data_prep", "report_agent"},
+            {
+                "orchestrator",
+                "specimen_ingest",
+                "data_prep",
+                "strut_metrics",
+                "report_agent",
+            },
             agent_names,
         )
 
@@ -53,6 +59,18 @@ class IntakeAndDataPrepAgentTests(unittest.TestCase):
         self.assertIn("Stage 1", prompt)
         self.assertIn("autonomous", prompt)
         self.assertNotIn("challenge_aligned_json", prompt)
+
+    def test_strut_metrics_is_stage_two_and_mcp_only(self) -> None:
+        document = tomllib.loads(
+            (ROOT / ".codex" / "agents" / "strut_metrics.toml").read_text(
+                encoding="utf-8"
+            )
+        )
+        prompt = document["developer_instructions"]
+        self.assertIn("Stage 2", prompt)
+        self.assertIn("compute_strut_metrics", prompt)
+        self.assertIn("canonical_segmentation_mask", prompt)
+        self.assertIn("Never call a", prompt)
 
     def test_contracts_route_stage_zero_directly_to_data_prep(self) -> None:
         intake = json.loads(

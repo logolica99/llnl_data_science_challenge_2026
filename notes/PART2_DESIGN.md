@@ -56,9 +56,12 @@ returns `manual_review` or reports metrology as unauthorized.
 
 `compute_strut_metrics` measures every nominal edge using bounded corridor
 sampling. Metrics include occupancy profile, maximum axial gap, local radius,
-corridor-local connectivity with junction regions masked, and centerline
-curvature. The stage must emit exactly one provenance-bound row per nominal
-strut.
+corridor-local connectivity, and centerline curvature. The primary connectivity
+measurement requires one identical 26-neighbor foreground component in the
+full, unmasked calibrated corridor to intersect both A and B endpoint windows.
+Junction-masked connectivity at the fixed `0.20L` and `0.80L` collar slabs is
+supplementary evidence only and must never override the primary A-to-B result.
+The stage must emit exactly one provenance-bound row per nominal strut.
 
 ## Stage 3 — defect analysis
 
