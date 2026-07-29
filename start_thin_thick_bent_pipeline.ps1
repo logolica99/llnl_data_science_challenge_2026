@@ -1,6 +1,7 @@
 param(
     [string]$OutputDir = "",
     [double]$Threshold = 40129,
+    [int]$Positions = 21,
     [int]$MaxStruts = 0,
     [switch]$Overwrite
 )
@@ -33,7 +34,8 @@ $arguments = @(
     $jsonPath,
     $OutputDir,
     "--threshold", "$Threshold",
-    "--thresholds-json", $thresholdsPath
+    "--thresholds-json", $thresholdsPath,
+    "--positions", "$Positions"
 )
 if ($MaxStruts -gt 0) {
     $arguments += @("--max-struts", "$MaxStruts")

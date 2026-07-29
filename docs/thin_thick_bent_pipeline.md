@@ -42,7 +42,7 @@ python src/strut_defect_pipeline.py input.tif registered.json output_dir `
 ```
 
 Useful developer options include `--max-struts 50`, `--strut-ids 12 18 25`,
-`--positions 11`, and `--voxel-size-mm <known-spacing>`. Physical-unit fields
+`--positions 21`, and `--voxel-size-mm <known-spacing>`. Physical-unit fields
 remain blank unless authoritative voxel spacing is supplied.
 
 ## Output contract
@@ -93,6 +93,10 @@ Reliable bending evidence can therefore be classified even when radius
 variation is too high for a thin/thick decision. Short one- or two-section gaps
 are recovered only when a unique, continuous CT bridge exists between
 confident tracked sections.
+
+The 21-position policy requires at least 12 valid samples. Bent evidence needs
+at least three adjacent high-deviation samples, preserving approximately the
+same physical support length used by the earlier 11-position/two-sample policy.
 
 ## Export result IDs to review CSV
 

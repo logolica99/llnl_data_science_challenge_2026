@@ -124,6 +124,7 @@ class ThinThickBentPipelineTests(unittest.TestCase):
                 tiff_path, json_path, root / "metrics_only", 500,
             )
             self.assertEqual(measurement["strut_count"], 1)
+            self.assertEqual(measurement["section_count"], 21)
             with (root / "metrics_only" / "strut_summary.csv").open(
                 newline="", encoding="utf-8"
             ) as handle:
@@ -148,6 +149,7 @@ class ThinThickBentPipelineTests(unittest.TestCase):
                 measurement_manifest["config"]["tracking_method"],
                 "3d_centerline_local_tangent",
             )
+            self.assertEqual(measurement_manifest["config"]["positions"], 21)
 
             result = run_pipeline(
                 tiff_path, json_path, root / "complete", 500,
@@ -199,6 +201,8 @@ class ThinThickBentPipelineTests(unittest.TestCase):
             thresholds_path = root / "test_thresholds.json"
             thresholds_path.write_text(json.dumps({
                 "minimum_peer_group_size": 4,
+                "minimum_valid_samples": 6,
+                "bent_minimum_adjacent_samples": 2,
             }), encoding="utf-8")
 
             classification_dir = root / "classification"
@@ -283,6 +287,8 @@ class ThinThickBentPipelineTests(unittest.TestCase):
             thresholds_path = root / "thresholds.json"
             thresholds_path.write_text(json.dumps({
                 "minimum_peer_group_size": 4,
+                "minimum_valid_samples": 6,
+                "bent_minimum_adjacent_samples": 2,
             }), encoding="utf-8")
             output = root / "classification"
             classify_struts(
@@ -326,6 +332,8 @@ class ThinThickBentPipelineTests(unittest.TestCase):
             thresholds_path = root / "thresholds.json"
             thresholds_path.write_text(json.dumps({
                 "minimum_peer_group_size": 4,
+                "minimum_valid_samples": 6,
+                "bent_minimum_adjacent_samples": 2,
             }), encoding="utf-8")
             output = root / "classification"
             classify_struts(

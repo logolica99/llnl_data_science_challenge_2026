@@ -23,13 +23,13 @@ teammate-review labels are handled separately.
 
 ## CT measurement
 
-Each strut is sampled at 11 positions from 10% to 90% of its registered length.
+Each strut is sampled at 21 positions from 10% to 90% of its registered length.
 The default CT settings are:
 
 | Setting | Value |
 |---|---:|
 | CT threshold for Brian | 40129 |
-| Samples per strut | 11 |
+| Samples per strut | 21 |
 | Tracking radius | 6 voxels |
 | Cross-section plane | 49 × 49 |
 | Plane extent | ±12 voxels |
@@ -103,7 +103,7 @@ Tracking must satisfy every gate below:
 
 | Gate | Threshold |
 |---|---:|
-| Valid samples | ≥ 6 |
+| Valid samples | ≥ 12 |
 | Tracking coverage | ≥ 0.75 |
 | Mean tracking confidence | ≥ 0.60 |
 | Junction contamination | ≤ 0.20 |
@@ -173,7 +173,7 @@ Bent uses 3D centerline shape, not radius. It requires:
 
 ```text
 tracking quality passes
-AND at least 2 adjacent valid sections have deviation ≥ 0.75 voxels
+AND at least 3 adjacent valid sections have deviation ≥ 0.75 voxels
 AND maximum deviation ≥ 1.50 voxels
 AND (
     RMS deviation ≥ 0.75 voxels
@@ -268,4 +268,3 @@ not experimentally validated ground-truth labels.
 - `src/mcp_server.py`
 - `configs/thin_thick_bent_thresholds.json`
 - `docs/thin_thick_bent_pipeline.md`
-

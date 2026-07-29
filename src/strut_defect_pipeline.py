@@ -40,7 +40,7 @@ DEFAULT_THRESHOLDS = {
     "thick_radius_ratio_min": 1.30,
     "radius_robust_z_threshold": 3.5,
     "minimum_peer_group_size": 20,
-    "minimum_valid_samples": 6,
+    "minimum_valid_samples": 12,
     "minimum_tracking_coverage": 0.75,
     "minimum_tracking_confidence": 0.60,
     "maximum_junction_contamination_fraction": 0.20,
@@ -49,7 +49,7 @@ DEFAULT_THRESHOLDS = {
     "bent_centerline_rms_voxels": 0.75,
     "bent_centerline_max_voxels": 1.50,
     "bent_adjacent_deviation_voxels": 0.75,
-    "bent_minimum_adjacent_samples": 2,
+    "bent_minimum_adjacent_samples": 3,
     "bent_curvature_rms_inverse_voxels": 0.15,
     "bent_priority_relative_margin": 0.10,
 }
@@ -275,7 +275,7 @@ def compute_strut_metrics(
     output_dir: str | Path,
     threshold: float,
     *,
-    positions: int = 11,
+    positions: int = 21,
     start_fraction: float = 0.10,
     end_fraction: float = 0.90,
     ignore_edge_sections: int = 1,
@@ -1286,7 +1286,7 @@ def build_parser():
     parser.add_argument("output_dir", type=Path)
     parser.add_argument("--threshold", type=float, required=True)
     parser.add_argument("--thresholds-json", type=Path)
-    parser.add_argument("--positions", type=int, default=11)
+    parser.add_argument("--positions", type=int, default=21)
     parser.add_argument("--start-fraction", type=float, default=0.10)
     parser.add_argument("--end-fraction", type=float, default=0.90)
     parser.add_argument("--ignore-edge-sections", type=int, default=1)

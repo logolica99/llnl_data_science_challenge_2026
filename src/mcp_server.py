@@ -1,9 +1,13 @@
 import os
 import site
+import sys
 
 # The project keeps its scientific/MCP runtime under .python_packages. Using
 # addsitedir (rather than PYTHONPATH alone) processes pywin32's .pth bootstrap
 # on Windows, which FastMCP's stdio transport requires.
+_REPOSITORY_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+if _REPOSITORY_ROOT not in sys.path:
+    sys.path.insert(0, _REPOSITORY_ROOT)
 _LOCAL_PACKAGES = os.path.realpath(
     os.path.join(os.path.dirname(__file__), "..", ".python_packages")
 )
@@ -16,7 +20,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from skeletonization import skeletonize_mask
+from research.skeletonization import skeletonize_mask
 from strut_defect_pipeline import (
     classify_struts as classify_struts_artifacts,
     compute_strut_metrics as compute_strut_metrics_artifacts,
@@ -28,7 +32,7 @@ from strut_defect_pipeline import (
 mcp = FastMCP("CT Segmentation")
 
 
-REPOSITORY_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+REPOSITORY_ROOT = _REPOSITORY_ROOT
 
 
 def _repository_path(value: str, must_exist: bool = False) -> str:
@@ -142,9 +146,10 @@ def compute_strut_metrics(
     registered_json: str,
     output_dir: str,
     threshold: float,
-    positions: int = 11,
+    positions: int = 21,
     tracking_radius_voxels: float = 6.0,
     voxel_size_mm: float | None = None,
+    strut_ids: list[int] | None = None,
     max_struts: int | None = None,
     overwrite: bool = False,
 ) -> dict:
@@ -161,6 +166,7 @@ def compute_strut_metrics(
         positions=positions,
         tracking_radius_voxels=tracking_radius_voxels,
         voxel_size_mm=voxel_size_mm,
+        strut_ids=strut_ids,
         max_struts=max_struts,
         overwrite=overwrite,
     )
@@ -212,9 +218,10 @@ def run_thin_thick_bent_pipeline(
     output_dir: str,
     threshold: float,
     thresholds_json: str | None = None,
-    positions: int = 11,
+    positions: int = 21,
     tracking_radius_voxels: float = 6.0,
     voxel_size_mm: float | None = None,
+    strut_ids: list[int] | None = None,
     max_struts: int | None = None,
     overwrite: bool = False,
 ) -> dict:
@@ -231,6 +238,7 @@ def run_thin_thick_bent_pipeline(
         positions=positions,
         tracking_radius_voxels=tracking_radius_voxels,
         voxel_size_mm=voxel_size_mm,
+        strut_ids=strut_ids,
         max_struts=max_struts,
         overwrite=overwrite,
     )
