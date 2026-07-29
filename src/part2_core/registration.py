@@ -7,6 +7,7 @@ graph is opened on the autonomous path.
 
 from __future__ import annotations
 
+import copy
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,6 +26,7 @@ from .lattice import (
     positions_in_volume,
 )
 from .otsu import replay_exact_otsu
+from .strut_metrics import DEFAULT_STAGE2_CONFIG
 from .volume import AXIS_MAPPING, load_volume
 
 REGISTRATION_SCHEMA_VERSION = "part2-registration/1.0.0"
@@ -794,6 +796,10 @@ def register_lattice_to_ct(
     report["artifacts"]["registered_graph"]["changed"] = graph_artifact["changed"]
     report["hashes"]["registration_report_sha256"] = report_artifact["sha256"]
     if analysis_config_path is not None:
+        stage_2_strut_metrics = copy.deepcopy(DEFAULT_STAGE2_CONFIG)
+        stage_2_strut_metrics["otsu_threshold"] = (
+            float(threshold) if threshold is not None else None
+        )
         analysis_config = {
             "schema_version": "part2-analysis-config/1.0.0",
             "registration_mode": mode,
@@ -810,6 +816,7 @@ def register_lattice_to_ct(
                     else {}
                 ),
             },
+            "stage_2_strut_metrics": stage_2_strut_metrics,
             "label_inputs_accessed": False,
         }
         config_artifact = write_json_atomic(

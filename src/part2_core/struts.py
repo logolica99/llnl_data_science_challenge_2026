@@ -223,7 +223,7 @@ def _centerline_curvature(
     return float(np.sqrt(np.mean(np.sum((points - chord) ** 2, axis=1))))
 
 
-def compute_strut_metrics(
+def _legacy_compute_strut_metrics(
     ct_path: str | Path,
     localized_graph_path: str | Path,
     output_metrics_path: str | Path,
@@ -417,7 +417,7 @@ def compute_strut_metrics(
     return report
 
 
-def read_metrics_csv(path: str | Path) -> list[dict[str, Any]]:
+def _legacy_read_metrics_csv(path: str | Path) -> list[dict[str, Any]]:
     source = Path(path).expanduser().resolve()
     with source.open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
@@ -443,6 +443,20 @@ def read_metrics_csv(path: str | Path) -> list[dict[str, Any]]:
                 result[key] = float(value) if value else None
         parsed.append(result)
     return parsed
+
+
+# The production export is the batched rotated-cuboid implementation.  The
+# private legacy functions above remain temporarily readable for historical
+# reproducibility, but no MCP or package export can select them.
+from .strut_metrics import (  # noqa: E402
+    METRIC_FIELDS as BATCHED_METRIC_FIELDS,
+    compute_strut_metrics as compute_batched_strut_metrics,
+    read_metrics_csv as read_batched_metrics_csv,
+)
+
+METRIC_FIELDS = BATCHED_METRIC_FIELDS
+compute_strut_metrics = compute_batched_strut_metrics
+read_metrics_csv = read_batched_metrics_csv
 
 
 def _normalized_thresholds(value: dict[str, Any]) -> dict[str, float]:
