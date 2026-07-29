@@ -19,7 +19,9 @@ centerline.
 `strut_section_measurements.csv` contains one row per sampled cross-section:
 strut/sample IDs, normalized position, equivalent-area radius, tracked CT
 center, best-fit-centerline deviation, curvature, confidence, validity, and
-exclusion reason.
+exclusion reason. Recovered samples also preserve a bounded
+`tracking_recovery_reason`; component-guided recovery must identify the same
+26-neighbor material component on both sides of an isolated gap.
 
 The registered-axis plane pass is a bounded bootstrap only. Final radii are
 measured on planes centered on the tracked 3D CT path and perpendicular to its
@@ -37,7 +39,9 @@ Valid exclusion reasons are:
 
 `strut_summary.csv` contains one row per strut with peer identity, robust radius
 summaries, coverage/confidence, centerline RMS/max deviation, curvature RMS,
-and measurement quality.
+measurement quality, and junction-safe tracked-tube continuity. Continuity
+fields include status, shared-component result, both collar support fractions,
+maximum axial gap, corridor radius, and sample count.
 
 ## Classification artifacts
 
@@ -46,6 +50,8 @@ and measurement quality.
 - `classification`
 - `is_thin`, `is_thick`, `is_bent`
 - confidence and decision status
+- `continuous_for_shape_classification`, continuity evidence, and any shape
+  exclusion reason
 - radius and bend evidence strengths plus any primary-label priority reason
 - target and peer radius statistics
 - bend statistics
@@ -60,6 +66,11 @@ compact per-section radius, tracked center, centerline deviation, curvature,
 validity, exclusion reason, confidence, CT threshold, and
 `section_measurements_sha256`. This is the preferred graph source for viewers;
 it contains no TIFF arrays, crops, masks, or contours.
+
+Thin, thick, and bent flags must all be false unless one CT material component
+connects the junction-safe A/B collars and both collar-support fractions pass
+the frozen threshold. A nonconnected or unresolved strut remains outside this
+specialist's findings so the broken/missing stage can assign its own label.
 
 ## Evidence
 

@@ -45,8 +45,9 @@ Tracking has two stages:
    are centered on that path and sampled perpendicular to its local tangent.
 
 One- or two-section gaps are recovered only when a unique, smooth,
-area-consistent bridge exists between confident tracked sections. Ambiguous
-gaps remain untracked.
+area-consistent bridge exists between confident tracked sections. Recovery is
+performed after the final local-tangent pass as well as during bootstrap.
+Ambiguous gaps remain untracked.
 
 Sections near junctions or the dense build-plate/boundary region are excluded.
 The junction exclusion distance is:
@@ -91,6 +92,7 @@ The per-strut summary includes:
 - median registration offset;
 - centerline RMS and maximum deviation;
 - RMS curvature and maximum turn angle;
+- junction-safe 3D tube connectivity and both collar support fractions;
 - peer-group ID and measurement quality.
 
 Centerline deviation is measured from the tracked CT centers to their robust
@@ -141,6 +143,11 @@ robust z = (target median radius - peer median radius) / robust scale
 ```
 
 ## Classification rules
+
+Before any rule below, one CT component must connect the 0.20L and 0.80L
+junction-safe collars and both collars must contain at least 5% foreground.
+Otherwise all thin/thick/bent flags remain false and the strut is reserved for
+the broken/missing stage.
 
 ### Thin
 
@@ -251,11 +258,11 @@ data/missing_struts/analysis/thin_thick_bent/
 
 | Classification | Count |
 |---|---:|
-| Normal | 14,966 |
-| Uncertain | 3,291 |
-| Bent | 202 |
-| Thin | 5 |
-| Thick | 4 |
+| Normal | 14,768 |
+| Uncertain | 3,479 |
+| Bent | 200 |
+| Thin | 9 |
+| Thick | 12 |
 
 These are conservative screening results under the current frozen thresholds,
 not experimentally validated ground-truth labels.

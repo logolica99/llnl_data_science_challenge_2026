@@ -88,8 +88,20 @@ class StandaloneViewerTests(unittest.TestCase):
                                     "sample_index": 0,
                                     "fraction": 0.25,
                                     "radius_voxels": 2.5,
+                                    "center_x_voxels": 4.0,
+                                    "center_y_voxels": 5.0,
+                                    "center_z_voxels": 6.0,
                                     "center_u_voxels": 1.0,
                                     "center_v_voxels": 2.0,
+                                    "sampling_plane_center_x_voxels": 3.8,
+                                    "sampling_plane_center_y_voxels": 5.1,
+                                    "sampling_plane_center_z_voxels": 6.0,
+                                    "local_tangent_x": 0.2,
+                                    "local_tangent_y": 0.3,
+                                    "local_tangent_z": 0.9,
+                                    "tracking_method": (
+                                        "3d_centerline_local_tangent"
+                                    ),
                                     "deviation_voxels": 1.25,
                                     "confidence": 0.9,
                                     "valid": True,
@@ -122,6 +134,19 @@ class StandaloneViewerTests(unittest.TestCase):
             self.assertEqual(profile["threshold"], 40129)
             self.assertEqual(profile["coverage"], 0.5)
             self.assertEqual(profile["profile"][0]["radius_voxels"], 2.5)
+            self.assertEqual(
+                profile["profile"][0][
+                    "sampling_plane_center_x_voxels"
+                ],
+                3.8,
+            )
+            self.assertEqual(
+                profile["profile"][0]["local_tangent_z"], 0.9
+            )
+            self.assertEqual(
+                profile["profile"][0]["tracking_method"],
+                "3d_centerline_local_tangent",
+            )
         finally:
             state.clear()
 

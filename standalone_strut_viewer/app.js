@@ -464,6 +464,11 @@ function vectorUnit(a) {
 
 function strutBasis() {
   const direction = vectorUnit(vectorSub(state.volume.end, state.volume.start));
+  return basisForDirection(direction);
+}
+
+function basisForDirection(directionValue) {
+  const direction = vectorUnit(directionValue);
   let helper = [0, 0, 1];
   if (Math.abs(vectorDot(direction, helper)) > 0.9) helper = [0, 1, 0];
   const u = vectorUnit(vectorCross(direction, helper));
@@ -485,19 +490,39 @@ function interpolateProfile(fraction) {
         Number.isFinite(a[key]) && Number.isFinite(b[key])
           ? a[key] + t * (b[key] - a[key])
           : Number.isFinite(a[key]) ? a[key] : b[key];
-      return {
+      const lerpStrict = (key) =>
+        Number.isFinite(a[key]) && Number.isFinite(b[key])
+          ? a[key] + t * (b[key] - a[key])
+          : null;
+      const result = {
         fraction,
-        center_u_voxels: lerp("center_u_voxels"),
-        center_v_voxels: lerp("center_v_voxels"),
-        radius_voxels: lerp("radius_voxels"),
-        confidence: lerp("confidence"),
+        valid: Boolean(a.valid && b.valid),
+        exclusion_reason: a.exclusion_reason || b.exclusion_reason || "",
       };
+      [
+        "sampling_plane_center_x_voxels",
+        "sampling_plane_center_y_voxels",
+        "sampling_plane_center_z_voxels",
+        "local_tangent_x", "local_tangent_y", "local_tangent_z",
+      ].forEach((key) => { result[key] = lerp(key); });
+      [
+        "center_u_voxels", "center_v_voxels",
+        "center_x_voxels", "center_y_voxels", "center_z_voxels",
+        "radius_voxels", "confidence",
+      ].forEach((key) => { result[key] = lerpStrict(key); });
+      return result;
     }
   }
   return values.at(-1);
 }
 
 function trackedPoint(profileItem) {
+  const globalCenter = [
+    profileItem.center_x_voxels,
+    profileItem.center_y_voxels,
+    profileItem.center_z_voxels,
+  ];
+  if (globalCenter.every(Number.isFinite)) return globalCenter;
   const { u, v } = strutBasis();
   const delta = vectorSub(state.volume.end, state.volume.start);
   let point = vectorAdd(state.volume.start, vectorScale(delta, profileItem.fraction));
@@ -583,8 +608,16 @@ function drawRegisteredGeometry(context, geometry, pointToCanvas) {
 function trackedPointForSlice(axisIndex, globalSlice) {
   const samples = state.profile.profile
     .filter((item) =>
-      Number.isFinite(item.center_u_voxels) &&
-      Number.isFinite(item.center_v_voxels)
+      item.valid && (
+        (
+          Number.isFinite(item.center_x_voxels) &&
+          Number.isFinite(item.center_y_voxels) &&
+          Number.isFinite(item.center_z_voxels)
+        ) || (
+          Number.isFinite(item.center_u_voxels) &&
+          Number.isFinite(item.center_v_voxels)
+        )
+      )
     )
     .map((item) => ({ item, point: trackedPoint(item) }));
   if (!samples.length) return null;
@@ -748,16 +781,38 @@ function nearestComponent(mask, size, center, maximumDistancePixels) {
 function drawPerpendicular() {
   const fraction = Number($("perpSlider").value) / 100;
   const profileItem = interpolateProfile(fraction);
-  const { u, v } = strutBasis();
+  const registeredBasis = strutBasis();
   const delta = vectorSub(state.volume.end, state.volume.start);
   const registeredCenter = vectorAdd(state.volume.start, vectorScale(delta, fraction));
-  let center = registeredCenter;
-  if (profileItem && Number.isFinite(profileItem.center_u_voxels)) {
-    center = vectorAdd(center, vectorScale(u, profileItem.center_u_voxels));
+  let center = null;
+  if (profileItem) {
+    const samplingCenter = [
+      profileItem.sampling_plane_center_x_voxels,
+      profileItem.sampling_plane_center_y_voxels,
+      profileItem.sampling_plane_center_z_voxels,
+    ];
+    if (samplingCenter.every(Number.isFinite)) center = samplingCenter;
+    if (!center) {
+      const trackedCenter = [
+        profileItem.center_x_voxels,
+        profileItem.center_y_voxels,
+        profileItem.center_z_voxels,
+      ];
+      if (trackedCenter.every(Number.isFinite)) center = trackedCenter;
+    }
   }
-  if (profileItem && Number.isFinite(profileItem.center_v_voxels)) {
-    center = vectorAdd(center, vectorScale(v, profileItem.center_v_voxels));
+  if (!center && profileItem) center = trackedPoint(profileItem);
+  if (!center) center = registeredCenter;
+  let tangent = registeredBasis.direction;
+  if (profileItem) {
+    const localTangent = [
+      profileItem.local_tangent_x,
+      profileItem.local_tangent_y,
+      profileItem.local_tangent_z,
+    ];
+    if (localTangent.every(Number.isFinite)) tangent = localTangent;
   }
+  const { u, v } = basisForDirection(tangent);
   const canvas = $("perpCanvas");
   const size = 81;
   const extent = state.profile.extent_voxels || 18;
@@ -785,7 +840,17 @@ function drawPerpendicular() {
   for (let index = 0; index < values.length; index += 1) {
     mask[index] = values[index] >= state.profile.threshold ? 1 : 0;
   }
-  const component = nearestComponent(mask, size, middle, 12 / spacing);
+  const trackingRadius = Number(state.profile.tracking_radius_voxels);
+  const component = nearestComponent(
+    mask,
+    size,
+    middle,
+    (
+      Number.isFinite(trackingRadius)
+        ? Math.max(6, trackingRadius)
+        : 6
+    ) / spacing
+  );
   let radius = null;
   let area = null;
   if (component) {
@@ -809,8 +874,14 @@ function drawPerpendicular() {
     drawRegisteredMarker(context, registeredX, registeredY);
   }
   $("perpLabel").textContent = `${Math.round(100 * fraction)}% along strut`;
+  const pipelineRadius = (
+    profileItem && Number.isFinite(profileItem.radius_voxels)
+  )
+    ? ` · pipeline radius ${fmt(profileItem.radius_voxels, 2)} vox`
+    : " · pipeline radius unavailable";
   $("perpReadout").textContent =
-    `Area-equivalent radius ${fmt(radius, 2)} vox · area ${fmt(area, 2)} voxels²` +
+    `Live area-equivalent radius ${fmt(radius, 2)} vox · area ${fmt(area, 2)} voxels²` +
+    pipelineRadius +
     (profileItem ? ` · tracker ${fmt(100 * profileItem.confidence, 0)}%` : "");
 }
 

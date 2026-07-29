@@ -31,6 +31,7 @@ from strut_cross_section_viewer import (
     extract_cross_sections,
     load_registered_graph,
     make_basis,
+    measure_tracked_tube_continuity,
 )
 
 
@@ -46,6 +47,7 @@ DEFAULT_THRESHOLDS = {
     "maximum_junction_contamination_fraction": 0.20,
     "maximum_boundary_interference_fraction": 0.15,
     "maximum_interior_radius_cv": 0.25,
+    "minimum_continuity_collar_support_fraction": 0.05,
     "bent_centerline_rms_voxels": 0.75,
     "bent_centerline_max_voxels": 1.50,
     "bent_adjacent_deviation_voxels": 0.75,
@@ -79,6 +81,7 @@ SECTION_FIELDS = [
     "curvature_inverse_voxels",
     "tracking_confidence",
     "tracking_recovered",
+    "tracking_recovery_reason",
     "valid",
     "exclusion_reason",
     "junction_excluded",
@@ -115,6 +118,14 @@ SUMMARY_FIELDS = [
     "centerline_deviation_max_voxels",
     "curvature_rms_inverse_voxels",
     "max_turn_angle_degrees",
+    "continuity_status",
+    "same_component_connects_collar_a_to_b",
+    "endpoint0_support_fraction",
+    "endpoint1_support_fraction",
+    "maximum_axial_gap_samples",
+    "maximum_axial_gap_fraction",
+    "continuity_corridor_radius_voxels",
+    "continuity_sample_count",
     "measurement_quality",
 ]
 
@@ -124,6 +135,13 @@ CLASSIFICATION_FIELDS = [
     "is_thin",
     "is_thick",
     "is_bent",
+    "continuous_for_shape_classification",
+    "continuity_status",
+    "same_component_connects_collar_a_to_b",
+    "endpoint0_support_fraction",
+    "endpoint1_support_fraction",
+    "maximum_axial_gap_samples",
+    "shape_exclusion_reason",
     "decision_status",
     "confidence",
     "peer_group_id",
@@ -341,6 +359,13 @@ def compute_strut_metrics(
             tracking_radius_voxels=tracking_radius_voxels,
             valid_z_range=(safe_z_min, safe_z_max),
         )
+        continuity = measure_tracked_tube_continuity(
+            volume,
+            threshold,
+            sections,
+            length,
+            valid_z_range=(safe_z_min, safe_z_max),
+        )
         radii = []
         deviations = []
         for sample_index, section in enumerate(sections):
@@ -401,6 +426,9 @@ def compute_strut_metrics(
                 "tracking_confidence": _finite(section["tracking_confidence"]),
                 "tracking_recovered": bool(
                     section.get("tracking_recovered", False)
+                ),
+                "tracking_recovery_reason": section.get(
+                    "tracking_recovery_reason", ""
                 ),
                 "valid": valid,
                 "exclusion_reason": reason,
@@ -487,6 +515,28 @@ def compute_strut_metrics(
             ),
             "curvature_rms_inverse_voxels": _finite(rms_curvature),
             "max_turn_angle_degrees": _max_turn_angle(sections),
+            "continuity_status": continuity["continuity_status"],
+            "same_component_connects_collar_a_to_b": continuity[
+                "same_component_connects_collar_a_to_b"
+            ],
+            "endpoint0_support_fraction": continuity[
+                "endpoint0_support_fraction"
+            ],
+            "endpoint1_support_fraction": continuity[
+                "endpoint1_support_fraction"
+            ],
+            "maximum_axial_gap_samples": continuity[
+                "maximum_axial_gap_samples"
+            ],
+            "maximum_axial_gap_fraction": continuity[
+                "maximum_axial_gap_fraction"
+            ],
+            "continuity_corridor_radius_voxels": continuity[
+                "continuity_corridor_radius_voxels"
+            ],
+            "continuity_sample_count": continuity[
+                "continuity_sample_count"
+            ],
             "measurement_quality": quality,
         })
 
@@ -524,6 +574,13 @@ def compute_strut_metrics(
                 "orthogonal distance from tracked CT center to robust "
                 "best-fit straight 3D CT line"
             ),
+            "continuity_method": (
+                "26-neighbor foreground connectivity through a tracked "
+                "local-tangent tube between junction-safe 0.20L/0.80L collars"
+            ),
+            "continuity_collar_fraction": 0.20,
+            "continuity_collar_half_length_voxels": 1.0,
+            "continuity_axial_spacing_voxels": 1.0,
         },
         "volume": {
             "shape_zyx": list(map(int, volume.shape)),
@@ -578,9 +635,24 @@ def _tracking_trustworthy(row, thresholds):
     )
 
 
+def _continuity_trustworthy(row, thresholds):
+    minimum_support = thresholds[
+        "minimum_continuity_collar_support_fraction"
+    ]
+    return bool(
+        row["continuity_status"] == "continuous"
+        and row["same_component_connects_collar_a_to_b"] is True
+        and row["endpoint0_support_fraction"] is not None
+        and row["endpoint0_support_fraction"] >= minimum_support
+        and row["endpoint1_support_fraction"] is not None
+        and row["endpoint1_support_fraction"] >= minimum_support
+    )
+
+
 def _radius_trustworthy(row, thresholds):
     return (
         _tracking_trustworthy(row, thresholds)
+        and _continuity_trustworthy(row, thresholds)
         and row["interior_radius_cv"] is not None
         and row["interior_radius_cv"]
         <= thresholds["maximum_interior_radius_cv"]
@@ -590,15 +662,23 @@ def _radius_trustworthy(row, thresholds):
 def _typed_summary(row):
     integer_fields = {
         "strut_id", "unit_cell_edge_idx", "junction0", "junction1",
-        "valid_sample_count",
+        "valid_sample_count", "maximum_axial_gap_samples",
+        "continuity_sample_count",
     }
-    text_fields = {"peer_group_id", "measurement_quality"}
+    text_fields = {
+        "peer_group_id", "measurement_quality", "continuity_status",
+    }
+    boolean_fields = {"same_component_connects_collar_a_to_b"}
     result = {}
     for key, value in row.items():
         if key in integer_fields:
             result[key] = _as_int(value)
         elif key in text_fields:
             result[key] = value
+        elif key in boolean_fields:
+            result[key] = (
+                None if value in (None, "") else _as_bool(value)
+            )
         else:
             result[key] = _as_float(value)
     return result
@@ -655,6 +735,10 @@ def _measurement_provenance(strut_sections_csv):
         "centerline_deviation_definition": config.get(
             "centerline_deviation_definition"
         ),
+        "continuity_method": config.get("continuity_method"),
+        "continuity_collar_fraction": _finite(
+            config.get("continuity_collar_fraction")
+        ),
         "section_measurements_sha256": (
             artifact.get("sha256") or _sha256(strut_sections_csv)
         ),
@@ -695,6 +779,9 @@ def _typed_profile_sample(row):
         ),
         "confidence": _as_float(row.get("tracking_confidence")),
         "tracking_recovered": _as_bool(row.get("tracking_recovered")),
+        "tracking_recovery_reason": row.get(
+            "tracking_recovery_reason", ""
+        ),
         "valid": _as_bool(row.get("valid")),
         "exclusion_reason": row.get("exclusion_reason", ""),
         "junction_excluded": _as_bool(row.get("junction_excluded")),
@@ -735,6 +822,10 @@ def classify_struts(
     for row in rows:
         baseline = baselines.get(row["peer_group_id"])
         tracking_trustworthy = _tracking_trustworthy(row, thresholds)
+        continuity_trustworthy = _continuity_trustworthy(row, thresholds)
+        shape_trustworthy = (
+            tracking_trustworthy and continuity_trustworthy
+        )
         radius_trustworthy = _radius_trustworthy(row, thresholds)
         radius = row["median_radius_voxels"]
         ratio = z_score = None
@@ -773,7 +864,7 @@ def classify_struts(
         max_deviation = row["centerline_deviation_max_voxels"]
         curvature = row["curvature_rms_inverse_voxels"]
         strict_bent = bool(
-            tracking_trustworthy
+            shape_trustworthy
             and adjacent_bend
             and max_deviation is not None
             and max_deviation >= thresholds["bent_centerline_max_voxels"]
@@ -808,7 +899,7 @@ def classify_struts(
             )
         bend_strength = None
         if (
-            tracking_trustworthy
+            shape_trustworthy
             and adjacent_bend
             and max_deviation is not None
         ):
@@ -849,7 +940,23 @@ def classify_struts(
             ) if flag
         ]
         priority_reason = ""
-        if labels:
+        shape_exclusion_reason = ""
+        if not continuity_trustworthy:
+            labels = []
+            is_thin = is_thick = is_bent = False
+            radius_strength = bend_strength = None
+            classification = "uncertain"
+            if row["continuity_status"] == "noncontinuous":
+                decision_status = "excluded_noncontinuous"
+                shape_exclusion_reason = (
+                    "no junction-safe CT component connects both strut collars"
+                )
+            else:
+                decision_status = "continuity_unresolved"
+                shape_exclusion_reason = (
+                    "junction-safe CT continuity could not be established"
+                )
+        elif labels:
             radius_flag = is_thin or is_thick
             bent_priority = (
                 is_bent
@@ -912,7 +1019,14 @@ def classify_struts(
             )
         if priority_reason:
             reasons.append(priority_reason)
-        if decision_status == "insufficient_peers":
+        if decision_status in {
+            "excluded_noncontinuous", "continuity_unresolved"
+        }:
+            reasons.append(
+                shape_exclusion_reason
+                + "; thin/thick/bent classification suppressed"
+            )
+        elif decision_status == "insufficient_peers":
             reasons.append("peer group did not meet the minimum baseline size")
         elif decision_status == "insufficient_quality":
             reasons.append("measurement quality did not satisfy classification gates")
@@ -930,6 +1044,21 @@ def classify_struts(
             "is_thin": is_thin,
             "is_thick": is_thick,
             "is_bent": is_bent,
+            "continuous_for_shape_classification": continuity_trustworthy,
+            "continuity_status": row["continuity_status"],
+            "same_component_connects_collar_a_to_b": row[
+                "same_component_connects_collar_a_to_b"
+            ],
+            "endpoint0_support_fraction": row[
+                "endpoint0_support_fraction"
+            ],
+            "endpoint1_support_fraction": row[
+                "endpoint1_support_fraction"
+            ],
+            "maximum_axial_gap_samples": row[
+                "maximum_axial_gap_samples"
+            ],
+            "shape_exclusion_reason": shape_exclusion_reason,
             "decision_status": decision_status,
             "confidence": round(float(confidence), 6),
             "peer_group_id": row["peer_group_id"],
@@ -963,6 +1092,22 @@ def classify_struts(
                 **measurement_provenance,
                 "length_voxels": row["length_voxels"],
                 "tracking_coverage": row["tracking_coverage"],
+                "continuous_for_shape_classification": (
+                    continuity_trustworthy
+                ),
+                "continuity_status": row["continuity_status"],
+                "same_component_connects_collar_a_to_b": row[
+                    "same_component_connects_collar_a_to_b"
+                ],
+                "endpoint0_support_fraction": row[
+                    "endpoint0_support_fraction"
+                ],
+                "endpoint1_support_fraction": row[
+                    "endpoint1_support_fraction"
+                ],
+                "maximum_axial_gap_samples": row[
+                    "maximum_axial_gap_samples"
+                ],
                 "median_radius_voxels": radius,
                 "centerline_deviation_rms_voxels": rms_deviation,
                 "centerline_deviation_max_voxels": max_deviation,

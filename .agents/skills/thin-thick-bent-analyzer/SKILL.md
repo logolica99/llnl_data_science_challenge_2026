@@ -37,13 +37,16 @@ place CT arrays or per-section tables in context.
    thresholds. Keep scope limited to thin, thick, and bent.
 5. Freeze all chosen cutoffs in a thresholds JSON. Do not change them after
    inspecting individual candidate identities.
-6. Invoke `classify_struts` with the measurement CSV paths and frozen
+6. Require junction-safe CT material continuity before shape classification.
+   Nonconnected or unresolved struts retain no thin, thick, or bent flags and
+   are handed off for the separate broken/missing decision.
+7. Invoke `classify_struts` with the measurement CSV paths and frozen
    thresholds. Preserve independent thin, thick, and bent flags; do not force
    combined findings into one lossy label.
-7. Invoke `render_strut_evidence`. Use radius profiles for thin/thick and
+8. Invoke `render_strut_evidence`. Use radius profiles for thin/thick and
    centerline-deviation plus curvature profiles for bent. Do not use a radius
    graph as the primary bent evidence.
-8. Verify all artifact hashes, finding counts, and required paths. Emit or
+9. Verify all artifact hashes, finding counts, and required paths. Emit or
    consume `classification_handoff.json` as the downstream contract.
 
 Read [artifact-contract.md](references/artifact-contract.md) when validating
@@ -59,6 +62,9 @@ inputs, outputs, defect rules, or downstream hand-offs.
 - Diagnose bending from tracked CT-centerline deviation relative to its
   best-fit straight CT line, with adjacent-section support and curvature.
   A coherent registration offset or rigid tilt is not bending.
+- Require one 26-neighbor CT material component in a narrow tracked tube to
+  intersect both junction-safe 0.20L/0.80L collar slabs. Continuity is a
+  prerequisite, not a broken-strut label.
 - Treat all cutoffs as screening thresholds until scientifically validated.
 - Return `uncertain` when peer support or tracking quality is insufficient.
 

@@ -91,8 +91,20 @@ classification evidence without reopening or recomputing the TIFF.
 Tracking-quality gates and radius-quality gates are evaluated separately.
 Reliable bending evidence can therefore be classified even when radius
 variation is too high for a thin/thick decision. Short one- or two-section gaps
-are recovered only when a unique, continuous CT bridge exists between
-confident tracked sections.
+are recovered both before and after local-tangent refinement, but only when a
+unique, area-consistent CT bridge exists between confident tracked sections.
+
+Continuity has priority over all three specialist defect labels. A narrow tube
+following the measured global CT centers is labeled in the original voxel grid
+with 26-neighbor connectivity. One material component must intersect collar
+slabs at 0.20L and 0.80L, and each collar must contain at least 5% foreground.
+The collars avoid junction blobs and alternate paths through neighboring
+struts. Nonconnected or unresolved struts keep all thin/thick/bent flags false
+and are reserved for the separate broken/missing stage.
+
+The standalone viewer preserves each saved sampling-plane center and local
+tangent. Its perpendicular panel uses that 3D frame and reports the saved
+pipeline radius separately from its live CT preview.
 
 The 21-position policy requires at least 12 valid samples. Bent evidence needs
 at least three adjacent high-deviation samples, preserving approximately the

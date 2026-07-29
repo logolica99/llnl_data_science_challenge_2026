@@ -596,6 +596,511 @@ def select_local_tangent_component(mask, axis, spacing, search_radius,
     }
 
 
+def recover_refined_tangent_gaps(
+    volume,
+    threshold,
+    positions,
+    registered_centers,
+    registered_u,
+    registered_v,
+    tracked,
+    sampled_planes,
+    axis,
+    uu,
+    vv,
+    spacing,
+    expected_area_pixels,
+    search_radius,
+    maximum_gap_planes=2,
+    minimum_confidence=0.45,
+):
+    """Recover short gaps created by the final local-tangent measurement pass.
+
+    Bootstrap gap recovery cannot repair a component that is lost only after
+    the 3D centerline has been fitted and the section plane has rotated to its
+    local tangent. This pass interpolates between two measured global CT
+    centers, resamples the missing local plane, and accepts a bridge only when
+    its component, confidence, and 3D step sizes remain consistent with both
+    flanks. Longer, endpoint, boundary, or ambiguous gaps stay unresolved.
+    """
+    if len(tracked) < 3 or not expected_area_pixels:
+        return tracked, sampled_planes
+
+    recovered = [dict(item) for item in tracked]
+    planes = list(sampled_planes)
+    recovery_radius = max(
+        float(search_radius),
+        min(float(search_radius) + 2.5, 1.5 * float(search_radius)),
+    )
+    index = 1
+    while index < len(recovered) - 1:
+        if np.any(recovered[index]["selected"]):
+            index += 1
+            continue
+        start = index
+        while (
+            index < len(recovered)
+            and not np.any(recovered[index]["selected"])
+        ):
+            index += 1
+        stop = index
+        gap = stop - start
+        if (
+            gap > int(maximum_gap_planes)
+            or start == 0
+            or stop >= len(recovered)
+            or not np.any(recovered[start - 1]["selected"])
+            or not np.any(recovered[stop]["selected"])
+            or any(
+                recovered[item]["dense_boundary_interference"]
+                for item in range(start, stop)
+            )
+        ):
+            continue
+
+        left = recovered[start - 1]
+        right = recovered[stop]
+        left_center = np.asarray(left["tracked_center"], dtype=float)
+        right_center = np.asarray(right["tracked_center"], dtype=float)
+        if not (
+            np.all(np.isfinite(left_center))
+            and np.all(np.isfinite(right_center))
+        ):
+            continue
+        span = stop - (start - 1)
+        bridge_direction = right_center - left_center
+        direction_norm = float(np.linalg.norm(bridge_direction))
+        if direction_norm <= 1e-9:
+            continue
+        bridge_tangent = bridge_direction / direction_norm
+        bridge_records = []
+        bridge_planes = []
+        for plane_index in range(start, stop):
+            fraction = (plane_index - (start - 1)) / span
+            plane_center = (
+                (1.0 - fraction) * left_center
+                + fraction * right_center
+            )
+            left_tangent = np.asarray(left["local_tangent"], dtype=float)
+            right_tangent = np.asarray(right["local_tangent"], dtype=float)
+            local_tangent = (
+                (1.0 - fraction) * left_tangent
+                + fraction * right_tangent
+            )
+            tangent_norm = float(np.linalg.norm(local_tangent))
+            local_tangent = (
+                local_tangent / tangent_norm
+                if tangent_norm > 1e-9 else bridge_tangent
+            )
+            local_tangent, local_u, local_v = make_transported_bases(
+                [local_tangent],
+                initial_u=left["local_u"],
+            )[0]
+            offsets = uu[..., None] * local_u + vv[..., None] * local_v
+            xyz = plane_center + offsets
+            intensities = sample_nearest(
+                volume, xyz.reshape(-1, 3)
+            ).reshape(len(axis), len(axis))
+            mask = intensities >= threshold
+            local_result = select_local_tangent_component(
+                mask,
+                axis,
+                spacing,
+                recovery_radius,
+                expected_area_pixels,
+            )
+            if local_result is None:
+                bridge_records = []
+                break
+            candidate = local_result["candidate"]
+            local_centroid_u = float(candidate["centroid_u"])
+            local_centroid_v = float(candidate["centroid_v"])
+            tracked_center = (
+                plane_center
+                + local_centroid_u * local_u
+                + local_centroid_v * local_v
+            )
+            flank_confidence = min(
+                float(left["tracking_confidence"]),
+                float(right["tracking_confidence"]),
+            )
+            confidence = min(
+                float(local_result["confidence"]),
+                flank_confidence,
+            )
+            if confidence < float(minimum_confidence):
+                bridge_records = []
+                break
+            registered_delta = (
+                tracked_center
+                - np.asarray(registered_centers[plane_index], dtype=float)
+            )
+            bridge_records.append({
+                "selected": candidate["selected"],
+                "raw_component_area_pixels": local_result[
+                    "raw_component_area_pixels"
+                ],
+                "junction_contaminated": local_result[
+                    "junction_contaminated"
+                ],
+                "tracking_confidence": confidence,
+                "candidate_count": local_result["candidate_count"],
+                "tracking_recovered": True,
+                "sampling_plane_center": plane_center,
+                "local_tangent": local_tangent,
+                "local_u": local_u,
+                "local_v": local_v,
+                "tracked_center": tracked_center,
+                "registered_centroid_u": float(np.dot(
+                    registered_delta, registered_u
+                )),
+                "registered_centroid_v": float(np.dot(
+                    registered_delta, registered_v
+                )),
+                "dense_boundary_interference": False,
+                "tracking_method": "3d_centerline_local_tangent",
+            })
+            bridge_planes.append((intensities, mask))
+
+        if len(bridge_records) != gap:
+            continue
+        bridge_centers = (
+            [left_center]
+            + [
+                np.asarray(item["tracked_center"], dtype=float)
+                for item in bridge_records
+            ]
+            + [right_center]
+        )
+        step_lengths = np.linalg.norm(
+            np.diff(np.asarray(bridge_centers), axis=0),
+            axis=1,
+        )
+        expected_step = direction_norm / span
+        maximum_step = max(1.75 * expected_step, expected_step + 3.0)
+        if np.any(step_lengths > maximum_step):
+            continue
+        for plane_index, record, plane in zip(
+            range(start, stop), bridge_records, bridge_planes
+        ):
+            recovered[plane_index] = record
+            planes[plane_index] = plane
+    return recovered, planes
+
+
+def recover_refined_tangent_gaps_from_3d_component(
+    volume,
+    threshold,
+    registered_centers,
+    registered_u,
+    registered_v,
+    tracked,
+    sampled_planes,
+    axis,
+    uu,
+    vv,
+    spacing,
+    expected_area_pixels,
+    search_radius,
+    maximum_gap_planes=2,
+    minimum_confidence=0.45,
+):
+    """Recover short gaps only from one flank-to-flank 3D CT component.
+
+    The ordinary recovery still asks a 2D selector to rediscover material on
+    each missing plane. This fallback labels thresholded voxels inside a narrow
+    original-grid tube between the measured centers flanking a gap. A section
+    is recovered only when the same 26-neighbor component supports both flanks
+    and intersects the exact perpendicular plane. It therefore cannot bridge a
+    real CT discontinuity or invent a radius by interpolation.
+    """
+    if len(tracked) < 3 or not expected_area_pixels:
+        return tracked, sampled_planes
+
+    recovered = [dict(item) for item in tracked]
+    planes = list(sampled_planes)
+    expected_area_voxels = float(expected_area_pixels) * float(spacing) ** 2
+    expected_radius_voxels = math.sqrt(
+        max(expected_area_voxels, 1e-9) / math.pi
+    )
+    corridor_radius = float(np.clip(
+        1.8 * expected_radius_voxels,
+        4.0,
+        max(4.0, float(search_radius)),
+    ))
+    shape_xyz = np.asarray(
+        [volume.shape[2], volume.shape[1], volume.shape[0]], dtype=int
+    )
+
+    def record_labels(record, labels, crop_min):
+        selected = np.asarray(record["selected"], dtype=bool)
+        if not np.any(selected):
+            return {}
+        plane_xyz = (
+            np.asarray(record["sampling_plane_center"], dtype=float)
+            + uu[..., None] * np.asarray(record["local_u"], dtype=float)
+            + vv[..., None] * np.asarray(record["local_v"], dtype=float)
+        )
+        local_xyz = np.rint(plane_xyz[selected]).astype(int) - crop_min
+        crop_shape_xyz = np.asarray(
+            [labels.shape[2], labels.shape[1], labels.shape[0]], dtype=int
+        )
+        inside = np.all(
+            (local_xyz >= 0) & (local_xyz < crop_shape_xyz), axis=1
+        )
+        local_xyz = local_xyz[inside]
+        if not local_xyz.size:
+            return {}
+        values, counts = np.unique(
+            labels[
+                local_xyz[:, 2],
+                local_xyz[:, 1],
+                local_xyz[:, 0],
+            ],
+            return_counts=True,
+        )
+        return {
+            int(value): int(count)
+            for value, count in zip(values, counts)
+            if int(value) != 0
+        }
+
+    def mark_gap_reason(start, stop, reason):
+        for gap_index in range(start, stop):
+            recovered[gap_index]["tracking_recovery_reason"] = reason
+
+    index = 1
+    while index < len(recovered) - 1:
+        if np.any(recovered[index]["selected"]):
+            index += 1
+            continue
+        start = index
+        while (
+            index < len(recovered)
+            and not np.any(recovered[index]["selected"])
+        ):
+            index += 1
+        stop = index
+        gap = stop - start
+        if (
+            gap > int(maximum_gap_planes)
+            or start == 0
+            or stop >= len(recovered)
+            or not np.any(recovered[start - 1]["selected"])
+            or not np.any(recovered[stop]["selected"])
+            or any(
+                recovered[item]["dense_boundary_interference"]
+                for item in range(start, stop)
+            )
+        ):
+            continue
+
+        left = recovered[start - 1]
+        right = recovered[stop]
+        left_center = np.asarray(left["tracked_center"], dtype=float)
+        right_center = np.asarray(right["tracked_center"], dtype=float)
+        if not (
+            np.all(np.isfinite(left_center))
+            and np.all(np.isfinite(right_center))
+        ):
+            continue
+        bridge_delta = right_center - left_center
+        bridge_length = float(np.linalg.norm(bridge_delta))
+        if bridge_length <= 1e-9:
+            continue
+
+        seed_count = max(3, int(math.ceil(2.0 * bridge_length)) + 1)
+        seed_centers = np.linspace(left_center, right_center, seed_count)
+        margin = int(math.ceil(corridor_radius)) + 1
+        crop_min = (
+            np.floor(np.min(seed_centers, axis=0)).astype(int) - margin
+        )
+        crop_max = (
+            np.ceil(np.max(seed_centers, axis=0)).astype(int) + margin
+        )
+        if np.any(crop_min < 0) or np.any(crop_max >= shape_xyz):
+            mark_gap_reason(start, stop, "3d_component_crop_out_of_bounds")
+            continue
+        crop_shape_xyz = crop_max - crop_min + 1
+        crop_shape_zyx = tuple(map(
+            int, crop_shape_xyz[[2, 1, 0]]
+        ))
+        centerline_seed = np.zeros(crop_shape_zyx, dtype=bool)
+        seed_xyz = np.rint(seed_centers).astype(int) - crop_min
+        centerline_seed[
+            seed_xyz[:, 2], seed_xyz[:, 1], seed_xyz[:, 0]
+        ] = True
+        tube = (
+            ndimage.distance_transform_edt(~centerline_seed)
+            <= corridor_radius
+        )
+        crop = np.asarray(volume[
+            crop_min[2]:crop_max[2] + 1,
+            crop_min[1]:crop_max[1] + 1,
+            crop_min[0]:crop_max[0] + 1,
+        ])
+        foreground = (crop >= threshold) & tube
+        labels, _ = ndimage.label(
+            foreground,
+            structure=ndimage.generate_binary_structure(3, 3),
+        )
+        left_labels = record_labels(left, labels, crop_min)
+        right_labels = record_labels(right, labels, crop_min)
+        common_labels = set(left_labels) & set(right_labels)
+        if not common_labels:
+            mark_gap_reason(
+                start, stop, "no_3d_component_shared_by_flanks"
+            )
+            continue
+        component_label = max(
+            common_labels,
+            key=lambda value: min(
+                left_labels[value], right_labels[value]
+            ),
+        )
+
+        span = stop - (start - 1)
+        bridge_tangent = bridge_delta / bridge_length
+        reference_tangent = (
+            np.asarray(left["local_tangent"], dtype=float)
+            + np.asarray(right["local_tangent"], dtype=float)
+        )
+        if float(np.dot(bridge_tangent, reference_tangent)) < 0.0:
+            bridge_tangent = -bridge_tangent
+        bridge_records = []
+        bridge_planes = []
+        for plane_index in range(start, stop):
+            fraction = (plane_index - (start - 1)) / span
+            plane_center = (
+                (1.0 - fraction) * left_center
+                + fraction * right_center
+            )
+            # The smoothed path tangent can be the cause of the failed plane
+            # on a sharp bend. For a bounded gap, the measured CT centers on
+            # both sides provide the most local data-supported direction.
+            local_tangent = bridge_tangent
+            local_tangent, local_u, local_v = make_transported_bases(
+                [local_tangent],
+                initial_u=left["local_u"],
+            )[0]
+            plane_xyz = (
+                plane_center
+                + uu[..., None] * local_u
+                + vv[..., None] * local_v
+            )
+            intensities = sample_nearest(
+                volume, plane_xyz.reshape(-1, 3)
+            ).reshape(len(axis), len(axis))
+            mask = intensities >= threshold
+            local_xyz = np.rint(plane_xyz).astype(int) - crop_min
+            inside = np.all(
+                (local_xyz >= 0) & (local_xyz < crop_shape_xyz), axis=-1
+            )
+            selected = np.zeros_like(mask, dtype=bool)
+            selected[inside] = (
+                labels[
+                    local_xyz[..., 2][inside],
+                    local_xyz[..., 1][inside],
+                    local_xyz[..., 0][inside],
+                ]
+                == component_label
+            )
+            selected &= mask
+            selected_area = int(np.count_nonzero(selected))
+            area_ratio = (
+                selected_area / max(float(expected_area_pixels), 1.0)
+            )
+            if selected_area < 3 or not 0.35 <= area_ratio <= 2.75:
+                mark_gap_reason(
+                    start, stop, "3d_component_plane_area_out_of_range"
+                )
+                bridge_records = []
+                break
+            yy_selected, xx_selected = np.nonzero(selected)
+            local_centroid_u = float(axis[xx_selected].mean())
+            local_centroid_v = float(axis[yy_selected].mean())
+            tracked_center = (
+                plane_center
+                + local_centroid_u * local_u
+                + local_centroid_v * local_v
+            )
+            flank_confidence = min(
+                float(left["tracking_confidence"]),
+                float(right["tracking_confidence"]),
+            )
+            area_penalty = abs(math.log(max(area_ratio, 1e-9)))
+            confidence = min(
+                flank_confidence,
+                0.95 * math.exp(-0.12 * area_penalty),
+            )
+            if confidence < float(minimum_confidence):
+                mark_gap_reason(
+                    start, stop, "3d_component_recovery_low_confidence"
+                )
+                bridge_records = []
+                break
+            registered_delta = (
+                tracked_center
+                - np.asarray(registered_centers[plane_index], dtype=float)
+            )
+            bridge_records.append({
+                "selected": selected,
+                "raw_component_area_pixels": selected_area,
+                "junction_contaminated": False,
+                "tracking_confidence": float(confidence),
+                "candidate_count": len(common_labels),
+                "tracking_recovered": True,
+                "sampling_plane_center": plane_center,
+                "local_tangent": local_tangent,
+                "local_u": local_u,
+                "local_v": local_v,
+                "tracked_center": tracked_center,
+                "registered_centroid_u": float(np.dot(
+                    registered_delta, registered_u
+                )),
+                "registered_centroid_v": float(np.dot(
+                    registered_delta, registered_v
+                )),
+                "dense_boundary_interference": False,
+                "tracking_method": (
+                    "3d_centerline_local_tangent_component_recovery"
+                ),
+                "tracking_recovery_reason": (
+                    "recovered_from_connected_3d_component"
+                ),
+            })
+            bridge_planes.append((intensities, mask))
+
+        if len(bridge_records) != gap:
+            continue
+        bridge_centers = (
+            [left_center]
+            + [
+                np.asarray(item["tracked_center"], dtype=float)
+                for item in bridge_records
+            ]
+            + [right_center]
+        )
+        step_lengths = np.linalg.norm(
+            np.diff(np.asarray(bridge_centers), axis=0),
+            axis=1,
+        )
+        expected_step = bridge_length / span
+        maximum_step = max(1.75 * expected_step, expected_step + 3.0)
+        if np.any(step_lengths > maximum_step):
+            mark_gap_reason(
+                start, stop, "3d_component_recovery_step_too_large"
+            )
+            continue
+        for plane_index, record, plane in zip(
+            range(start, stop), bridge_records, bridge_planes
+        ):
+            recovered[plane_index] = record
+            planes[plane_index] = plane
+
+    return recovered, planes
+
+
 def recover_bounded_path_gaps(selected_path, sampled_masks, axis, spacing,
                               expected_area_pixels, search_radius,
                               maximum_gap_planes=2, maximum_prediction_error=4.5,
@@ -1331,6 +1836,39 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
                 "dense_boundary_interference": boundary_interference,
                 "tracking_method": "3d_centerline_local_tangent",
             })
+        tracked, refined_planes = recover_refined_tangent_gaps(
+            volume,
+            threshold,
+            positions,
+            section_centers,
+            u,
+            v,
+            tracked,
+            refined_planes,
+            axis,
+            uu,
+            vv,
+            spacing,
+            expected_area_pixels,
+            search_radius,
+        )
+        tracked, refined_planes = (
+            recover_refined_tangent_gaps_from_3d_component(
+                volume,
+                threshold,
+                section_centers,
+                u,
+                v,
+                tracked,
+                refined_planes,
+                axis,
+                uu,
+                vv,
+                spacing,
+                expected_area_pixels,
+                search_radius,
+            )
+        )
         sampled_planes = refined_planes
     else:
         for index, path_item in enumerate(bootstrap_path):
@@ -1482,6 +2020,9 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
             "tracking_confidence": record["tracking_confidence"],
             "tracking_candidate_count": record["candidate_count"],
             "tracking_recovered": record["tracking_recovered"],
+            "tracking_recovery_reason": record.get(
+                "tracking_recovery_reason", ""
+            ),
             "dense_boundary_interference": bool(
                 record["dense_boundary_interference"]
             ),
@@ -1548,6 +2089,347 @@ def extract_cross_sections(volume, start, end, threshold, positions, extent, gri
     for section in sections:
         section.update(registration_metrics)
     return sections, length, rms_curvature
+
+
+def measure_tracked_tube_continuity(
+    volume,
+    threshold,
+    sections,
+    length_voxels,
+    *,
+    collar_fraction=0.20,
+    collar_half_length_voxels=1.0,
+    axial_spacing_voxels=1.0,
+    transverse_spacing_voxels=1.0,
+    corridor_radius_voxels=None,
+    valid_z_range=None,
+):
+    """Measure junction-safe 3D material connectivity along a tracked CT tube.
+
+    The resampled tube follows the final sampling-plane centers and local
+    tangents. A 26-connected foreground component must intersect collar slabs
+    at 0.20L and 0.80L. Those collars avoid the junction blobs, preventing the
+    surrounding lattice network from supplying a false alternate connection.
+    """
+    if len(sections) < 2 or length_voxels <= 0:
+        return {
+            "continuity_status": "unresolved_tracking",
+            "same_component_connects_collar_a_to_b": None,
+            "endpoint0_support_fraction": None,
+            "endpoint1_support_fraction": None,
+            "maximum_axial_gap_samples": None,
+            "maximum_axial_gap_fraction": None,
+            "continuity_corridor_radius_voxels": None,
+            "continuity_sample_count": 0,
+        }
+
+    fractions = np.asarray([
+        section["position_fraction"] for section in sections
+    ], dtype=float)
+    # Center the connectivity corridor on measured CT material, not merely on
+    # the fitted sampling-plane path. Missing CT centers are interpolated from
+    # the surrounding measured centers below. This retains the registered/fitted
+    # path as a sampling aid without letting a several-voxel fit residual cut a
+    # physically continuous bent strut out of its own connectivity tube.
+    centers = np.asarray([[
+        section["tracked_center_x_voxels"],
+        section["tracked_center_y_voxels"],
+        section["tracked_center_z_voxels"],
+    ] for section in sections], dtype=float)
+    tangents = np.asarray([[
+        section["local_tangent_x"],
+        section["local_tangent_y"],
+        section["local_tangent_z"],
+    ] for section in sections], dtype=float)
+    supported = (
+        np.isfinite(fractions)
+        & np.all(np.isfinite(centers), axis=1)
+        & np.all(np.isfinite(tangents), axis=1)
+    )
+    if np.count_nonzero(supported) < 2:
+        return {
+            "continuity_status": "unresolved_tracking",
+            "same_component_connects_collar_a_to_b": None,
+            "endpoint0_support_fraction": None,
+            "endpoint1_support_fraction": None,
+            "maximum_axial_gap_samples": None,
+            "maximum_axial_gap_fraction": None,
+            "continuity_corridor_radius_voxels": None,
+            "continuity_sample_count": 0,
+        }
+    order = np.argsort(fractions[supported])
+    source_fractions = fractions[supported][order]
+    source_centers = centers[supported][order]
+    source_tangents = tangents[supported][order]
+    start_fraction = float(source_fractions[0])
+    end_fraction = float(source_fractions[-1])
+    if not (
+        start_fraction <= collar_fraction
+        and end_fraction >= 1.0 - collar_fraction
+    ):
+        return {
+            "continuity_status": "unresolved_tracking",
+            "same_component_connects_collar_a_to_b": None,
+            "endpoint0_support_fraction": None,
+            "endpoint1_support_fraction": None,
+            "maximum_axial_gap_samples": None,
+            "maximum_axial_gap_fraction": None,
+            "continuity_corridor_radius_voxels": None,
+            "continuity_sample_count": 0,
+        }
+
+    axial_count = max(
+        3,
+        int(math.ceil(
+            (end_fraction - start_fraction)
+            * float(length_voxels)
+            / max(float(axial_spacing_voxels), 1e-6)
+        )) + 1,
+    )
+    target_fractions = np.linspace(
+        start_fraction, end_fraction, axial_count
+    )
+    target_centers = np.column_stack([
+        np.interp(target_fractions, source_fractions, source_centers[:, axis])
+        for axis in range(3)
+    ])
+    target_tangents = np.column_stack([
+        np.interp(target_fractions, source_fractions, source_tangents[:, axis])
+        for axis in range(3)
+    ])
+    tangent_norms = np.linalg.norm(target_tangents, axis=1)
+    if np.any(tangent_norms <= 1e-9):
+        return {
+            "continuity_status": "unresolved_tracking",
+            "same_component_connects_collar_a_to_b": None,
+            "endpoint0_support_fraction": None,
+            "endpoint1_support_fraction": None,
+            "maximum_axial_gap_samples": None,
+            "maximum_axial_gap_fraction": None,
+            "continuity_corridor_radius_voxels": None,
+            "continuity_sample_count": 0,
+        }
+    target_tangents /= tangent_norms[:, None]
+    local_bases = make_transported_bases(target_tangents)
+
+    finite_radii = np.asarray([
+        section["equivalent_radius_voxels"]
+        for section in sections
+        if (
+            np.isfinite(section["equivalent_radius_voxels"])
+            and not section.get("junction_contaminated", False)
+        )
+    ], dtype=float)
+    search_radius = max(
+        [
+            float(section.get("tracking_search_radius_voxels", 0.0))
+            for section in sections
+        ] + [4.0]
+    )
+    if corridor_radius_voxels is None:
+        baseline_radius = (
+            float(np.median(finite_radii))
+            if finite_radii.size else search_radius / 1.8
+        )
+        corridor_radius_voxels = float(np.clip(
+            1.8 * baseline_radius,
+            4.0,
+            max(4.0, search_radius),
+        ))
+    corridor_radius_voxels = float(corridor_radius_voxels)
+    transverse_spacing_voxels = max(
+        float(transverse_spacing_voxels), 1e-6
+    )
+    transverse_extent = int(math.ceil(
+        corridor_radius_voxels / transverse_spacing_voxels
+    ))
+    transverse_axis = (
+        np.arange(-transverse_extent, transverse_extent + 1, dtype=float)
+        * transverse_spacing_voxels
+    )
+    uu, vv = np.meshgrid(
+        transverse_axis, transverse_axis, indexing="xy"
+    )
+    disk = uu * uu + vv * vv <= corridor_radius_voxels ** 2
+
+    tube_values = np.empty(
+        (axial_count, len(transverse_axis), len(transverse_axis)),
+        dtype=float,
+    )
+    in_bounds = True
+    shape_xyz = np.asarray(
+        [volume.shape[2], volume.shape[1], volume.shape[0]], dtype=float
+    )
+    for index, (center, basis) in enumerate(zip(
+        target_centers, local_bases
+    )):
+        _, local_u, local_v = basis
+        xyz = (
+            center
+            + uu[..., None] * local_u
+            + vv[..., None] * local_v
+        )
+        in_bounds = in_bounds and bool(np.all(
+            (xyz >= 0.0) & (xyz <= shape_xyz - 1.0)
+        ))
+        tube_values[index] = sample_nearest(
+            volume, xyz.reshape(-1, 3)
+        ).reshape(len(transverse_axis), len(transverse_axis))
+    if (
+        not in_bounds
+        or (
+            valid_z_range is not None
+            and not np.all(
+                (target_centers[:, 2] >= valid_z_range[0])
+                & (target_centers[:, 2] <= valid_z_range[1])
+            )
+        )
+    ):
+        return {
+            "continuity_status": "unresolved_boundary",
+            "same_component_connects_collar_a_to_b": None,
+            "endpoint0_support_fraction": None,
+            "endpoint1_support_fraction": None,
+            "maximum_axial_gap_samples": None,
+            "maximum_axial_gap_fraction": None,
+            "continuity_corridor_radius_voxels": corridor_radius_voxels,
+            "continuity_sample_count": axial_count,
+        }
+
+    # Connectivity is evaluated in the original CT voxel grid. Labeling the
+    # curvilinear resampling grid can split an intact, sharply bent strut when
+    # its center moves by more than one transverse grid cell between adjacent
+    # axial samples. The original-grid tube preserves true 26-neighbor material
+    # adjacency while remaining narrow enough to exclude neighboring struts.
+    margin = int(math.ceil(corridor_radius_voxels)) + 1
+    crop_min = np.floor(np.min(target_centers, axis=0)).astype(int) - margin
+    crop_max = np.ceil(np.max(target_centers, axis=0)).astype(int) + margin
+    if np.any(crop_min < 0) or np.any(crop_max >= shape_xyz.astype(int)):
+        return {
+            "continuity_status": "unresolved_boundary",
+            "same_component_connects_collar_a_to_b": None,
+            "endpoint0_support_fraction": None,
+            "endpoint1_support_fraction": None,
+            "maximum_axial_gap_samples": None,
+            "maximum_axial_gap_fraction": None,
+            "continuity_corridor_radius_voxels": corridor_radius_voxels,
+            "continuity_sample_count": axial_count,
+        }
+    crop_shape_xyz = crop_max - crop_min + 1
+    crop_shape_zyx = tuple(map(
+        int, crop_shape_xyz[[2, 1, 0]]
+    ))
+    centerline_seed = np.zeros(crop_shape_zyx, dtype=bool)
+    seed_step_count = max(
+        axial_count,
+        int(math.ceil(
+            (end_fraction - start_fraction) * length_voxels / 0.5
+        )) + 1,
+    )
+    seed_fractions = np.linspace(
+        start_fraction, end_fraction, seed_step_count
+    )
+    seed_centers = np.column_stack([
+        np.interp(seed_fractions, source_fractions, source_centers[:, axis])
+        for axis in range(3)
+    ])
+    seed_xyz = np.rint(seed_centers).astype(int) - crop_min
+    centerline_seed[
+        seed_xyz[:, 2], seed_xyz[:, 1], seed_xyz[:, 0]
+    ] = True
+    tube = (
+        ndimage.distance_transform_edt(~centerline_seed)
+        <= corridor_radius_voxels
+    )
+    crop = np.asarray(volume[
+        crop_min[2]:crop_max[2] + 1,
+        crop_min[1]:crop_max[1] + 1,
+        crop_min[0]:crop_max[0] + 1,
+    ])
+    foreground_crop = (crop >= threshold) & tube
+    labels, _ = ndimage.label(
+        foreground_crop,
+        structure=ndimage.generate_binary_structure(3, 3),
+    )
+    collar_center_a = np.asarray([
+        np.interp(collar_fraction, source_fractions, source_centers[:, axis])
+        for axis in range(3)
+    ])
+    collar_center_b = np.asarray([
+        np.interp(
+            1.0 - collar_fraction,
+            source_fractions,
+            source_centers[:, axis],
+        )
+        for axis in range(3)
+    ])
+    collar_tangent_a = np.asarray([
+        np.interp(collar_fraction, source_fractions, source_tangents[:, axis])
+        for axis in range(3)
+    ])
+    collar_tangent_b = np.asarray([
+        np.interp(
+            1.0 - collar_fraction,
+            source_fractions,
+            source_tangents[:, axis],
+        )
+        for axis in range(3)
+    ])
+    collar_tangent_a /= max(float(np.linalg.norm(collar_tangent_a)), 1e-9)
+    collar_tangent_b /= max(float(np.linalg.norm(collar_tangent_b)), 1e-9)
+    zz, yy, xx = np.indices(crop_shape_zyx, dtype=float)
+    xyz = np.stack((
+        xx + crop_min[0],
+        yy + crop_min[1],
+        zz + crop_min[2],
+    ), axis=-1)
+
+    def collar_mask(center, tangent):
+        delta = xyz - center
+        axial = np.sum(delta * tangent, axis=-1)
+        radial_squared = np.maximum(
+            np.sum(delta * delta, axis=-1) - axial * axial,
+            0.0,
+        )
+        return (
+            (np.abs(axial) <= float(collar_half_length_voxels))
+            & (radial_squared <= corridor_radius_voxels ** 2)
+            & tube
+        )
+
+    collar_a = collar_mask(collar_center_a, collar_tangent_a)
+    collar_b = collar_mask(collar_center_b, collar_tangent_b)
+    labels_a = set(np.unique(labels[collar_a & foreground_crop]))
+    labels_b = set(np.unique(labels[collar_b & foreground_crop]))
+    labels_a.discard(0)
+    labels_b.discard(0)
+    connected = bool(labels_a & labels_b)
+
+    endpoint0_support = float(
+        np.count_nonzero(foreground_crop & collar_a)
+        / max(np.count_nonzero(collar_a), 1)
+    )
+    endpoint1_support = float(
+        np.count_nonzero(foreground_crop & collar_b)
+        / max(np.count_nonzero(collar_b), 1)
+    )
+    foreground = (tube_values >= threshold) & disk[None, :, :]
+    axial_support = np.any(foreground[:, disk], axis=1)
+    maximum_gap = _longest_true_run(~axial_support)
+    return {
+        "continuity_status": (
+            "continuous" if connected else "noncontinuous"
+        ),
+        "same_component_connects_collar_a_to_b": connected,
+        "endpoint0_support_fraction": endpoint0_support,
+        "endpoint1_support_fraction": endpoint1_support,
+        "maximum_axial_gap_samples": int(maximum_gap),
+        "maximum_axial_gap_fraction": float(
+            maximum_gap / max(axial_count, 1)
+        ),
+        "continuity_corridor_radius_voxels": corridor_radius_voxels,
+        "continuity_sample_count": axial_count,
+    }
 
 
 def write_html(path, sections, strut_id, threshold, extent, summary):

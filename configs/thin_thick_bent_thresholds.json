@@ -10,6 +10,7 @@
   "maximum_junction_contamination_fraction": 0.2,
   "maximum_boundary_interference_fraction": 0.15,
   "maximum_interior_radius_cv": 0.25,
+  "minimum_continuity_collar_support_fraction": 0.05,
   "bent_centerline_rms_voxels": 0.75,
   "bent_centerline_max_voxels": 1.5,
   "bent_adjacent_deviation_voxels": 0.75,

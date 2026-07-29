@@ -410,6 +410,25 @@ def _embedded_profile(payload):
                 raw.get("center_v_voxels",
                         raw.get("tracked_center_v_voxels"))
             ),
+            "sampling_plane_center_x_voxels": finite_or_none(
+                raw.get("sampling_plane_center_x_voxels")
+            ),
+            "sampling_plane_center_y_voxels": finite_or_none(
+                raw.get("sampling_plane_center_y_voxels")
+            ),
+            "sampling_plane_center_z_voxels": finite_or_none(
+                raw.get("sampling_plane_center_z_voxels")
+            ),
+            "local_tangent_x": finite_or_none(
+                raw.get("local_tangent_x")
+            ),
+            "local_tangent_y": finite_or_none(
+                raw.get("local_tangent_y")
+            ),
+            "local_tangent_z": finite_or_none(
+                raw.get("local_tangent_z")
+            ),
+            "tracking_method": str(raw.get("tracking_method", "")),
             "deviation_voxels": finite_or_none(
                 raw.get("deviation_voxels",
                         raw.get("centerline_deviation_voxels"))
@@ -440,6 +459,16 @@ def _embedded_profile(payload):
         "length_voxels": finite_or_none(payload.get("length_voxels")),
         "coverage": finite_or_none(
             payload.get("tracking_coverage", payload.get("coverage"))
+        ),
+        "tracking_radius_voxels": finite_or_none(
+            payload.get("tracking_radius_voxels")
+        ),
+        "continuous_for_shape_classification": bool(
+            payload.get("continuous_for_shape_classification", False)
+        ),
+        "continuity_status": str(payload.get("continuity_status", "")),
+        "same_component_connects_collar_a_to_b": payload.get(
+            "same_component_connects_collar_a_to_b"
         ),
         "median_radius_voxels": finite_or_none(
             payload.get("median_radius_voxels")
