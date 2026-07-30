@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gc
 import hashlib
 import json
 from dataclasses import asdict, dataclass
@@ -163,6 +164,13 @@ def parse_args() -> argparse.Namespace:
         help="Test every graph edge in deterministic JSON order.",
     )
     parser.add_argument(
+        "--strut-id-range",
+        type=int,
+        nargs=2,
+        metavar=("FIRST_ID", "LAST_ID"),
+        help="Test one inclusive deterministic graph-ID range; useful for checkpointed full runs.",
+    )
+    parser.add_argument(
         "--strut-ids-file",
         type=Path,
         help=(
@@ -195,6 +203,36 @@ def parse_args() -> argparse.Namespace:
             "Keep all CSV/JSON measurements, but save cuboid NPZ files and plot "
             "profiles only for struts that are not connected."
         ),
+    )
+    parser.add_argument(
+        "--threshold",
+        type=int,
+        default=FROZEN_THRESHOLD,
+        help=(
+            "Frozen CT foreground threshold for this run. The value is recorded "
+            "in and checked against the analysis configuration."
+        ),
+    )
+    parser.add_argument(
+        "--write-compact-profiles",
+        action="store_true",
+        help=(
+            "Write one compressed all-strut axial-profile NPZ containing only "
+            "strut IDs, lengths, and corridor-disk foreground profiles."
+        ),
+    )
+    parser.add_argument(
+        "--skip-cuboid-artifacts",
+        action="store_true",
+        help=(
+            "Do not write individual full-cuboid NPZ artifacts. Intended with "
+            "--write-compact-profiles for lightweight all-strut feature extraction."
+        ),
+    )
+    parser.add_argument(
+        "--skip-overview",
+        action="store_true",
+        help="Do not render connection_overview.png; useful for all-strut feature runs.",
     )
     return parser.parse_args()
 
@@ -978,7 +1016,11 @@ def analyze_struts_batch(
     ]
 
 
-def write_overview(results: list[dict[str, Any]], output_path: Path) -> None:
+def write_overview(
+    results: list[dict[str, Any]],
+    output_path: Path,
+    compact_profiles: dict[int, np.ndarray] | None = None,
+) -> None:
     """Render a compact evidence plot; it contains measurements, not labels."""
     if not results:
         figure, axis = plt.subplots(1, 1, figsize=(10, 2.5))
@@ -1000,10 +1042,17 @@ def write_overview(results: list[dict[str, Any]], output_path: Path) -> None:
         axes = [axes]
     for axis, result in zip(axes, results, strict=True):
         geometry = result["geometry"]
-        profile_path = result["profile_path"]
-        profile = np.load(profile_path)["axial_disk_foreground_fraction"]
-        z = np.load(profile_path)["local_z_from_node_a_voxels"]
         length = geometry["length_voxels"]
+        if "profile_path" in result:
+            profile_path = result["profile_path"]
+            with np.load(profile_path) as profile_data:
+                profile = profile_data["axial_disk_foreground_fraction"]
+                z = profile_data["local_z_from_node_a_voxels"]
+        elif compact_profiles is not None:
+            profile = compact_profiles[int(geometry["strut_id"])]
+            z = np.linspace(0.0, length, len(profile), dtype=np.float64)
+        else:
+            raise ValueError("Overview requires saved individual or compact axial profiles")
         axis.plot(z, profile, color="#2a6fbb", linewidth=1.5, label="disk foreground fraction")
         axis.axvline(0.0, color="#444444", linestyle="--", linewidth=1, label="node A")
         axis.axvline(length, color="#444444", linestyle="--", linewidth=1, label="node B")
@@ -1045,6 +1094,10 @@ cuboid measurement or connectivity decision.
   direct A-to-B connectivity observations in one machine-readable document.
 - `connection_metrics.csv` - one row per tested strut endpoint, convenient for
   spreadsheet inspection.
+- `all_strut_axial_profiles.npz` - written with `--write-compact-profiles`.
+  It stores only each strut ID, A-to-B length, and axial corridor-disk
+  foreground profile; it is suitable for downstream material-loss features and
+  is not a full-cuboid artifact.
 - `connection_overview.png` - axial foreground-fraction profiles. Dashed lines
   are registered nodes; orange dotted lines are the 20%-length collar samples.
   With `--failures-only`, it contains only not-connected cases (or a clear
@@ -1091,13 +1144,22 @@ def cohort_statistics(results: list[dict[str, Any]]) -> dict[str, dict[str, floa
 
 
 def main() -> None:
+    global FROZEN_THRESHOLD
     args = parse_args()
+    if args.threshold < 0:
+        raise ValueError("--threshold must be non-negative")
+    FROZEN_THRESHOLD = int(args.threshold)
     selection_mode_count = sum(
-        (bool(args.strut_ids), bool(args.strut_ids_file), args.all_struts)
+        (
+            bool(args.strut_ids),
+            bool(args.strut_ids_file),
+            args.all_struts,
+            args.strut_id_range is not None,
+        )
     )
     if selection_mode_count > 1:
         raise ValueError(
-            "--strut-ids, --strut-ids-file, and --all-struts are mutually exclusive"
+            "--strut-ids, --strut-ids-file, --strut-id-range, and --all-struts are mutually exclusive"
         )
     if selection_mode_count == 0 and (args.count < 1 or args.count > 4):
         raise ValueError("--count must be from 1 to 4 for the fixed representative selection")
@@ -1105,6 +1167,10 @@ def main() -> None:
         raise ValueError("--max-labeled must be positive")
     if args.batch_size < 1:
         raise ValueError("--batch-size must be positive")
+    if args.strut_id_range and args.strut_id_range[0] > args.strut_id_range[1]:
+        raise ValueError("--strut-id-range requires FIRST_ID <= LAST_ID")
+    if args.skip_cuboid_artifacts and not args.write_compact_profiles:
+        raise ValueError("--skip-cuboid-artifacts requires --write-compact-profiles")
     if not args.ct.is_file():
         raise FileNotFoundError(f"CT TIFF not found: {args.ct}")
     if not args.graph.is_file():
@@ -1135,6 +1201,12 @@ def main() -> None:
         ]
     elif args.all_struts:
         selected_with_cohorts = [(strut, "all_graph_edges") for strut in struts]
+    elif args.strut_id_range:
+        first_id, last_id = args.strut_id_range
+        selected_with_cohorts = [
+            (strut, "all_graph_edges_checkpoint")
+            for strut in select_struts_by_ids(struts, list(range(first_id, last_id + 1)))
+        ]
     elif args.strut_ids_file:
         if not args.strut_ids_file.is_file():
             raise FileNotFoundError(f"Tube-emptiness label JSON not found: {args.strut_ids_file}")
@@ -1156,6 +1228,11 @@ def main() -> None:
         selection_method = (
             "all graph struts in deterministic JSON order; CT measurements are label-blind"
         )
+    elif args.strut_id_range:
+        selection_method = (
+            f"inclusive deterministic graph-ID checkpoint {args.strut_id_range[0]} "
+            f"through {args.strut_id_range[1]}; CT measurements are label-blind"
+        )
     elif args.strut_ids_file:
         selection_method = (
             "tube-labelled validation: labelled IDs select the cohort and matched controls; "
@@ -1169,6 +1246,9 @@ def main() -> None:
 
     results: list[dict[str, Any]] = []
     csv_rows: list[dict[str, Any]] = []
+    compact_profile_ids: list[int] = []
+    compact_profile_lengths: list[float] = []
+    compact_profile_values: list[np.ndarray] = []
     for batch_start in range(0, len(selected_with_cohorts), args.batch_size):
         batch = selected_with_cohorts[batch_start : batch_start + args.batch_size]
         batch_analyses = analyze_struts_batch(
@@ -1181,9 +1261,18 @@ def main() -> None:
         for (_, cohort), (result, arrays, _) in zip(batch, batch_analyses, strict=True):
             result["cohort"] = cohort
             strut_id = result["geometry"]["strut_id"]
+            if args.write_compact_profiles:
+                compact_profile_ids.append(int(strut_id))
+                compact_profile_lengths.append(float(result["geometry"]["length_voxels"]))
+                compact_profile_values.append(
+                    arrays["axial_disk_foreground_fraction"].astype(np.float32, copy=True)
+                )
             should_save_profile = (
-                not args.failures_only
-                or not result["same_material_component_connects_a_to_b"]
+                not args.skip_cuboid_artifacts
+                and (
+                    not args.failures_only
+                    or not result["same_material_component_connects_a_to_b"]
+                )
             )
             if should_save_profile:
                 cuboid_path = args.output_dir / f"strut_{strut_id}_cuboid.npz"
@@ -1223,6 +1312,31 @@ def main() -> None:
                         ]["same_component_observed"],
                     }
                 )
+        del batch_analyses
+        gc.collect()
+
+    compact_profiles_by_id: dict[int, np.ndarray] | None = None
+    compact_profile_path: Path | None = None
+    if args.write_compact_profiles:
+        max_profile_length = max(len(profile) for profile in compact_profile_values)
+        compact_profile_array = np.full(
+            (len(compact_profile_values), max_profile_length), np.nan, dtype=np.float32
+        )
+        for index, profile in enumerate(compact_profile_values):
+            compact_profile_array[index, : len(profile)] = profile
+        compact_profile_path = args.output_dir / "all_strut_axial_profiles.npz"
+        np.savez_compressed(
+            compact_profile_path,
+            strut_id=np.asarray(compact_profile_ids, dtype=np.int32),
+            length_voxels=np.asarray(compact_profile_lengths, dtype=np.float32),
+            axial_disk_foreground_fraction=compact_profile_array,
+        )
+        compact_profiles_by_id = {
+            strut_id: profile[~np.isnan(profile)]
+            for strut_id, profile in zip(
+                compact_profile_ids, compact_profile_array, strict=True
+            )
+        }
 
     summary = {
         "purpose": (
@@ -1256,6 +1370,9 @@ def main() -> None:
             "artifact_policy": "not-connected struts only"
             if args.failures_only
             else "all tested struts",
+            "compact_axial_profiles": str(compact_profile_path)
+            if compact_profile_path
+            else None,
         },
         "selection": {
             "method": selection_method,
@@ -1279,7 +1396,12 @@ def main() -> None:
         if args.failures_only
         else results
     )
-    write_overview(overview_results, args.output_dir / "connection_overview.png")
+    if not args.skip_overview:
+        write_overview(
+            overview_results,
+            args.output_dir / "connection_overview.png",
+            compact_profiles=compact_profiles_by_id,
+        )
     write_output_readme(args.output_dir)
     print(f"Tested {len(results)} struts; wrote artifacts to {args.output_dir}")
 
