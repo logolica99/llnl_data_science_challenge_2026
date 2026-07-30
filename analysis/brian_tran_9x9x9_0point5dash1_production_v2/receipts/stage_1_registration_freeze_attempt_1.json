@@ -1,0 +1,28 @@
+{
+  "aligned_graph_accessed": false,
+  "attempt": 1,
+  "canonical_freeze_sha256": "096ffcb11c1352c3ab47057c04b7d502da6d7d4861cc28715d8c327d42c17072",
+  "config_sha256": "9270429da74ead93d01411b982bdb2499aa3c5178995c29c276f3f228e4f29fe",
+  "contract_sha256": "469dbd4588d289f76a27957bb7ade46fbcf6188a7bbb615872ed0e4fde71c9f7",
+  "frozen_artifacts": [
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/registered_graph.json",
+      "phase": "input",
+      "role": "registered_graph",
+      "sha256": "87a9b6806bdd8e7911eb53ff536e036ca3e5c4c9f49fc0c34c0840f29ac386ab"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/registration_report.json",
+      "phase": "input",
+      "role": "registration_report",
+      "sha256": "702a4db404acb9fdf138dc6f2f188ba4643647ab29389951c34ac73b1f4d1a5c"
+    }
+  ],
+  "frozen_at": "2026-07-30T16:59:12.761396Z",
+  "input_handoff_sha256": "cece204908ca1aed5c93bdc28c59916a3c13ec1c025e7f7346135d21c6a765d8",
+  "predecessor_receipt_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+  "run_token": "0cc8bf023935a34263b81f481e2c83851034839f2032272c1c51277e2766fde3",
+  "schema_version": "part2-registration-freeze/1.0.0",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "stage_number": 1
+}

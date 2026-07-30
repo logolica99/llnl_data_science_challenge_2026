@@ -1,0 +1,90 @@
+{
+  "assertions": {
+    "accessed_inputs_within_allowlist": true,
+    "all_paths_repository_relative": true,
+    "all_supplied_inputs_hashed": true,
+    "association_explicit": true,
+    "canonical_ingest_receipt_hash_valid": true,
+    "contract_version_matches": true,
+    "ct_metadata_mcp_integrity_chain_valid": true,
+    "defect_labels_not_derived": true,
+    "forbidden_inputs_not_accessed": true,
+    "graph_ids_references_and_topology_valid": true,
+    "manifest_schema_valid": true,
+    "nominal_graph_normalized_by_mcp": true,
+    "normalized_graph_path_and_hash_bound": true,
+    "output_artifact_hashes_match": true,
+    "registration_not_run": true,
+    "segmentation_not_run": true
+  },
+  "attempt": 1,
+  "canonical_receipt_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+  "completed_at": "2026-07-30T16:44:12.098941Z",
+  "config_sha256": "9270429da74ead93d01411b982bdb2499aa3c5178995c29c276f3f228e4f29fe",
+  "contract_sha256": "612eb2bc5f008accb930ee6da2b8f5386215b360bfd5c4c7faf6afd0a4c15dfc",
+  "contract_version": "agent-stage-contract/1.0.0",
+  "error": null,
+  "failure_kind": null,
+  "input_handoff": {
+    "canonical_sha256": "32a1eb641e079574f58fb16a0b36ee41218f52759f0b3a39af3b1c16f25cf438",
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/handoffs/stage_0_specimen_ingest_attempt_1.json",
+    "sha256": "44d5527843f26828bbb5466bbd7393fd452871fea6941150c9183570d368abff"
+  },
+  "output_artifacts": [
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_mcp_call_receipt.json",
+      "phase": "input",
+      "role": "ct_metadata_mcp_call_receipt",
+      "sha256": "fb4673c94e98178457c34a1457c5f938421d69779074cac2d1ef214740703dd9"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_response.json",
+      "phase": "input",
+      "role": "ct_metadata_mcp_response",
+      "sha256": "cb5a8c820236df9c7ae5006ce588bbc22fa76918473623fb457e9b81079693e7"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_handoff.json",
+      "phase": "input",
+      "role": "data_prep_handoff",
+      "sha256": "7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ingest_receipt.json",
+      "phase": "input",
+      "role": "ingest_receipt",
+      "sha256": "8cade5e748ec8bd346c81507d85c6507bdaef65005b363b87b6288639ba706da"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ingest_request.json",
+      "phase": "input",
+      "role": "ingest_request",
+      "sha256": "cde65342c167121e981a9d75b15e01876db5c3c3378d40606f584cc71dcc4a14"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json",
+      "phase": "input",
+      "role": "specimen_manifest",
+      "sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz",
+      "phase": "input",
+      "role": "normalized_nominal_graph",
+      "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+    }
+  ],
+  "owner": "specimen_ingest",
+  "predecessor_receipt_sha256": null,
+  "registration_freeze": null,
+  "registration_mode": "autonomous_v2",
+  "run_token": "bed8df7cf47a8c8d341218b88713d16b1d287cee5c7fe101a724721dee492c35",
+  "schema_version": "part2-stage-receipt/1.1.0",
+  "scoped_handoffs": [],
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "stage": "specimen_ingest",
+  "stage_number": 0,
+  "stage_policy": null,
+  "supplemental_handoffs": [],
+  "terminal_state": "pass"
+}

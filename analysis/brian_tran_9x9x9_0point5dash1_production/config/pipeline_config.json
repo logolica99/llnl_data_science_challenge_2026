@@ -1,0 +1,7 @@
+{
+  "design_id": "octet_truss_9x9x9",
+  "frozen": true,
+  "registration_mode": "autonomous_v2",
+  "requested_analysis_scope": "roi_screening",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production"
+}

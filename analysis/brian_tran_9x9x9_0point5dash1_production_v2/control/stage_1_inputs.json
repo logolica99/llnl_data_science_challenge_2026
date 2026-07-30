@@ -1,0 +1,7 @@
+[
+  {"path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_handoff.json","sha256":"7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac","role":"data_prep_handoff","consumer":"data_prep"},
+  {"path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json","sha256":"eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e","role":"specimen_manifest","consumer":"data_prep"},
+  {"path":"data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif","sha256":"1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79","role":"ct_volume","consumer":"data_prep"},
+  {"path":"data/missing_struts/octet_truss_9x9x9.json","sha256":"af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2","role":"nominal_graph","consumer":"data_prep"},
+  {"path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz","sha256":"e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f","role":"normalized_nominal_graph","consumer":"data_prep"}
+]

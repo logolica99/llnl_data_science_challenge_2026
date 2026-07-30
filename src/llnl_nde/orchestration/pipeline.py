@@ -149,21 +149,8 @@ MCP_TOOL_ARGUMENT_FIELDS = {
         {
             "input_filepath",
             "output_directory",
-            "histogram_encoding",
-            "edge_slices_excluded",
-            "chunk_voxels",
-            "coarse_bins",
-            "peak_smoothing_sigma_bins",
-            "peak_prominence_fraction",
-            "minimum_significant_peaks",
-            "minimum_foreground_fraction",
-            "maximum_foreground_fraction",
-            "minimum_otsu_separability",
-            "minimum_class_mean_separation_sigma",
+            "analysis_policy_artifact_filepath",
             "registration_mode",
-            "enforce_reference_replay",
-            "reference_threshold",
-            "reference_foreground_voxels",
             "overwrite",
         }
     ),
@@ -197,16 +184,6 @@ MCP_TOOL_ARGUMENT_FIELDS = {
             "canonical_mask_filepath",
             "mask_comparison_report_filepath",
             "output_filepath",
-            "registration_mode",
-            "overwrite",
-        }
-    ),
-    "visualize_slice": frozenset(
-        {
-            "input_filepath",
-            "output_filepath",
-            "slice_index",
-            "axis",
             "registration_mode",
             "overwrite",
         }
@@ -3861,6 +3838,10 @@ def _validate_stage_policy(
             ("volume_info", "input_filepath"): ct_path,
             ("replay_exact_otsu", "input_filepath"): ct_path,
             ("replay_exact_otsu", "output_directory"): replay_directory,
+            (
+                "replay_exact_otsu",
+                "analysis_policy_artifact_filepath",
+            ): specimen_manifest_path,
             ("segment_ct_dataset", "input_filepath"): ct_path,
             ("segment_ct_dataset", "output_filepath"): output_path(
                 "canonical_segmentation_mask"
@@ -3890,10 +3871,6 @@ def _validate_stage_policy(
                 "verify_canonical_segmentation",
                 "output_filepath",
             ): output_path("segmentation_verification_mcp_response"),
-            ("visualize_slice", "input_filepath"): ct_path,
-            ("visualize_slice", "output_filepath"): output_path(
-                "junction_overlay"
-            ),
             ("register_lattice_to_ct", "nominal_graph_filepath"): nominal_path,
             ("register_lattice_to_ct", "ct_filepath"): ct_path,
             ("register_lattice_to_ct", "output_graph_filepath"): output_path(
@@ -3943,6 +3920,10 @@ def _validate_stage_policy(
             ): specimen_manifest_path,
             (
                 "compute_registration_qa",
+                "slice_output_filepath",
+            ): output_path("junction_overlay"),
+            (
+                "compute_registration_qa",
                 "bias_output_filepath",
             ): output_path("spatial_bias_figure"),
         }
@@ -3968,7 +3949,6 @@ def _validate_stage_policy(
                     "segment_ct_dataset",
                     "compare_segmentation_masks",
                     "verify_canonical_segmentation",
-                    "visualize_slice",
                     "register_lattice_to_ct",
                     "localize_lattice_nodes",
                     "compute_registration_qa",
@@ -4812,9 +4792,10 @@ def _validate_stage_output_documents(
         ),
     }
     replay_arguments = arguments_for("replay_exact_otsu")
-    requested_otsu_recipe = {
-        field: replay_arguments.get(field) for field in expected_otsu_recipe
-    }
+    otsu_document_hashes = otsu_document.get("hashes")
+    otsu_policy_artifact = otsu_document.get("analysis_policy_artifact")
+    specimen_manifest_hash = policy["source_hashes"].get("specimen_manifest")
+    segmentation_policy_sha256 = canonical_json_sha256(segmentation_parameters)
     if (
         not finite_number(otsu_threshold)
         or replay_result != otsu_document
@@ -4825,8 +4806,10 @@ def _validate_stage_output_documents(
         or otsu_document.get("threshold_comparison")
         != segmentation_parameters.get("comparison")
         or otsu_document.get("recipe") != expected_otsu_recipe
-        or requested_otsu_recipe != expected_otsu_recipe
-        or replay_arguments.get("enforce_reference_replay") is not False
+        or replay_arguments.get("analysis_policy_artifact_filepath")
+        != arguments_for("verify_canonical_segmentation").get(
+            "analysis_policy_artifact_filepath"
+        )
         or otsu_document.get("source_path")
         != arguments_for("replay_exact_otsu").get("input_filepath")
         or otsu_document.get("registration_mode")
@@ -4841,6 +4824,22 @@ def _validate_stage_output_documents(
         or otsu_provenance.get("threshold_selected_per_scan") is not True
         or otsu_provenance.get("target_foreground_fraction_used") is not False
         or otsu_provenance.get("defect_labels_read") is not False
+        or otsu_provenance.get("policy_binding") != "hashed_analysis_parameters"
+        or not isinstance(otsu_document_hashes, Mapping)
+        or otsu_document_hashes.get("input_sha256") != ct_hash
+        or otsu_document_hashes.get("analysis_parameters_sha256")
+        != analysis_parameters_sha256
+        or otsu_document_hashes.get("segmentation_policy_sha256")
+        != segmentation_policy_sha256
+        or otsu_document_hashes.get("analysis_policy_artifact_sha256")
+        != specimen_manifest_hash
+        or not isinstance(otsu_policy_artifact, Mapping)
+        or otsu_policy_artifact
+        != {
+            "path": replay_arguments.get("analysis_policy_artifact_filepath"),
+            "sha256": specimen_manifest_hash,
+            "role": "specimen_manifest",
+        }
         or not isinstance(replay_hashes, Mapping)
         or replay_hashes.get("input_sha256") != ct_hash
         or replay_hashes.get("histogram_sha256")
@@ -4849,6 +4848,12 @@ def _validate_stage_output_documents(
         != output_hashes.get("exact_histogram")
         or replay_hashes.get("report_artifact_sha256")
         != output_hashes.get("otsu_report")
+        or replay_hashes.get("analysis_parameters_sha256")
+        != analysis_parameters_sha256
+        or replay_hashes.get("segmentation_policy_sha256")
+        != segmentation_policy_sha256
+        or replay_hashes.get("analysis_policy_artifact_sha256")
+        != specimen_manifest_hash
     ):
         raise ReceiptValidationError(
             "Stage 1 exact Otsu response/result artifact is inconsistent"

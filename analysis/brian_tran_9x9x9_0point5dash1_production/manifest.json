@@ -1,0 +1,403 @@
+{
+  "artifact_index": [
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_mcp_call_receipt.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ct_metadata_mcp_call_receipt",
+      "sensitivity": null,
+      "sha256": "1987a1115c4b2bd181f393c4ca484c18483a8fe2a59ef795f9aa66c23336cbc6",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_response.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ct_metadata_mcp_response",
+      "sensitivity": null,
+      "sha256": "eadf7fe213a82dfa4e6a47e6105f430ee0465a46891185ee295480c3bf8abe3f",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/data_prep_handoff.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "data_prep_handoff",
+      "sensitivity": null,
+      "sha256": "4feb3ca4519cbc6d28093ec0c2f46c22afa47c6ce474d2c1c396cbc97aeec3d0",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_receipt.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ingest_receipt",
+      "sensitivity": null,
+      "sha256": "95096637fca6250f95253322f338dad7fbbaaff5f973c2d50d3ec026520aa95d",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_request.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ingest_request",
+      "sensitivity": null,
+      "sha256": "9d36472cce2b821cabd619d8e62af5990fea8cfb9914e6809283b3f75ac51bcf",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/specimen_manifest.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "specimen_manifest",
+      "sensitivity": null,
+      "sha256": "1857f18e818a82e03e8aec73df8dc087b4ffea827cca6493d48ec9c3912277ce",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/design/normalized_nominal_graph.npz",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "normalized_nominal_graph",
+      "sensitivity": null,
+      "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f",
+      "stage_number": 0,
+      "state": "active"
+    }
+  ],
+  "config": {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/pipeline_config.json",
+    "sha256": "196fd93afa4044dbef41b2056cbe4d8365aef67dcb396c241370606bfbfd905b"
+  },
+  "created_at": "2026-07-30T16:21:21.493645Z",
+  "current_stage": 1,
+  "events": [
+    {
+      "action": "pipeline_created",
+      "details": {
+        "registration_mode": "autonomous_v2"
+      },
+      "sequence": 0,
+      "stage_number": 0,
+      "timestamp": "2026-07-30T16:21:21.493645Z"
+    },
+    {
+      "action": "stage_started",
+      "details": {
+        "attempt": 1,
+        "run_token": "4dc4381e317fc44b3d73f77ee0786cad5b313ed4f461c4ecf913d23f34dc9083"
+      },
+      "sequence": 1,
+      "stage_number": 0,
+      "timestamp": "2026-07-30T16:23:19.128564Z"
+    },
+    {
+      "action": "stage_completed",
+      "details": {
+        "attempt": 1,
+        "effective_state": "pass",
+        "receipt_sha256": "6519f63bd3c22b3017edcc8b1d51be2548e6f4c6b3cec65f255a63427a495d06",
+        "reported_state": "pass"
+      },
+      "sequence": 2,
+      "stage_number": 0,
+      "timestamp": "2026-07-30T16:26:03.832371Z"
+    },
+    {
+      "action": "dependency_halt",
+      "details": {
+        "code": "missing_or_incompatible_dependency",
+        "failures": [
+          {
+            "kind": "mcp_tool",
+            "name": "segmentation-tools.visualize_slice",
+            "reason": "missing"
+          }
+        ],
+        "fallback_used": false
+      },
+      "sequence": 3,
+      "stage_number": 1,
+      "timestamp": "2026-07-30T16:28:19.830143Z"
+    }
+  ],
+  "manifest_sha256": "1369caa00578c82a1338167c9c344f724de2454b7fece8612f18594a0c938d60",
+  "pipeline_state": "halt",
+  "predecessor_receipt_sha256": "6519f63bd3c22b3017edcc8b1d51be2548e6f4c6b3cec65f255a63427a495d06",
+  "registration_mode": "autonomous_v2",
+  "revision": 3,
+  "schema_version": "part2-pipeline-manifest/1.0.0",
+  "sealed_evaluation": {
+    "consumed": false,
+    "consumed_at": null,
+    "run_token": null,
+    "stage_attempt": null
+  },
+  "sensitive_artifact_hashes": {
+    "aligned_graph": [],
+    "defect_labels": [],
+    "development_labels": [],
+    "sealed_labels": []
+  },
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production",
+  "stage_order": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "stages": {
+    "0": {
+      "attempt_count": 1,
+      "attempts": [
+        {
+          "attempt": 1,
+          "completed_at": "2026-07-30T16:26:03.832371Z",
+          "effective_terminal_state": "pass",
+          "failure_kind": null,
+          "handoff": {
+            "canonical_sha256": "8ae59c9987124dcdfd9c2b2d89c9fc4533271b40fddc985ab8cd0e4b067cf8d4",
+            "path": "analysis/brian_tran_9x9x9_0point5dash1_production/handoffs/stage_0_specimen_ingest_attempt_1.json",
+            "sha256": "b1c33ea6b77b632fb513ab70141bc70abde0cb4d9508f7f37d3a832f9169193a"
+          },
+          "input_artifacts": [
+            {
+              "consumer": "specimen_ingest",
+              "path": ".agents/skills/volume-metadata/SKILL.md",
+              "phase": "input",
+              "role": "volume_metadata_skill",
+              "sha256": "6c450ee49222653417914a18c5fc064e8a3030165c1c20bfd629a0a2d5a57ece"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/runtime_request.json",
+              "phase": "input",
+              "role": "scientist_intake_request",
+              "sha256": "cf0a433e25d34833ac5f0cb6bfb335be9c8f74249989a0a75797e46a3d30e718"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "analysis/schema/specimen_manifest.schema.json",
+              "phase": "input",
+              "role": "specimen_manifest_schema",
+              "sha256": "b05639f5b554f51d824dd53357adbcca75510a0224c2478780a668bf929718d9"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "data/missing_struts/octet_truss_9x9x9.json",
+              "phase": "input",
+              "role": "nominal_graph",
+              "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+              "phase": "input",
+              "role": "ct_volume",
+              "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+            }
+          ],
+          "output_artifacts": [
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_mcp_call_receipt.json",
+              "phase": "output",
+              "producer": "specimen_ingest",
+              "role": "ct_metadata_mcp_call_receipt",
+              "sha256": "1987a1115c4b2bd181f393c4ca484c18483a8fe2a59ef795f9aa66c23336cbc6"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_response.json",
+              "phase": "output",
+              "producer": "specimen_ingest",
+              "role": "ct_metadata_mcp_response",
+              "sha256": "eadf7fe213a82dfa4e6a47e6105f430ee0465a46891185ee295480c3bf8abe3f"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/data_prep_handoff.json",
+              "phase": "output",
+              "producer": "specimen_ingest",
+              "role": "data_prep_handoff",
+              "sha256": "4feb3ca4519cbc6d28093ec0c2f46c22afa47c6ce474d2c1c396cbc97aeec3d0"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_receipt.json",
+              "phase": "output",
+              "producer": "specimen_ingest",
+              "role": "ingest_receipt",
+              "sha256": "95096637fca6250f95253322f338dad7fbbaaff5f973c2d50d3ec026520aa95d"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_request.json",
+              "phase": "output",
+              "producer": "specimen_ingest",
+              "role": "ingest_request",
+              "sha256": "9d36472cce2b821cabd619d8e62af5990fea8cfb9914e6809283b3f75ac51bcf"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/specimen_manifest.json",
+              "phase": "output",
+              "producer": "specimen_ingest",
+              "role": "specimen_manifest",
+              "sha256": "1857f18e818a82e03e8aec73df8dc087b4ffea827cca6493d48ec9c3912277ce"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production/design/normalized_nominal_graph.npz",
+              "phase": "output",
+              "producer": "specimen_ingest",
+              "role": "normalized_nominal_graph",
+              "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+            }
+          ],
+          "predecessor_receipt_sha256": null,
+          "receipt": {
+            "canonical_sha256": "6519f63bd3c22b3017edcc8b1d51be2548e6f4c6b3cec65f255a63427a495d06",
+            "path": "analysis/brian_tran_9x9x9_0point5dash1_production/receipts/stage_0_specimen_ingest_attempt_1.json",
+            "sha256": "757f409d1760b71972ce967059645a582facf65744e305b5c9b5bc563ea11cb7"
+          },
+          "registration_freeze": null,
+          "reported_terminal_state": "pass",
+          "run_token": "4dc4381e317fc44b3d73f77ee0786cad5b313ed4f461c4ecf913d23f34dc9083",
+          "scoped_handoffs": [],
+          "stage_policy": null,
+          "started_at": "2026-07-30T16:23:19.128564Z",
+          "state": "pass",
+          "supplemental_handoffs": []
+        }
+      ],
+      "completed_at": "2026-07-30T16:26:03.832371Z",
+      "completion_receipt": {
+        "canonical_sha256": "6519f63bd3c22b3017edcc8b1d51be2548e6f4c6b3cec65f255a63427a495d06",
+        "path": "analysis/brian_tran_9x9x9_0point5dash1_production/receipts/stage_0_specimen_ingest_attempt_1.json",
+        "sha256": "757f409d1760b71972ce967059645a582facf65744e305b5c9b5bc563ea11cb7"
+      },
+      "contract": {
+        "path": "analysis/contracts/specimen_ingest.json",
+        "sha256": "612eb2bc5f008accb930ee6da2b8f5386215b360bfd5c4c7faf6afd0a4c15dfc",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": 1,
+      "execution_kind": "hybrid",
+      "maximum_attempts": 2,
+      "name": "specimen_ingest",
+      "one_shot": false,
+      "owner": "specimen_ingest",
+      "stage_number": 0,
+      "state": "pass",
+      "unlocked_at": "2026-07-30T16:21:21.493645Z"
+    },
+    "1": {
+      "attempt_count": 0,
+      "attempts": [],
+      "completed_at": "2026-07-30T16:28:19.830143Z",
+      "completion_receipt": {
+        "canonical_sha256": "a4785158f4313270fef32f4c6a5f656849f1351797834a2bc2e4426697b65e52",
+        "path": "analysis/brian_tran_9x9x9_0point5dash1_production/receipts/stage_1_data_prep_dependency_halt.json",
+        "sha256": "83032ffdada7b55ee665aafeb66fe904a22b36497b5b119a22a38d8c2a695006"
+      },
+      "contract": {
+        "path": "analysis/contracts/data_prep.json",
+        "sha256": "5cdc013cf66ec52ba96a0ba7b7d4ab3562506b5081b2b4926618b71f8c7df7e4",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": {
+        "code": "missing_or_incompatible_dependency",
+        "failures": [
+          {
+            "kind": "mcp_tool",
+            "name": "segmentation-tools.visualize_slice",
+            "reason": "missing"
+          }
+        ],
+        "fallback_used": false
+      },
+      "current_attempt": null,
+      "execution_kind": "hybrid",
+      "maximum_attempts": 2,
+      "name": "data_prep",
+      "one_shot": false,
+      "owner": "data_prep",
+      "stage_number": 1,
+      "state": "halt",
+      "unlocked_at": "2026-07-30T16:26:03.832371Z"
+    },
+    "2": {
+      "attempt_count": 0,
+      "attempts": [],
+      "completed_at": null,
+      "completion_receipt": null,
+      "contract": {
+        "path": "analysis/contracts/strut_metrics.json",
+        "sha256": "544bdbac952846a846ea7d1216b72abb8c6cdf8c29eca663dd8958fad250cb40",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": null,
+      "execution_kind": "deterministic",
+      "maximum_attempts": 1,
+      "name": "strut_metrics",
+      "one_shot": false,
+      "owner": "strut_metrics",
+      "stage_number": 2,
+      "state": "locked",
+      "unlocked_at": null
+    },
+    "3": {
+      "attempt_count": 0,
+      "attempts": [],
+      "completed_at": null,
+      "completion_receipt": null,
+      "contract": {
+        "path": "analysis/contracts/defect_analysis.json",
+        "sha256": "4f48861493543fbf076cfc29e72d965532e09dc6080769551e38a0bb8186588b",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": null,
+      "execution_kind": "agent_judgment",
+      "maximum_attempts": 2,
+      "name": "defect_analysis",
+      "one_shot": false,
+      "owner": "defect_lead",
+      "stage_number": 3,
+      "state": "locked",
+      "unlocked_at": null
+    },
+    "4": {
+      "attempt_count": 0,
+      "attempts": [],
+      "completed_at": null,
+      "completion_receipt": null,
+      "contract": {
+        "path": "analysis/contracts/nde_report.json",
+        "sha256": "ddca0ac44d90420a171ec2fb4bf24b3d9071efe9fb73d8f6ddc84b48630872c9",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": null,
+      "execution_kind": "agent_judgment",
+      "maximum_attempts": 2,
+      "name": "nde_report",
+      "one_shot": false,
+      "owner": "report_agent",
+      "stage_number": 4,
+      "state": "locked",
+      "unlocked_at": null
+    }
+  },
+  "updated_at": "2026-07-30T16:28:19.830143Z"
+}

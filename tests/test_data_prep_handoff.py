@@ -436,15 +436,26 @@ class DataPrepHandoffTests(unittest.TestCase):
             {
                 "source_path": self.ct.relative_to(self.root).as_posix(),
                 "registration_mode": "autonomous_v2",
+                "analysis_policy_artifact": {
+                    "path": manifest_path.relative_to(self.root).as_posix(),
+                    "sha256": sha256_file(manifest_path),
+                    "role": "specimen_manifest",
+                },
                 "hashes": {
                     "input_sha256": ct_hash,
                     "config_sha256": replay_config_sha256,
+                    "analysis_parameters_sha256": config_hash,
+                    "segmentation_policy_sha256": canonical_json_sha256(
+                        manifest["analysis_parameters"]["segmentation"]
+                    ),
+                    "analysis_policy_artifact_sha256": sha256_file(manifest_path),
                 },
                 "provenance": {
                     "registration_mode": "autonomous_v2",
                     "threshold_selected_per_scan": True,
                     "target_foreground_fraction_used": False,
                     "defect_labels_read": False,
+                    "policy_binding": "hashed_analysis_parameters",
                 },
             }
         )
@@ -1164,40 +1175,14 @@ class DataPrepHandoffTests(unittest.TestCase):
         self.assertFalse(replay_artifact["changed"])
         self.assertEqual(artifact["sha256"], replay_artifact["sha256"])
 
-    def test_enforced_reference_replay_gates_are_verified_as_stricter_evidence(
+    def test_exact_otsu_policy_binding_is_required_by_verifier(
         self,
     ) -> None:
         intake = self._ingest()
         manifest_path = Path(intake["paths"]["specimen_manifest"])
         self._data_prep_result(manifest_path)
         self.segmentation_verification.unlink()
-        report = load_json(self.otsu_report)
-        reference_gates = {
-            "reference_threshold_matches": True,
-            "reference_foreground_count_matches": True,
-        }
-        report["reference_replay"] = {
-            "enforced": True,
-            "expected_threshold": report["threshold"],
-            "expected_foreground_voxels": report["foreground_voxel_count"],
-            "gates": reference_gates,
-        }
-        report["gates"].update(reference_gates)
-        report["hashes"]["config_sha256"] = canonical_json_sha256(
-            {
-                "recipe": report["recipe"],
-                "registration_mode": report["registration_mode"],
-                "enforce_reference_replay": True,
-                "reference_threshold": report["threshold"],
-                "reference_foreground_voxels": report[
-                    "foreground_voxel_count"
-                ],
-            }
-        )
-        self.otsu_report.write_text(
-            json.dumps(report, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        accepted_report = load_json(self.otsu_report)
 
         def verify() -> object:
             with patch.object(mcp_common, "REPOSITORY_ROOT", self.root):
@@ -1223,48 +1208,32 @@ class DataPrepHandoffTests(unittest.TestCase):
         accepted = verify()
         self.assertEqual("ok", accepted.status)
         self.assertEqual("pass", accepted.gate)
-        accepted_report = json.loads(json.dumps(report))
 
-        def stale_downgrade(value: dict[str, object]) -> None:
-            value["reference_replay"]["enforced"] = False
-            value["gates"].pop("reference_threshold_matches")
-            value["gates"].pop("reference_foreground_count_matches")
+        def missing_policy_artifact(value: dict[str, object]) -> None:
+            value.pop("analysis_policy_artifact")
 
-        def wrong_reference(value: dict[str, object]) -> None:
-            value["reference_replay"]["expected_threshold"] = value["threshold"] + 1
+        def stale_policy_hash(value: dict[str, object]) -> None:
+            value["hashes"]["analysis_parameters_sha256"] = "0" * 64
 
-        def integer_reference_gate(value: dict[str, object]) -> None:
-            value["reference_replay"]["gates"][
-                "reference_threshold_matches"
-            ] = 1
+        def missing_policy_binding(value: dict[str, object]) -> None:
+            value["provenance"].pop("policy_binding")
 
-        def float_reference_count_with_rebound_config(
-            value: dict[str, object],
-        ) -> None:
-            reference = value["reference_replay"]
-            reference["expected_foreground_voxels"] = float(
-                reference["expected_foreground_voxels"]
-            )
-            value["hashes"]["config_sha256"] = canonical_json_sha256(
-                {
-                    "recipe": value["recipe"],
-                    "registration_mode": value["registration_mode"],
-                    "enforce_reference_replay": reference["enforced"],
-                    "reference_threshold": reference["expected_threshold"],
-                    "reference_foreground_voxels": reference[
-                        "expected_foreground_voxels"
-                    ],
-                }
-            )
+        def legacy_reference_replay(value: dict[str, object]) -> None:
+            value["reference_replay"] = {
+                "enforced": True,
+                "expected_threshold": value["threshold"],
+                "expected_foreground_voxels": value["foreground_voxel_count"],
+                "gates": {
+                    "reference_threshold_matches": True,
+                    "reference_foreground_count_matches": True,
+                },
+            }
 
         for name, mutate in (
-            ("stale-true-to-false-downgrade", stale_downgrade),
-            ("wrong-reference", wrong_reference),
-            ("integer-reference-gate", integer_reference_gate),
-            (
-                "float-reference-count-with-rebound-config",
-                float_reference_count_with_rebound_config,
-            ),
+            ("missing-policy-artifact", missing_policy_artifact),
+            ("stale-policy-hash", stale_policy_hash),
+            ("missing-policy-binding", missing_policy_binding),
+            ("legacy-reference-replay", legacy_reference_replay),
         ):
             with self.subTest(case=name):
                 self.segmentation_verification.unlink(missing_ok=True)

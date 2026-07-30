@@ -17,7 +17,6 @@ from llnl_nde.core import (
     replay_exact_otsu as _replay_exact_otsu,
     segment_ct_dataset as _segment_ct_dataset_core,
     success_response as _success_response,
-    visualize_slice as _visualize_slice_core,
     volume_metadata as _volume_metadata,
     write_otsu_artifacts as _write_otsu_artifacts,
 )
@@ -43,6 +42,141 @@ from .registry import mcp
 SEGMENTATION_VERIFICATION_EVIDENCE_SCHEMA_VERSION = (
     "segmentation-verification-mcp-evidence/1.0.0"
 )
+_EXACT_OTSU_HASH_FIELDS = frozenset(
+    {
+        "input_sha256",
+        "config_sha256",
+        "analysis_parameters_sha256",
+        "segmentation_policy_sha256",
+        "analysis_policy_artifact_sha256",
+    }
+)
+_EXACT_OTSU_PROVENANCE_FIELDS = frozenset(
+    {
+        "registration_mode",
+        "threshold_selected_per_scan",
+        "target_foreground_fraction_used",
+        "defect_labels_read",
+        "policy_binding",
+    }
+)
+
+
+def _exact_otsu_recipe_from_policy(
+    segmentation_policy: dict[str, Any],
+    ct_shape: list[Any] | tuple[Any, ...],
+) -> dict[str, Any]:
+    """Derive the closed exact-Otsu recipe from the frozen segmentation policy."""
+
+    if (
+        not isinstance(ct_shape, (list, tuple))
+        or len(ct_shape) != 3
+        or any(
+            not isinstance(axis, int) or isinstance(axis, bool) or axis < 1
+            for axis in ct_shape
+        )
+    ):
+        raise ValueError("Specimen manifest CT shape is invalid")
+    return {
+        "histogram_encoding": segmentation_policy.get("histogram_encoding"),
+        "edge_slices_excluded": segmentation_policy.get("edge_slices_excluded"),
+        "chunk_voxels": int(segmentation_policy.get("chunk_depth", 0))
+        * int(ct_shape[1])
+        * int(ct_shape[2]),
+        "coarse_bins": segmentation_policy.get("coarse_bins"),
+        "peak_smoothing_sigma_bins": segmentation_policy.get(
+            "peak_smoothing_sigma_bins"
+        ),
+        "peak_prominence_fraction": segmentation_policy.get(
+            "peak_prominence_fraction"
+        ),
+        "minimum_significant_peaks": segmentation_policy.get(
+            "minimum_significant_peaks"
+        ),
+        "minimum_foreground_fraction": segmentation_policy.get(
+            "minimum_foreground_fraction"
+        ),
+        "maximum_foreground_fraction": segmentation_policy.get(
+            "maximum_foreground_fraction"
+        ),
+        "minimum_otsu_separability": segmentation_policy.get(
+            "minimum_otsu_separability"
+        ),
+        "minimum_class_mean_separation_sigma": segmentation_policy.get(
+            "minimum_class_mean_separation_sigma"
+        ),
+    }
+
+
+def _load_exact_otsu_policy_binding(
+    analysis_policy_artifact_filepath: str,
+    *,
+    registration_mode: Literal["autonomous_v2"],
+    ct_relative: str,
+    ct_sha256: str,
+) -> dict[str, Any]:
+    """Bind exact Otsu to the frozen specimen manifest policy and CT identity."""
+
+    policy_path, policy_relative = _repository_path(
+        analysis_policy_artifact_filepath,
+        must_exist=True,
+        expected_suffixes={".json"},
+    )
+    _validate_specimen_manifest(
+        policy_path,
+        repository_root=common.REPOSITORY_ROOT,
+        verify_files=False,
+    )
+    manifest = _load_json(policy_path)
+    analysis_parameters = manifest.get("analysis_parameters")
+    if not isinstance(analysis_parameters, dict):
+        raise ValueError("Specimen manifest has no analysis_parameters object")
+    analysis_parameters_sha256 = _canonical_json_sha256(analysis_parameters)
+    if manifest.get("analysis_parameters_sha256") != analysis_parameters_sha256:
+        raise ValueError("Specimen manifest analysis_parameters hash is stale")
+    if analysis_parameters.get("requested_analysis_scope") not in {
+        "roi_screening",
+        "direct_metrology",
+    }:
+        raise ValueError("Specimen manifest requested analysis scope is invalid")
+    if analysis_parameters.get("registration", {}).get("mode") != registration_mode:
+        raise ValueError("Exact-Otsu registration mode is stale")
+    segmentation_policy = analysis_parameters.get("segmentation")
+    if not isinstance(segmentation_policy, dict):
+        raise ValueError("Specimen manifest has no segmentation policy")
+    ct_artifact = manifest.get("inputs", {}).get("ct")
+    ct_metadata = manifest.get("inputs", {}).get("ct_metadata")
+    if not isinstance(ct_artifact, dict) or not isinstance(ct_metadata, dict):
+        raise ValueError("Specimen manifest CT binding is incomplete")
+    bound_ct_path, bound_ct_relative = _repository_path(
+        str(ct_artifact.get("path", "")),
+        must_exist=True,
+        expected_suffixes={".npy", ".tif", ".tiff"},
+    )
+    if bound_ct_relative != ct_relative:
+        raise ValueError(
+            "Exact-Otsu CT path is not bound to the frozen specimen policy"
+        )
+    if ct_artifact.get("sha256") != ct_sha256 or _sha256_file(bound_ct_path) != ct_sha256:
+        raise ValueError("Specimen manifest CT SHA-256 is stale")
+    recipe = _exact_otsu_recipe_from_policy(
+        segmentation_policy,
+        ct_metadata.get("shape", []),
+    )
+    policy_sha256 = _sha256_file(policy_path)
+    segmentation_policy_sha256 = _canonical_json_sha256(segmentation_policy)
+    return {
+        "manifest": manifest,
+        "policy_path": policy_path,
+        "policy_relative": policy_relative,
+        "policy_sha256": policy_sha256,
+        "analysis_parameters": analysis_parameters,
+        "analysis_parameters_sha256": analysis_parameters_sha256,
+        "segmentation_policy": segmentation_policy,
+        "segmentation_policy_sha256": segmentation_policy_sha256,
+        "recipe": recipe,
+        "ct_metadata": ct_metadata,
+    }
 
 
 @mcp.tool()
@@ -96,26 +230,11 @@ def volume_info(
 def replay_exact_otsu(
     input_filepath: str,
     output_directory: str,
-    histogram_encoding: Literal[
-        "auto", "native_uint16", "full_volume_affine_uint16"
-    ] = "auto",
-    edge_slices_excluded: int = 0,
-    chunk_voxels: int = 8 * 1024 * 1024,
-    coarse_bins: int = 1024,
-    peak_smoothing_sigma_bins: float = 2.0,
-    peak_prominence_fraction: float = 0.003,
-    minimum_significant_peaks: int = 2,
-    minimum_foreground_fraction: float = 0.01,
-    maximum_foreground_fraction: float = 0.35,
-    minimum_otsu_separability: float = 0.45,
-    minimum_class_mean_separation_sigma: float = 0.75,
+    analysis_policy_artifact_filepath: str,
     registration_mode: Literal["autonomous_v2"] = "autonomous_v2",
-    enforce_reference_replay: bool = False,
-    reference_threshold: int = 40054,
-    reference_foreground_voxels: int = 58653410,
     overwrite: bool = False,
 ) -> MCPResponseEnvelope:
-    """Replay per-scan exact Otsu and persist its histogram and diagnostics."""
+    """Replay exact Otsu from the frozen specimen policy and persist diagnostics."""
 
     def operation() -> dict[str, Any]:
         source, source_relative = _repository_path(
@@ -124,57 +243,46 @@ def replay_exact_otsu(
             expected_suffixes={".npy", ".tif", ".tiff"},
         )
         output, _ = _repository_output_directory(output_directory)
-        recipe = {
-            "histogram_encoding": histogram_encoding,
-            "edge_slices_excluded": edge_slices_excluded,
-            "chunk_voxels": chunk_voxels,
-            "coarse_bins": coarse_bins,
-            "peak_smoothing_sigma_bins": peak_smoothing_sigma_bins,
-            "peak_prominence_fraction": peak_prominence_fraction,
-            "minimum_significant_peaks": minimum_significant_peaks,
-            "minimum_foreground_fraction": minimum_foreground_fraction,
-            "maximum_foreground_fraction": maximum_foreground_fraction,
-            "minimum_otsu_separability": minimum_otsu_separability,
-            "minimum_class_mean_separation_sigma": (
-                minimum_class_mean_separation_sigma
-            ),
-        }
+        input_hash = _sha256_file(source)
+        policy_binding = _load_exact_otsu_policy_binding(
+            analysis_policy_artifact_filepath,
+            registration_mode=registration_mode,
+            ct_relative=source_relative,
+            ct_sha256=input_hash,
+        )
+        recipe = policy_binding["recipe"]
         result, histogram = _replay_exact_otsu(source, recipe=recipe)
         result["source_path"] = source_relative
-        reference_gates = {
-            "reference_threshold_matches": result["threshold"] == reference_threshold,
-            "reference_foreground_count_matches": result["foreground_voxel_count"]
-            == reference_foreground_voxels,
-        }
-        if enforce_reference_replay:
-            result["gates"].update(reference_gates)
-            result["overall_pass"] = bool(all(result["gates"].values()))
         config_hash = _config_sha256(
             {
                 "recipe": recipe,
                 "registration_mode": registration_mode,
-                "enforce_reference_replay": enforce_reference_replay,
-                "reference_threshold": reference_threshold,
-                "reference_foreground_voxels": reference_foreground_voxels,
+                "enforce_reference_replay": False,
             }
         )
-        input_hash = _sha256_file(source)
         result["registration_mode"] = registration_mode
-        result["reference_replay"] = {
-            "enforced": enforce_reference_replay,
-            "expected_threshold": reference_threshold,
-            "expected_foreground_voxels": reference_foreground_voxels,
-            "gates": reference_gates,
+        result["analysis_policy_artifact"] = {
+            "path": policy_binding["policy_relative"],
+            "sha256": policy_binding["policy_sha256"],
+            "role": "specimen_manifest",
         }
         result["hashes"] = {
             "input_sha256": input_hash,
             "config_sha256": config_hash,
+            "analysis_parameters_sha256": policy_binding[
+                "analysis_parameters_sha256"
+            ],
+            "segmentation_policy_sha256": policy_binding[
+                "segmentation_policy_sha256"
+            ],
+            "analysis_policy_artifact_sha256": policy_binding["policy_sha256"],
         }
         result["provenance"] = {
             "registration_mode": registration_mode,
             "threshold_selected_per_scan": True,
             "target_foreground_fraction_used": False,
             "defect_labels_read": False,
+            "policy_binding": "hashed_analysis_parameters",
         }
         artifacts = _write_otsu_artifacts(
             output,
@@ -208,6 +316,13 @@ def replay_exact_otsu(
                 "histogram_artifact_sha256": artifacts["histogram"]["sha256"],
                 "report_artifact_sha256": artifacts["report"]["sha256"],
                 "config_sha256": config_hash,
+                "analysis_parameters_sha256": policy_binding[
+                    "analysis_parameters_sha256"
+                ],
+                "segmentation_policy_sha256": policy_binding[
+                    "segmentation_policy_sha256"
+                ],
+                "analysis_policy_artifact_sha256": policy_binding["policy_sha256"],
             },
             warnings=warnings,
         )
@@ -495,43 +610,6 @@ def segment_ct_dataset(
 
 
 @mcp.tool()
-def visualize_slice(
-    input_filepath: str,
-    output_filepath: str,
-    slice_index: int,
-    axis: int = 0,
-    registration_mode: Literal["autonomous_v2"] = "autonomous_v2",
-    overwrite: bool = False,
-) -> MCPResponseEnvelope:
-    """Render one TIFF/NPY slice and return only compact artifact metadata."""
-
-    def operation() -> dict[str, Any]:
-        input_path, _ = _repository_path(
-            input_filepath,
-            must_exist=True,
-            expected_suffixes={".npy", ".tif", ".tiff"},
-        )
-        output_path, _ = _repository_path(
-            output_filepath, must_exist=False, expected_suffixes={".png"}
-        )
-        payload = _visualize_slice_core(
-            input_path,
-            output_path,
-            slice_index=slice_index,
-            axis=axis,
-            registration_mode=registration_mode,
-            overwrite=overwrite,
-        )
-        return _core_response(
-            "visualize_slice",
-            f"Saved axis {axis}, slice {slice_index}",
-            payload,
-        )
-
-    return _run_structured_tool("visualize_slice", operation)
-
-
-@mcp.tool()
 def compare_segmentation_masks(
     raw_filepath: str,
     mask_filepaths: list[str],
@@ -688,35 +766,10 @@ def verify_canonical_segmentation(
         if ct_artifact.get("sha256") != ct_sha256:
             raise ValueError("Specimen manifest CT SHA-256 is stale")
 
-        expected_recipe = {
-            "histogram_encoding": segmentation_policy.get("histogram_encoding"),
-            "edge_slices_excluded": segmentation_policy.get("edge_slices_excluded"),
-            "chunk_voxels": int(segmentation_policy.get("chunk_depth", 0))
-            * int(ct_metadata.get("shape", [0, 0, 0])[1])
-            * int(ct_metadata.get("shape", [0, 0, 0])[2]),
-            "coarse_bins": segmentation_policy.get("coarse_bins"),
-            "peak_smoothing_sigma_bins": segmentation_policy.get(
-                "peak_smoothing_sigma_bins"
-            ),
-            "peak_prominence_fraction": segmentation_policy.get(
-                "peak_prominence_fraction"
-            ),
-            "minimum_significant_peaks": segmentation_policy.get(
-                "minimum_significant_peaks"
-            ),
-            "minimum_foreground_fraction": segmentation_policy.get(
-                "minimum_foreground_fraction"
-            ),
-            "maximum_foreground_fraction": segmentation_policy.get(
-                "maximum_foreground_fraction"
-            ),
-            "minimum_otsu_separability": segmentation_policy.get(
-                "minimum_otsu_separability"
-            ),
-            "minimum_class_mean_separation_sigma": segmentation_policy.get(
-                "minimum_class_mean_separation_sigma"
-            ),
-        }
+        expected_recipe = _exact_otsu_recipe_from_policy(
+            segmentation_policy,
+            ct_metadata.get("shape", []),
+        )
         independently_replayed_otsu, _ = _replay_exact_otsu(
             ct_path,
             recipe=expected_recipe,
@@ -725,6 +778,9 @@ def verify_canonical_segmentation(
         threshold = independently_replayed_otsu.get("threshold")
         otsu_hashes = otsu.get("hashes")
         otsu_provenance = otsu.get("provenance")
+        otsu_policy_artifact = otsu.get("analysis_policy_artifact")
+        policy_sha256 = _sha256_file(policy_path)
+        segmentation_policy_sha256 = _canonical_json_sha256(segmentation_policy)
         exact_otsu_fields = {
             "schema_version",
             "method",
@@ -779,66 +835,11 @@ def verify_canonical_segmentation(
         expected_persisted_gates = (
             dict(independent_gates) if isinstance(independent_gates, dict) else {}
         )
-        reference_replay = otsu.get("reference_replay")
-        reference_replay_valid = reference_replay is None
         expected_config = {
             "recipe": expected_recipe,
             "registration_mode": registration_mode,
             "enforce_reference_replay": False,
         }
-        if isinstance(reference_replay, dict):
-            reference_gates = reference_replay.get("gates")
-            expected_threshold = reference_replay.get("expected_threshold")
-            expected_foreground_voxels = reference_replay.get(
-                "expected_foreground_voxels"
-            )
-            enforced = reference_replay.get("enforced")
-            expected_reference_gates = {
-                "reference_threshold_matches": (
-                    type(expected_threshold) is int
-                    and exact_json_equal(expected_threshold, threshold)
-                ),
-                "reference_foreground_count_matches": (
-                    type(expected_foreground_voxels) is int
-                    and exact_json_equal(
-                        expected_foreground_voxels,
-                        independently_replayed_otsu.get("foreground_voxel_count"),
-                    )
-                ),
-            }
-            reference_replay_valid = (
-                set(reference_replay)
-                == {
-                    "enforced",
-                    "expected_threshold",
-                    "expected_foreground_voxels",
-                    "gates",
-                }
-                and type(enforced) is bool
-                and type(expected_threshold) is int
-                and expected_threshold >= 0
-                and type(expected_foreground_voxels) is int
-                and expected_foreground_voxels >= 0
-                and isinstance(reference_gates, dict)
-                and set(reference_gates) == set(expected_reference_gates)
-                and all(
-                    type(reference_gates.get(name)) is bool
-                    and reference_gates.get(name) is expected
-                    for name, expected in expected_reference_gates.items()
-                )
-            )
-            expected_config = {
-                "recipe": expected_recipe,
-                "registration_mode": registration_mode,
-                "enforce_reference_replay": enforced,
-                "reference_threshold": expected_threshold,
-                "reference_foreground_voxels": expected_foreground_voxels,
-            }
-            if enforced is True:
-                expected_persisted_gates.update(expected_reference_gates)
-                reference_replay_valid = reference_replay_valid and all(
-                    expected_reference_gates.values()
-                )
         expected_otsu_fields = (
             exact_otsu_fields
             | floating_otsu_fields
@@ -848,10 +849,9 @@ def verify_canonical_segmentation(
                 "registration_mode",
                 "hashes",
                 "provenance",
+                "analysis_policy_artifact",
             }
         )
-        if reference_replay is not None:
-            expected_otsu_fields.add("reference_replay")
         if (
             not isinstance(threshold, (int, float))
             or isinstance(threshold, bool)
@@ -867,27 +867,33 @@ def verify_canonical_segmentation(
             or otsu.get("recipe") != expected_recipe
             or otsu.get("overall_pass") is not True
             or exact_otsu_mismatch
-            or not reference_replay_valid
             or not isinstance(persisted_gates, dict)
             or persisted_gates != expected_persisted_gates
             or not all(value is True for value in persisted_gates.values())
             or not isinstance(otsu_hashes, dict)
-            or set(otsu_hashes) != {"input_sha256", "config_sha256"}
+            or set(otsu_hashes) != _EXACT_OTSU_HASH_FIELDS
             or otsu_hashes.get("input_sha256") != ct_sha256
             or otsu_hashes.get("config_sha256")
             != _config_sha256(expected_config)
-            or not isinstance(otsu_provenance, dict)
-            or set(otsu_provenance)
+            or otsu_hashes.get("analysis_parameters_sha256")
+            != analysis_parameters_sha256
+            or otsu_hashes.get("segmentation_policy_sha256")
+            != segmentation_policy_sha256
+            or otsu_hashes.get("analysis_policy_artifact_sha256") != policy_sha256
+            or not isinstance(otsu_policy_artifact, dict)
+            or otsu_policy_artifact
             != {
-                "registration_mode",
-                "threshold_selected_per_scan",
-                "target_foreground_fraction_used",
-                "defect_labels_read",
+                "path": policy_relative,
+                "sha256": policy_sha256,
+                "role": "specimen_manifest",
             }
+            or not isinstance(otsu_provenance, dict)
+            or set(otsu_provenance) != _EXACT_OTSU_PROVENANCE_FIELDS
             or otsu_provenance.get("registration_mode") != registration_mode
             or otsu_provenance.get("threshold_selected_per_scan") is not True
             or otsu_provenance.get("target_foreground_fraction_used") is not False
             or otsu_provenance.get("defect_labels_read") is not False
+            or otsu_provenance.get("policy_binding") != "hashed_analysis_parameters"
         ):
             raise ValueError(
                 "Exact-Otsu report is not bound to the frozen specimen policy"

@@ -42,11 +42,6 @@
       },
       {
         "server": "segmentation-tools",
-        "name": "visualize_slice",
-        "response_schema_version": "part2-mcp-response/1.0.0"
-      },
-      {
-        "server": "segmentation-tools",
         "name": "register_lattice_to_ct",
         "response_schema_version": "part2-mcp-response/1.0.0"
       },

@@ -1,0 +1,576 @@
+{
+  "artifacts": {
+    "spatial_statistics_figure": {
+      "path": "/Users/jubaerjami/Documents/llnl_data_science_challenge_2026/analysis/brian_tran_hackathon/stage3/spatial_statistics.png",
+      "retention": "committed",
+      "role": "spatial_statistics_figure",
+      "sha256": "fc002f1c27601ad9a28cf433503d85c5d262256dcac642e469ec2ad06ef821b3"
+    }
+  },
+  "axis_thirds_all_struts": {
+    "x": [
+      6211,
+      6169,
+      6088
+    ],
+    "y": [
+      6117,
+      6177,
+      6174
+    ],
+    "z": [
+      6048,
+      6357,
+      6063
+    ]
+  },
+  "bounds": {
+    "maximum_xyz": [
+      770.7909874766895,
+      760.6233594402669,
+      740.4314503920872
+    ],
+    "minimum_xyz": [
+      60.71833848557723,
+      50.33735221129909,
+      25.383959272586395
+    ],
+    "span_xyz": [
+      710.0726489911123,
+      710.2860072289678,
+      715.0474911195008
+    ]
+  },
+  "class_counts": {
+    "broken": 81,
+    "missing": 92,
+    "present": 18295,
+    "thin": 0
+  },
+  "class_fractions": {
+    "broken": 0.0043859649122807015,
+    "missing": 0.004981589776911414,
+    "present": 0.9906324453108079,
+    "thin": 0.0
+  },
+  "counts": {
+    "bent": 0,
+    "cells": 729,
+    "nodes": 10206,
+    "primary_defects": 173,
+    "struts": 18468
+  },
+  "defect_clusters": {
+    "cluster_strut_ids": [
+      [
+        8136,
+        8137,
+        8140,
+        8146,
+        8151
+      ],
+      [
+        6254,
+        6259,
+        6265
+      ],
+      [
+        8164,
+        8175,
+        8181
+      ],
+      [
+        11791,
+        11793,
+        11801
+      ],
+      [
+        12036,
+        12040,
+        12044
+      ],
+      [
+        13884,
+        13888,
+        13892
+      ],
+      [
+        4090,
+        4101
+      ],
+      [
+        4747,
+        4752
+      ],
+      [
+        4923,
+        4931
+      ],
+      [
+        8477,
+        8484
+      ],
+      [
+        10027,
+        10030
+      ],
+      [
+        11875,
+        11878
+      ],
+      [
+        12009,
+        12017
+      ],
+      [
+        12281,
+        12286
+      ],
+      [
+        12488,
+        12497
+      ],
+      [
+        13663,
+        13665
+      ],
+      [
+        13857,
+        13865
+      ],
+      [
+        14296,
+        14297
+      ],
+      [
+        14625,
+        14637
+      ],
+      [
+        10
+      ],
+      [
+        178
+      ],
+      [
+        214
+      ],
+      [
+        434
+      ],
+      [
+        846
+      ],
+      [
+        946
+      ],
+      [
+        1310
+      ],
+      [
+        1666
+      ],
+      [
+        1728
+      ],
+      [
+        2061
+      ],
+      [
+        2074
+      ],
+      [
+        2251
+      ],
+      [
+        2289
+      ],
+      [
+        2302
+      ],
+      [
+        2303
+      ],
+      [
+        2359
+      ],
+      [
+        2412
+      ],
+      [
+        2640
+      ],
+      [
+        2888
+      ],
+      [
+        3256
+      ],
+      [
+        3544
+      ],
+      [
+        3815
+      ],
+      [
+        3954
+      ],
+      [
+        4041
+      ],
+      [
+        4050
+      ],
+      [
+        4221
+      ],
+      [
+        4340
+      ],
+      [
+        4495
+      ],
+      [
+        4610
+      ],
+      [
+        4661
+      ],
+      [
+        4976
+      ],
+      [
+        5066
+      ],
+      [
+        5116
+      ],
+      [
+        5140
+      ],
+      [
+        5223
+      ],
+      [
+        5386
+      ],
+      [
+        5564
+      ],
+      [
+        5621
+      ],
+      [
+        6166
+      ],
+      [
+        6203
+      ],
+      [
+        6234
+      ],
+      [
+        6356
+      ],
+      [
+        6482
+      ],
+      [
+        6670
+      ],
+      [
+        6692
+      ],
+      [
+        6916
+      ],
+      [
+        7225
+      ],
+      [
+        7280
+      ],
+      [
+        7304
+      ],
+      [
+        7404
+      ],
+      [
+        7420
+      ],
+      [
+        7706
+      ],
+      [
+        8114
+      ],
+      [
+        8121
+      ],
+      [
+        8258
+      ],
+      [
+        8442
+      ],
+      [
+        8616
+      ],
+      [
+        8764
+      ],
+      [
+        8823
+      ],
+      [
+        8956
+      ],
+      [
+        8976
+      ],
+      [
+        9273
+      ],
+      [
+        9303
+      ],
+      [
+        9329
+      ],
+      [
+        9597
+      ],
+      [
+        9616
+      ],
+      [
+        9778
+      ],
+      [
+        10003
+      ],
+      [
+        10112
+      ],
+      [
+        10120
+      ],
+      [
+        10177
+      ],
+      [
+        10215
+      ],
+      [
+        10257
+      ],
+      [
+        10260
+      ],
+      [
+        10298
+      ],
+      [
+        10340
+      ],
+      [
+        10408
+      ],
+      [
+        10433
+      ],
+      [
+        10651
+      ],
+      [
+        10948
+      ],
+      [
+        11091
+      ],
+      [
+        11237
+      ],
+      [
+        11650
+      ],
+      [
+        11766
+      ],
+      [
+        11851
+      ],
+      [
+        11963
+      ],
+      [
+        11984
+      ],
+      [
+        12156
+      ],
+      [
+        12352
+      ],
+      [
+        12569
+      ],
+      [
+        12619
+      ],
+      [
+        12639
+      ],
+      [
+        12709
+      ],
+      [
+        12742
+      ],
+      [
+        12960
+      ],
+      [
+        12984
+      ],
+      [
+        13016
+      ],
+      [
+        13061
+      ],
+      [
+        13107
+      ],
+      [
+        13232
+      ],
+      [
+        13345
+      ],
+      [
+        13452
+      ],
+      [
+        13638
+      ],
+      [
+        13644
+      ],
+      [
+        14119
+      ],
+      [
+        14210
+      ],
+      [
+        14295
+      ],
+      [
+        14488
+      ],
+      [
+        14576
+      ],
+      [
+        14634
+      ],
+      [
+        14885
+      ],
+      [
+        14893
+      ],
+      [
+        15386
+      ],
+      [
+        15629
+      ],
+      [
+        15712
+      ],
+      [
+        15759
+      ],
+      [
+        15939
+      ],
+      [
+        16820
+      ],
+      [
+        17007
+      ],
+      [
+        17107
+      ],
+      [
+        17108
+      ],
+      [
+        17533
+      ],
+      [
+        17562
+      ],
+      [
+        17607
+      ],
+      [
+        17855
+      ],
+      [
+        18200
+      ],
+      [
+        18252
+      ]
+    ],
+    "count": 146,
+    "largest_strut_count": 5
+  },
+  "gate": "pass",
+  "hashes": {
+    "classifications_sha256": "49ba87cf9cf0d79d07ae805708fa74711637c57a02f5f324d2ef8b094a7df2db",
+    "localized_graph_sha256": "85245058a34d30456fc1021c98364f9d8c8b2a79b37d7b8c97396f0bfb1b687f",
+    "metrics_sha256": "22cfd3aabc726067a61edfc12bd5063b046be0dc2a8b4eacd22a4c508d927ea9",
+    "spatial_statistics_figure_sha256": "fc002f1c27601ad9a28cf433503d85c5d262256dcac642e469ec2ad06ef821b3"
+  },
+  "metric_medians_by_class": {
+    "broken": {
+      "median_corridor_foreground_fraction": 0.373647984267,
+      "median_curvature_rms_voxels": 1.79992738893,
+      "median_edt_radius_voxels": 2.2360679775,
+      "median_maximum_axial_gap_fraction": 0.272727272727
+    },
+    "missing": {
+      "median_corridor_foreground_fraction": 0.2089835163415,
+      "median_curvature_rms_voxels": 0.0,
+      "median_edt_radius_voxels": 0.0,
+      "median_maximum_axial_gap_fraction": 1.0
+    },
+    "present": {
+      "median_corridor_foreground_fraction": 0.411116286291,
+      "median_curvature_rms_voxels": 0.32142159604,
+      "median_edt_radius_voxels": 2.82842712475,
+      "median_maximum_axial_gap_fraction": 0.0
+    },
+    "thin": {
+      "median_corridor_foreground_fraction": null,
+      "median_curvature_rms_voxels": null,
+      "median_edt_radius_voxels": null,
+      "median_maximum_axial_gap_fraction": null
+    }
+  },
+  "overall_pass": true,
+  "provenance": {
+    "artifact_backed": true,
+    "classification_recomputed": false,
+    "intentional_attribution_claimed": false,
+    "sealed_labels_read": false
+  },
+  "schema_version": "part2-spatial-statistics/1.0.0",
+  "warnings": []
+}

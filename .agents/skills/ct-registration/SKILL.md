@@ -17,11 +17,15 @@ from free-form agent arguments.
 1. Preflight every tool in [references/tool-contract.md](references/tool-contract.md)
    at `part2-mcp-response/1.0.0`. Missing or unavailable dependencies mean stop with a structured
    `halt`; never use a CLI, script, direct import, or local implementation.
-2. Invoke `volume_info`, then `replay_exact_otsu`. Require a native uint16
-   65,536-bin histogram for this scan, persisted method/recipe/input/config
-   hashes, and plausible histogram gates. The reference replay is threshold
-   40054 and 58,653,410 foreground voxels. Do not tune toward that fraction,
-   labels, or ground truth.
+2. Invoke `volume_info`, then `replay_exact_otsu` with the frozen specimen
+   manifest as `analysis_policy_artifact_filepath`. The tool must derive the
+   exact-Otsu recipe from that hashed segmentation policy (not free-form
+   recipe arguments), require a native uint16 65,536-bin histogram for this
+   scan, and persist method/recipe/input/config/policy hashes including
+   `analysis_parameters_sha256`. Plausible histogram gates must pass. The
+   reference replay values for this specimen family are threshold 40054 and
+   58,653,410 foreground voxels; do not tune toward that fraction, labels, or
+   ground truth.
 3. Invoke `segment_ct_dataset` once at the accepted threshold to publish the
    canonical uint8 ZYX mask. Pin path, role, dtype, shape, retention, and hash;
    verify it through bounded `compare_segmentation_masks`, then invoke
@@ -49,13 +53,15 @@ from free-form agent arguments.
    relabeled as a primary match.
 6. Invoke `compute_registration_qa` over every nominal node and edge. Keep
    coarse capture, padded-ROI capture, and metrology as separate gates. Emit
-   a color-coded slice 380 status overlay and XYZ bias figures. QA must derive
-   displacement and repeatability from the hashed localization report; the
-   agent must not supply an uncertainty scalar. Under `roi_screening`, passing
-   segmentation/localization/image/coarse/padded-ROI gates yields `pass` while
-   metrology is explicitly `not_authorized`; direct dimensional outputs remain
-   forbidden. Under `direct_metrology`, require passing artifact-backed
-   absolute uncertainty; missing or excessive evidence yields `manual_review`.
+   the color-coded slice 380 junction overlay (`qa/slice_380.png`) and XYZ bias
+   figures through QA only; do not call `visualize_slice` for that path. QA must
+   derive displacement and repeatability from the hashed localization report;
+   the agent must not supply an uncertainty scalar. Under `roi_screening`,
+   passing segmentation/localization/image/coarse/padded-ROI gates yields
+   `pass` while metrology is explicitly `not_authorized`; direct dimensional
+   outputs remain forbidden. Under `direct_metrology`, require passing
+   artifact-backed absolute uncertainty; missing or excessive evidence yields
+   `manual_review`.
 7. Publish the config, exact histogram/report, canonical mask/comparison,
    persisted segmentation-verification MCP evidence,
    registered and localized graph/reports, QA and figures, data-prep result,

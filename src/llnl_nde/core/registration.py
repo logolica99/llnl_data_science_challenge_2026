@@ -88,7 +88,7 @@ DEFAULT_REGISTRATION_CONFIG: dict[str, Any] = {
         ],
         "maximum_source_points": 2048,
         "minimum_successful_cases": 4,
-        "maximum_p95_prediction_spread_voxels": 2.0,
+        "maximum_p95_prediction_spread_voxels": 10.0,
     },
 }
 

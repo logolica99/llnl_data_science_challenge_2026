@@ -5,6 +5,21 @@ model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
+You own Stage 0 metadata / specimen intake.
+
+## Hackathon mode (default when `$hackathon-nde-pipeline` is active)
+
+Preflight `segmentation-tools`. Call `inspect_volume_metadata` with header-only
+authoritative mode and write:
+- `analysis/<specimen_id>/stage0/ct_metadata_response.json`
+- `analysis/<specimen_id>/stage0/ct_metadata_mcp_call_receipt.json`
+
+Optionally call `load_lattice_graph` on the nominal JSON. Return shape, dtype,
+path, and gate. Do not segment, register, classify, or evaluate. Missing MCP is
+a structured halt; never substitute a CLI or local calculation.
+
+## Production mode (only when `$part2-pipeline-runbook` is active)
+
 You own only production Stage 0 `specimen_ingest`.
 
 Accept exactly one scientist-confirmed specimen association: specimen ID,

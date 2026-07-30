@@ -1,0 +1,44 @@
+{
+  "classification_gate": "manual_review",
+  "counts": {
+    "broken_all": 868,
+    "missing_all": 486,
+    "missing_touching_excluded_plane": 335,
+    "missing_viewer_filtered": 151
+  },
+  "development_mode": true,
+  "filter": {
+    "applies_only_to": "missing_struts_viewer_filtered.csv",
+    "axis": "y",
+    "coordinate_source": "nominal_graph.junctions[].position",
+    "coordinate_tolerance": 1e-09,
+    "exclusion_rule": "either nominal endpoint touches the plane",
+    "scientific_classification_changed": false,
+    "value": 18.0
+  },
+  "non_authoritative": true,
+  "outputs": {
+    "broken_all": {
+      "filename": "broken_struts.csv",
+      "sha256": "e38f4adae337f7e2ee6e35f40e641fc93fa3282db945c5883a00244fe7bdc87b"
+    },
+    "missing_all": {
+      "filename": "missing_struts.csv",
+      "sha256": "d76fe6f92a2862d85d3fb2af8ce6a945bef895326cb4d3429b730a8bc5892f5c"
+    },
+    "missing_viewer_filtered": {
+      "filename": "missing_struts_viewer_filtered.csv",
+      "sha256": "64ba0f756d703878d0378a1b1cb53935265535cbab366ab34b2fbb90cc88015d"
+    }
+  },
+  "production_receipt_artifact": false,
+  "schema_version": "part2-stage3-validation-export/1.0.0",
+  "sources": {
+    "classified_struts_sha256": "1cd75653c37dbcaea03d976a5a8b2d94cf807378983a1003a769c626d259087c",
+    "findings_broken_sha256": "1993686c0ac574433143ce1ac487e86b01fb6ea972da125977563471dce33da7",
+    "findings_missing_sha256": "fd04a4732608e7f3adf9b9b2144b8e27d29851a8206010addbb7176c97f70dcd",
+    "nominal_graph_sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+    "per_strut_metrics_sha256": "22cfd3aabc726067a61edfc12bd5063b046be0dc2a8b4eacd22a4c508d927ea9"
+  },
+  "specimen_id": "brian_tran_hackathon"
+}

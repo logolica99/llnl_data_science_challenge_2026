@@ -1,0 +1,50 @@
+{
+  "artifacts": {
+    "metadata_response": {
+      "path": "analysis/brian_tran_hackathon/stage0/ct_metadata_response.json",
+      "retention": "committed",
+      "role": "ct_metadata_mcp_response",
+      "sha256": "f3cdf42f85e0269b86fb704a800bc03879944341defd6ad49563934f52c6de24"
+    }
+  },
+  "canonical_call_receipt_sha256": "7e8bdf2f1578de9579f95bfccfd3db7b0da743f21a41c665c8bcbfa1d52a3ba5",
+  "error": null,
+  "gate": "pass",
+  "hashes": {
+    "header_facts_sha256": "88c6f1e14bd2647e7f327e12e708512492ad3fe746618fa4b4b970481794f35a",
+    "input_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "metadata_response_sha256": "f3cdf42f85e0269b86fb704a800bc03879944341defd6ad49563934f52c6de24",
+    "request_sha256": "cf6e8089b74d23646f9e479dc0d1512587ffb533bcb709fd31392357850a80ab",
+    "result_sha256": "e8eb46fd55f32a658c4f845d49542386b841a24714ae988888c5f9991156e06f"
+  },
+  "header_facts": {
+    "array_bytes": 1038239910,
+    "axes": "ZYX",
+    "byte_order": "big",
+    "dtype": "uint16",
+    "dtype_string": "<u2",
+    "file_bytes": 1038433319,
+    "format": "tiff",
+    "ndim": 3,
+    "shape": [
+      761,
+      815,
+      837
+    ],
+    "voxel_count": 519119955
+  },
+  "request": {
+    "call_receipt_filepath": "analysis/brian_tran_hackathon/stage0/ct_metadata_mcp_call_receipt.json",
+    "header_only": true,
+    "include_sha256": true,
+    "input_filepath": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+    "output_filepath": "analysis/brian_tran_hackathon/stage0/ct_metadata_response.json",
+    "retention": "external"
+  },
+  "response_schema_version": "part2-mcp-response/1.0.0",
+  "schema_version": "volume-metadata-mcp-call-receipt/1.0.0",
+  "status": "ok",
+  "summary": "Persisted authoritative header-only CT metadata response",
+  "tool": "inspect_volume_metadata",
+  "warnings": []
+}

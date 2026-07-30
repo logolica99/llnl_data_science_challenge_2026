@@ -1,0 +1,24 @@
+{
+  "agents": {
+    "data_prep": {
+      "available": true,
+      "contract_version": "agent-stage-contract/1.0.0"
+    }
+  },
+  "mcp_servers": {
+    "segmentation-tools": {
+      "healthy": true,
+      "tools": {
+        "volume_info": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "replay_exact_otsu": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "segment_ct_dataset": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "compare_segmentation_masks": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "verify_canonical_segmentation": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "visualize_slice": {"available": false, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "register_lattice_to_ct": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "localize_lattice_nodes": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"},
+        "compute_registration_qa": {"available": true, "response_schema_version": "part2-mcp-response/1.0.0"}
+      }
+    }
+  }
+}

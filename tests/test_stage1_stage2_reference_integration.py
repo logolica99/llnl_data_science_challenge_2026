@@ -20,7 +20,17 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 from llnl_nde.server import replay_exact_otsu, volume_info  # noqa: E402
 
 
-CT_PATH = REPOSITORY_ROOT / "data/9x9x9_octet_lattice/9x9x9_octet_lattice.tif"
+CT_PATH = REPOSITORY_ROOT / (
+    "data/missing_struts/tif_stacks/"
+    "210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif"
+)
+POLICY_PATH = (
+    REPOSITORY_ROOT
+    / "analysis"
+    / "brian_tran_9x9x9_0point5dash1_production"
+    / "config"
+    / "specimen_manifest.json"
+)
 RUN_EXPENSIVE = os.environ.get("RUN_PART2_REFERENCE_INTEGRATION") == "1"
 
 
@@ -38,12 +48,22 @@ class ReferenceIntegrationTests(unittest.TestCase):
             result = replay_exact_otsu(
                 str(CT_PATH),
                 temporary,
-                enforce_reference_replay=True,
+                analysis_policy_artifact_filepath=str(
+                    POLICY_PATH.relative_to(REPOSITORY_ROOT)
+                ),
                 registration_mode="autonomous_v2",
             )
         self.assertEqual("pass", result["gate"])
         self.assertEqual(40054, result["result"]["threshold"])
         self.assertEqual(58_653_410, result["result"]["foreground_voxel_count"])
+        self.assertEqual(
+            "hashed_analysis_parameters",
+            result["result"]["provenance"]["policy_binding"],
+        )
+        self.assertEqual(
+            POLICY_PATH.relative_to(REPOSITORY_ROOT).as_posix(),
+            result["result"]["analysis_policy_artifact"]["path"],
+        )
 
 
 if __name__ == "__main__":

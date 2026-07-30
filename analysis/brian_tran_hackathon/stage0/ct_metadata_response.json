@@ -1,0 +1,131 @@
+{
+  "error": null,
+  "gate": "pass",
+  "request": {
+    "call_receipt_filepath": "analysis/brian_tran_hackathon/stage0/ct_metadata_mcp_call_receipt.json",
+    "header_only": true,
+    "include_sha256": true,
+    "input_filepath": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+    "output_filepath": "analysis/brian_tran_hackathon/stage0/ct_metadata_response.json",
+    "retention": "external"
+  },
+  "response_schema_version": "part2-mcp-response/1.0.0",
+  "result": {
+    "array_bytes": 1038239910,
+    "authoritative": true,
+    "axes": "ZYX",
+    "byte_order": "big",
+    "dtype": "uint16",
+    "dtype_string": "<u2",
+    "file_bytes": 1038433319,
+    "format": "tiff",
+    "inspection_mode": "header_only",
+    "manifest_fragment": {
+      "ct_metadata": {
+        "array_axes": [
+          "z",
+          "y",
+          "x"
+        ],
+        "byte_order": "big",
+        "dtype": "uint16",
+        "format": "tiff",
+        "shape": [
+          761,
+          815,
+          837
+        ],
+        "voxel_spacing": {
+          "x": {
+            "provenance": {
+              "field": "unknown",
+              "raw_value": "unknown",
+              "source": "unknown"
+            },
+            "unit": "unknown",
+            "value": "unknown"
+          },
+          "y": {
+            "provenance": {
+              "field": "unknown",
+              "raw_value": "unknown",
+              "source": "unknown"
+            },
+            "unit": "unknown",
+            "value": "unknown"
+          },
+          "z": {
+            "provenance": {
+              "field": "unknown",
+              "raw_value": "unknown",
+              "source": "unknown"
+            },
+            "unit": "unknown",
+            "value": "unknown"
+          }
+        }
+      },
+      "ct_volume": {
+        "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+        "retention": "external",
+        "role": "ct_volume",
+        "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+      }
+    },
+    "method": "volume_metadata",
+    "method_version": "1.0.0",
+    "ndim": 3,
+    "output_schema_version": "volume-metadata/1.0.0",
+    "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+    "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "shape": [
+      761,
+      815,
+      837
+    ],
+    "statistics": {
+      "finite_count": "unknown",
+      "maximum": "unknown",
+      "mean": "unknown",
+      "minimum": "unknown",
+      "nonfinite_count": "unknown",
+      "status": "not_computed"
+    },
+    "status": "ok",
+    "voxel_count": 519119955,
+    "voxel_spacing": {
+      "x": {
+        "provenance": {
+          "field": "unknown",
+          "raw_value": "unknown",
+          "source": "unknown"
+        },
+        "unit": "unknown",
+        "value": "unknown"
+      },
+      "y": {
+        "provenance": {
+          "field": "unknown",
+          "raw_value": "unknown",
+          "source": "unknown"
+        },
+        "unit": "unknown",
+        "value": "unknown"
+      },
+      "z": {
+        "provenance": {
+          "field": "unknown",
+          "raw_value": "unknown",
+          "source": "unknown"
+        },
+        "unit": "unknown",
+        "value": "unknown"
+      }
+    }
+  },
+  "schema_version": "volume-metadata-mcp-evidence/1.1.0",
+  "status": "ok",
+  "summary": "Persisted authoritative header-only CT metadata response",
+  "tool": "inspect_volume_metadata",
+  "warnings": []
+}

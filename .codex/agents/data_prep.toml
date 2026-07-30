@@ -1,10 +1,31 @@
 name = "data_prep"
-description = "Run production Stage 1 exact Otsu, autonomous registration, independent localization, and QA through MCP."
+description = "Stage 1 registration/localization via MCP. Hackathon: autonomous register + hackathon localize. Production: sealed data_prep contract."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
+You own Stage 1 registration / data prep. Science only through MCP.
+
+## Hackathon mode (`$hackathon-nde-pipeline`)
+
+1. Call `register_lattice_to_ct` with `registration_mode=autonomous_v2`, the
+   nominal graph, CT path, and outputs:
+   - `analysis/<specimen_id>/stage1/registered_graph.json`
+   - `analysis/<specimen_id>/stage1/registration_report.json`
+   Never pass an aligned graph.
+2. Read `mode_details.threshold` from the registration report.
+3. Call `hackathon_localize_lattice_nodes` with that threshold and write:
+   - `analysis/<specimen_id>/stage2/localized_graph.json`
+   - `analysis/<specimen_id>/stage2/localization_report.json`
+4. Return paths, threshold, gates. Soft registration halt is allowed for the
+   hackathon if the registered JSON exists unless the orchestrator demanded
+   strict gates.
+
+Do not run scripts or import core. Missing MCP is halt.
+
+## Production mode (`$part2-pipeline-runbook`)
+
 You own only Stage 1 `data_prep`. Invoke `$ct-registration` first and follow
 the immutable attempt handoff, verified Stage 0 data-prep handoff, and
 `analysis/contracts/data_prep.json`.
@@ -19,42 +40,7 @@ manifests. Production registration is autonomous from nominal graph + CT; no
 aligned graph, CAD/STL, design variant, training label, evaluation label, or
 ground-truth segmentation is an authorized input.
 
-Read `requested_analysis_scope`, localization thresholds, and QA thresholds
-only from the hash-verified Stage 0 manifest/data-prep handoff. Reject missing,
-free-form, stale, or conflicting scope/config values. Carry specimen ID, design
-ID, scope, authorization lists, reason codes, and relevant artifact hashes in
-every Stage 1 report and completion receipt.
-
-Use exact per-scan Otsu, the canonical uint8 mask contract, one declared
-registration branch, independent all-node localization without a later global
-refit, and all-node/all-edge QA with separate coarse, padded-ROI, and metrology
-gates. After the bounded mask comparison, invoke
-`verify_canonical_segmentation` with the frozen specimen manifest and fixed
-specimen-scoped Otsu, mask, comparison, and evidence paths. Accept only its
-atomically persisted, closed, path/SHA-bound pass evidence; never locally load
-the volume or mask, replay Otsu, or recompute the comparison in the agent.
-Bind that evidence artifact in the data-prep result and completion receipt.
-Localization must use deterministic multistart convergence and robust
-incident-edge support without labels; retain stable coarse coordinates when CT
-support does not improve. Count primary, stable-coarse, fallback, ambiguous,
-rejected, and boundary-limited outcomes separately. Propagate node quality to
-incident edges. A bounded fallback fraction may pass only when every frozen
-aggregate gate passes; never relabel fallback or ambiguity as primary. Derive
-uncertainty only from hashed localization and
-registration evidence and never supply a judgment-selected uncertainty scalar.
-CT-only fit artifacts and the freeze receipt must be immutable and hashed
-before localization. Do not claim direct metrology without an artifact-backed
-absolute uncertainty result.
-
-For `roi_screening`, pass when segmentation, registration, localization,
-image/coarse/padded-ROI, and frozen aggregate gates pass; record metrology as
-`not_authorized` and forbid direct dimensional measurement. For
-`direct_metrology`, additionally require artifact-backed absolute uncertainty
-within the frozen limit; missing or excessive uncertainty is `manual_review`.
-Any ROI/localization gate failure remains `manual_review` or `halt` according
-to the contract.
-Reconcile all artifacts, hashes, config hash, registration mode, and mask
-contract; publish the data-prep result/completion receipt/analysis-ready
-manifest replacement; then return one stage receipt. Refuse overwrite except
-exact idempotent replay.
+Use exact per-scan Otsu bound to the frozen specimen-manifest segmentation
+policy, canonical mask contract, one declared registration branch, independent
+all-node localization, and all-node/all-edge QA. Return one Stage 1 receipt.
 """

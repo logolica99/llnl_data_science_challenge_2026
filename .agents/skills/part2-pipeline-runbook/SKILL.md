@@ -5,8 +5,13 @@ description: Orchestrate or resume the production nominal-graph + CT NDE pipelin
 
 # Part 2 Production Pipeline Runbook
 
-Operate only the control plane. Invoke bounded agents and the required
-`segmentation-tools` MCP server; never perform scientific algorithms locally.
+For the seal-free hackathon demo, invoke `$hackathon-nde-pipeline` and
+dispatch stage subagents through `segmentation-tools` MCP. Do **not** use
+`scripts/hackathon_pipeline.py` when MCP is available.
+
+Operate only the control plane for the **hash-sealed production** path. Invoke
+bounded agents and the required `segmentation-tools` MCP server; never perform
+scientific algorithms locally.
 
 ## Production boundary
 

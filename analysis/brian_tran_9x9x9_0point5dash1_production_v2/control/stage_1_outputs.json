@@ -1,0 +1,19 @@
+[
+  {"role":"analysis_config","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/analysis_config.json","sha256":"300bdbcbad93deedfb9716b9d399966d61ac8a26657b7d9300c2d97f9884ca87"},
+  {"role":"exact_histogram","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/segmentation/exact_histogram_uint16.npy","sha256":"386e3270fa9756d0517de14776f05034514578b85ef75f6c4aeafd25a7eba282"},
+  {"role":"otsu_report","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/segmentation/histogram_report.json","sha256":"723d5d7aab617a92f777d6f2aa3beec2d001669e2ff876584e8590e84a22df62"},
+  {"role":"canonical_segmentation_mask","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/segmentation/canonical_mask.npy","sha256":"37ffd769657bf8f96653bd4f06b9d57bd7de783a462c491bb73511a960d02bf6"},
+  {"role":"segmentation_mask_comparison","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/segmentation/mask_comparison.json","sha256":"77fbd885d40df07d96118b8f2be4a3873624fc9124c2783f9f6e231576e89d7a"},
+  {"role":"segmentation_verification_mcp_response","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/segmentation/segmentation_verification_mcp_response.json","sha256":"0e417f360ec269a30203ca4726f1ff0f18f5c9f035c4ab9fd9691a71240b3f55"},
+  {"role":"registered_graph","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/registered_graph.json","sha256":"87a9b6806bdd8e7911eb53ff536e036ca3e5c4c9f49fc0c34c0840f29ac386ab"},
+  {"role":"registration_report","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/registration_report.json","sha256":"702a4db404acb9fdf138dc6f2f188ba4643647ab29389951c34ac73b1f4d1a5c"},
+  {"role":"registration_fit_freeze","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/ct_only_fit_freeze.json","sha256":"bf0bccb51ff38631f3d6001b4ae188c18a48c2f2f1d76bf943b49c28384766f9"},
+  {"role":"localized_graph","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/localized_graph.json","sha256":"ad58cbd0fa3751add5cb24c54cfd8776c8af2a2c8513246de7dd8a4d2cd725be"},
+  {"role":"localization_report","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/localization_report.json","sha256":"8c99b5234abf455d75b8cb0eb2b6e88936719b02426b80b27af31e8ed9dd8fab"},
+  {"role":"registration_qa","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/qa/registration_qa.json","sha256":"f09b35c6b8e3072673e3a8f7b2773b738b16d25bcf95677fdd8c92d5bfdcb311"},
+  {"role":"junction_overlay","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/qa/slice_380.png","sha256":"b38a53bf9a9cf62857be78503036d888b061da02ae860399c4e0eb8c0965cb74"},
+  {"role":"spatial_bias_figure","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/qa/bias_by_xyz.png","sha256":"7868ebae17bf44978ccddbff08e37e4bed4fc4dfea31249ac9404b30effb69f4"},
+  {"role":"data_prep_result","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_result.json","sha256":"0363fcb5ed24065717d1cb7bf7484b2eb74af67193b0a74ccacbb8a9245694fd"},
+  {"role":"data_prep_completion_receipt","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_completion_receipt.json","sha256":"64ca29e95b2fefaf6100b962a838fd8fa679d7c11e253c221615ade363f43e92"},
+  {"role":"analysis_ready_specimen_manifest","path":"analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json","sha256":"311e957057684d17c4bbcbaec978ec97a9012ac3a4b583d2f1bf71cfb5413a09"}
+]

@@ -1,0 +1,62 @@
+{
+  "attempt": 1,
+  "canonical_handoff_sha256": "32a1eb641e079574f58fb16a0b36ee41218f52759f0b3a39af3b1c16f25cf438",
+  "config_sha256": "9270429da74ead93d01411b982bdb2499aa3c5178995c29c276f3f228e4f29fe",
+  "contract_sha256": "612eb2bc5f008accb930ee6da2b8f5386215b360bfd5c4c7faf6afd0a4c15dfc",
+  "contract_version": "agent-stage-contract/1.0.0",
+  "created_at": "2026-07-30T16:39:55.076948Z",
+  "forbidden_operations": [
+    "filename_or_directory_proximity_association",
+    "cad_or_stl_requirement",
+    "aligned_graph_access",
+    "segmentation",
+    "registration",
+    "defect_label_derivation",
+    "mcp_cli_or_direct_import_fallback"
+  ],
+  "input_artifacts": [
+    {
+      "consumer": "specimen_ingest",
+      "path": ".agents/skills/volume-metadata/SKILL.md",
+      "phase": "input",
+      "role": "volume_metadata_skill",
+      "sha256": "6c450ee49222653417914a18c5fc064e8a3030165c1c20bfd629a0a2d5a57ece"
+    },
+    {
+      "consumer": "specimen_ingest",
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/runtime_request.json",
+      "phase": "input",
+      "role": "scientist_intake_request",
+      "sha256": "5423757717db3fe009c23fff28635471de9bf56a9fc42434fc48b72c7a4f364c"
+    },
+    {
+      "consumer": "specimen_ingest",
+      "path": "analysis/schema/specimen_manifest.schema.json",
+      "phase": "input",
+      "role": "specimen_manifest_schema",
+      "sha256": "b05639f5b554f51d824dd53357adbcca75510a0224c2478780a668bf929718d9"
+    },
+    {
+      "consumer": "specimen_ingest",
+      "path": "data/missing_struts/octet_truss_9x9x9.json",
+      "phase": "input",
+      "role": "nominal_graph",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+    },
+    {
+      "consumer": "specimen_ingest",
+      "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+      "phase": "input",
+      "role": "ct_volume",
+      "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+    }
+  ],
+  "owner": "specimen_ingest",
+  "predecessor_receipt_sha256": null,
+  "registration_mode": "autonomous_v2",
+  "run_token": "bed8df7cf47a8c8d341218b88713d16b1d287cee5c7fe101a724721dee492c35",
+  "schema_version": "part2-stage-handoff/1.0.0",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "stage": "specimen_ingest",
+  "stage_number": 0
+}

@@ -1,0 +1,97 @@
+{
+  "assertions": {
+    "accessed_inputs_within_allowlist": true,
+    "all_paths_repository_relative": true,
+    "all_supplied_inputs_hashed": true,
+    "association_explicit": true,
+    "canonical_ingest_receipt_hash_valid": true,
+    "contract_version_matches": true,
+    "ct_metadata_mcp_integrity_chain_valid": true,
+    "defect_labels_not_derived": true,
+    "forbidden_inputs_not_accessed": true,
+    "graph_ids_references_and_topology_valid": true,
+    "manifest_schema_valid": true,
+    "nominal_graph_normalized_by_mcp": true,
+    "normalized_graph_path_and_hash_bound": true,
+    "output_artifact_hashes_match": true,
+    "registration_not_run": true,
+    "segmentation_not_run": true
+  },
+  "attempt": 1,
+  "canonical_receipt_sha256": "6519f63bd3c22b3017edcc8b1d51be2548e6f4c6b3cec65f255a63427a495d06",
+  "completed_at": "2026-07-30T16:26:03.832371Z",
+  "config_sha256": "196fd93afa4044dbef41b2056cbe4d8365aef67dcb396c241370606bfbfd905b",
+  "contract_sha256": "612eb2bc5f008accb930ee6da2b8f5386215b360bfd5c4c7faf6afd0a4c15dfc",
+  "contract_version": "agent-stage-contract/1.0.0",
+  "error": null,
+  "failure_kind": null,
+  "input_handoff": {
+    "canonical_sha256": "8ae59c9987124dcdfd9c2b2d89c9fc4533271b40fddc985ab8cd0e4b067cf8d4",
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/handoffs/stage_0_specimen_ingest_attempt_1.json",
+    "sha256": "b1c33ea6b77b632fb513ab70141bc70abde0cb4d9508f7f37d3a832f9169193a"
+  },
+  "output_artifacts": [
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_mcp_call_receipt.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ct_metadata_mcp_call_receipt",
+      "sha256": "1987a1115c4b2bd181f393c4ca484c18483a8fe2a59ef795f9aa66c23336cbc6"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_response.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ct_metadata_mcp_response",
+      "sha256": "eadf7fe213a82dfa4e6a47e6105f430ee0465a46891185ee295480c3bf8abe3f"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/data_prep_handoff.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "data_prep_handoff",
+      "sha256": "4feb3ca4519cbc6d28093ec0c2f46c22afa47c6ce474d2c1c396cbc97aeec3d0"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_receipt.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ingest_receipt",
+      "sha256": "95096637fca6250f95253322f338dad7fbbaaff5f973c2d50d3ec026520aa95d"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_request.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "ingest_request",
+      "sha256": "9d36472cce2b821cabd619d8e62af5990fea8cfb9914e6809283b3f75ac51bcf"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/specimen_manifest.json",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "specimen_manifest",
+      "sha256": "1857f18e818a82e03e8aec73df8dc087b4ffea827cca6493d48ec9c3912277ce"
+    },
+    {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production/design/normalized_nominal_graph.npz",
+      "phase": "output",
+      "producer": "specimen_ingest",
+      "role": "normalized_nominal_graph",
+      "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+    }
+  ],
+  "owner": "specimen_ingest",
+  "predecessor_receipt_sha256": null,
+  "registration_freeze": null,
+  "registration_mode": "autonomous_v2",
+  "run_token": "4dc4381e317fc44b3d73f77ee0786cad5b313ed4f461c4ecf913d23f34dc9083",
+  "schema_version": "part2-stage-receipt/1.1.0",
+  "scoped_handoffs": [],
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production",
+  "stage": "specimen_ingest",
+  "stage_number": 0,
+  "stage_policy": null,
+  "supplemental_handoffs": [],
+  "terminal_state": "pass"
+}

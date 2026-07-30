@@ -1,0 +1,215 @@
+{
+  "accepted_strut_count": 13,
+  "candidate_strut_count": 18468,
+  "canonical_mask_sha256": null,
+  "configuration_sha256": "9daabaa74c0f9a42f1f957b5beece7c7121b6ea64b2e715d4111b1163bf1cdce",
+  "corridor_radius_voxels": 6.0,
+  "ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+  "foreground_probability_cutoff": 0.5,
+  "interpolation": "trilinear scipy.ndimage.map_coordinates order=1",
+  "label_blind": true,
+  "localized_graph_sha256": "85245058a34d30456fc1021c98364f9d8c8b2a79b37d7b8c97396f0bfb1b687f",
+  "method": "label-blind central-slice nearest-component radial-extent bootstrap",
+  "per_strut": [
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 2.23606797749979,
+      "strut_id": 9055,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 34,
+      "strut_id": 18439,
+      "valid_slice_count": 1,
+      "valid_slice_fraction": 0.029411764705882353
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 32,
+      "strut_id": 2000,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 1773,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 32,
+      "strut_id": 16358,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 5.0990195135927845,
+      "strut_id": 200,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 30,
+      "strut_id": 18194,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 0,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 31,
+      "strut_id": 16133,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 9976,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.242640687119285,
+      "strut_id": 8707,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 1027,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 17781,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 34,
+      "median_radial_extent_voxels": 3.1622776601683795,
+      "strut_id": 8108,
+      "valid_slice_count": 34,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 4917,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 15005,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 3.1622776601683795,
+      "strut_id": 16523,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 2.23606797749979,
+      "strut_id": 9871,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 3.605551275463989,
+      "strut_id": 118,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 17396,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 1899,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.0,
+      "strut_id": 11601,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 5.0990195135927845,
+      "strut_id": 8195,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 710,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    }
+  ],
+  "policy": {
+    "calibration_half_width_voxels": 12.0,
+    "central_fraction": 0.6,
+    "maximum_axis_distance_voxels": 8.0,
+    "maximum_radius_voxels": 11.0,
+    "minimum_radius_voxels": 1.0,
+    "minimum_valid_samples": 6,
+    "minimum_valid_slice_fraction": 0.75,
+    "radial_extent_quantile": 0.9,
+    "radius_multiplier": 1.0,
+    "radius_safety_voxels": 0.5,
+    "sample_count": 24
+  },
+  "quantile_radial_extent_voxels": 4.973642801874144,
+  "sample_count_used": 24,
+  "schema_version": "part2-corridor-calibration/1.0.0",
+  "selection": "deterministic farthest-point sampling of in-bounds graph midpoints",
+  "source": "stage_1_canonical_segmentation_mask",
+  "unclipped_radius_voxels": 5.473642801874144
+}

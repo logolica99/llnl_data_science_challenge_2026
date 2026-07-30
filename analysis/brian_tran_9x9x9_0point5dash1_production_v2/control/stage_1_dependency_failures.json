@@ -1,0 +1,10 @@
+{
+  "code":"missing_or_incompatible_dependency",
+  "failures":[
+    {"kind":"mcp_schema","name":"segmentation-tools.register_lattice_to_ct:registered_graph","reason":"missing required top-level schema_version normalized-lattice-graph/1.0.0"},
+    {"kind":"mcp_schema","name":"segmentation-tools.localize_lattice_nodes:localized_graph","reason":"missing required top-level schema_version normalized-lattice-graph/1.0.0"},
+    {"kind":"schema_contract","name":"Stage 1 authorization arrays","reason":"MCP/core order conflicts with validator-required lexicographically sorted closed arrays"},
+    {"kind":"schema_contract","name":"data_prep_completion_receipt","reason":"coordinator output is inconsistent with the validator-accepted closed stage policy"}
+  ],
+  "fallback_used":false
+}

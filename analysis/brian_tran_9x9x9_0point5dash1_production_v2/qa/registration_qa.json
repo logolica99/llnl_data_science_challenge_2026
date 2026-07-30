@@ -1,0 +1,290 @@
+{
+  "artifacts": {
+    "junction_overlay": {
+      "path": "/Users/jubaerjami/Documents/llnl_data_science_challenge_2026/analysis/brian_tran_9x9x9_0point5dash1_production_v2/qa/slice_380.png",
+      "retention": "committed",
+      "role": "junction_overlay",
+      "sha256": "b38a53bf9a9cf62857be78503036d888b061da02ae860399c4e0eb8c0965cb74"
+    },
+    "spatial_bias_figure": {
+      "path": "/Users/jubaerjami/Documents/llnl_data_science_challenge_2026/analysis/brian_tran_9x9x9_0point5dash1_production_v2/qa/bias_by_xyz.png",
+      "retention": "committed",
+      "role": "spatial_bias_figure",
+      "sha256": "7868ebae17bf44978ccddbff08e37e4bed4fc4dfea31249ac9404b30effb69f4"
+    }
+  },
+  "authorized_outputs": [
+    "segmentation",
+    "registration",
+    "node_localization",
+    "coarse_region_screening",
+    "padded_roi_definition"
+  ],
+  "axis_mapping": {
+    "array_axes": [
+      "z",
+      "y",
+      "x"
+    ],
+    "coordinate_order": [
+      "x",
+      "y",
+      "z"
+    ],
+    "numpy_index_expression": "volume[round(z), round(y), round(x)]"
+  },
+  "coarse_capture": {
+    "accepted_displacement_p95_voxels": 3.4866693489534404,
+    "estimator_stability_p95_voxels": 0.06564635187240549,
+    "gates": {
+      "accepted_displacement_within_local_capture_radius": true,
+      "independent_node_positions_retained": true,
+      "localization_edge_quality_records_complete": true,
+      "localization_graph_hash_matches": true,
+      "localization_node_quality_counts_complete": true,
+      "localization_not_halted": true,
+      "localization_report_binding_complete": true
+    },
+    "local_search_radius_voxels": 8.0,
+    "localization_report_gate": "pass",
+    "overall_pass": true
+  },
+  "counts": {
+    "cells": 729,
+    "edges": 18468,
+    "nodes": 10206
+  },
+  "design_id": "octet_truss_9x9x9",
+  "gate": "pass",
+  "hashes": {
+    "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+    "analysis_scope_artifact_sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e",
+    "ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "localization_policy_sha256": "1374b143e2714b0d5d7ec96b4bb8d10c167ef9207261cf71130dca13d40377a1",
+    "localization_report_sha256": "8c99b5234abf455d75b8cb0eb2b6e88936719b02426b80b27af31e8ed9dd8fab",
+    "localized_graph_sha256": "ad58cbd0fa3751add5cb24c54cfd8776c8af2a2c8513246de7dd8a4d2cd725be",
+    "qa_policy_sha256": "ce462f7d524c71a03af699a0c52107acb15d675b89f0d0210504faa9e71367eb",
+    "registration_report_sha256": "702a4db404acb9fdf138dc6f2f188ba4643647ab29389951c34ac73b1f4d1a5c",
+    "segmentation_policy_sha256": "ba333e743a61566b7302f09fd7cf12773746ad112ef34b53ed15f23921e69fae"
+  },
+  "localization_binding": {
+    "artifact": {
+      "path": "/Users/jubaerjami/Documents/llnl_data_science_challenge_2026/analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/localization_report.json",
+      "role": "localization_report",
+      "sha256": "8c99b5234abf455d75b8cb0eb2b6e88936719b02426b80b27af31e8ed9dd8fab"
+    },
+    "expected": {
+      "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+      "analysis_policy_artifact_sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e",
+      "ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+      "design_id": "octet_truss_9x9x9",
+      "localization_policy_sha256": "1374b143e2714b0d5d7ec96b4bb8d10c167ef9207261cf71130dca13d40377a1",
+      "localized_graph_sha256": "ad58cbd0fa3751add5cb24c54cfd8776c8af2a2c8513246de7dd8a4d2cd725be",
+      "registration_mode": "autonomous_v2",
+      "requested_analysis_scope": "roi_screening",
+      "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2"
+    },
+    "gates": {
+      "analysis_parameters_sha256_matches": true,
+      "analysis_policy_artifact_sha256_matches": true,
+      "ct_sha256_matches": true,
+      "design_id_matches_scope": true,
+      "localization_config_sha256_matches_policy": true,
+      "localization_policy_sha256_matches": true,
+      "localization_policy_values_match": true,
+      "localized_graph_artifact_binding_closed": true,
+      "localized_graph_sha256_matches": true,
+      "policy_binding_declared": true,
+      "registration_mode_matches": true,
+      "registration_report_artifact_binding_closed": true,
+      "registration_report_colocated_with_localization": true,
+      "registration_report_matches_inputs": true,
+      "registration_report_path_within_run_root": true,
+      "requested_analysis_scope_matches": true,
+      "schema_version_supported": true,
+      "segmentation_binding_matches_exact_otsu": true,
+      "specimen_id_matches_scope": true,
+      "threshold_matches_exact_otsu": true
+    },
+    "observed": {
+      "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+      "analysis_policy_artifact_sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e",
+      "ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+      "design_id": "octet_truss_9x9x9",
+      "localization_policy_sha256": "1374b143e2714b0d5d7ec96b4bb8d10c167ef9207261cf71130dca13d40377a1",
+      "localized_graph_sha256": "ad58cbd0fa3751add5cb24c54cfd8776c8af2a2c8513246de7dd8a4d2cd725be",
+      "registration_mode": "autonomous_v2",
+      "requested_analysis_scope": "roi_screening",
+      "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2"
+    },
+    "overall_pass": true
+  },
+  "localization_quality_counts": {
+    "ambiguous_edges": 0,
+    "ambiguous_nodes": 0,
+    "boundary_limited_nodes": 0,
+    "direct_metrology_usable_edges": 17644,
+    "fallback_edges": 824,
+    "fallback_nodes": 288,
+    "primary_edges": 5579,
+    "primary_nodes": 4254,
+    "rejected_or_low_confidence_nodes": 288,
+    "roi_screening_usable_edges": 18468,
+    "stable_coarse_edges": 12065,
+    "stable_coarse_nodes": 5664
+  },
+  "metrology": {
+    "absolute_registration_uncertainty_source": "autonomous_registration_bounded_robustness_p95_prediction_spread",
+    "absolute_registration_uncertainty_voxels": 9.65210806240544,
+    "combined_metrology_uncertainty_voxels": 9.717754414277845,
+    "direct_narrow_corridor_allowed": false,
+    "estimator_stability_p95_voxels": 0.06564635187240549,
+    "gates": {
+      "absolute_registration_uncertainty_artifact_backed": true,
+      "absolute_registration_uncertainty_available": true,
+      "measured_radius_positive": true,
+      "uncertainty_within_measured_radius": false
+    },
+    "measured_strut_radius_voxels": 3.0,
+    "overall_pass": null,
+    "required_resolution": "none",
+    "status": "not_authorized",
+    "uncertainty_to_measured_radius_ratio": 3.2392514714259484
+  },
+  "overall_pass": true,
+  "padded_roi_capture": {
+    "gates": {
+      "padded_rois_in_bounds": true
+    },
+    "in_bounds_fraction": 1.0,
+    "overall_pass": true,
+    "padding_fraction": 0.2
+  },
+  "production_image_qa": {
+    "corridors": {
+      "edge_count": 18468,
+      "measured_strut_radius_voxels": 3.0,
+      "median_foreground_fraction": 0.528344671201814,
+      "p10_foreground_fraction": 0.4217687074829932,
+      "p90_foreground_fraction": 0.6485260770975056,
+      "radial_foreground_probability": [
+        0.9441857386951604,
+        0.9279346557408611,
+        0.8164640639665006,
+        0.5464835571438885,
+        0.345327804249994,
+        0.27461840901980605,
+        0.24789049527109955
+      ]
+    },
+    "gates": {
+      "all_graph_nodes_inside_volume": true,
+      "corridor_foreground_sufficient": true,
+      "exact_otsu_replay_passed": true,
+      "junction_foreground_sufficient": true,
+      "spatial_bias_within_limit": true,
+      "threshold_matches_exact_otsu": true
+    },
+    "junctions": {
+      "mean_foreground_fraction": 0.9628728199098571,
+      "median_foreground_fraction": 1.0,
+      "record_count": 10206
+    },
+    "overall_pass": true,
+    "spatial_bias": {
+      "x": {
+        "bin_median_corridor_foreground_fraction": [
+          0.5192743764172335,
+          0.5351473922902494,
+          0.5351473922902494,
+          0.5328798185941043,
+          0.5170068027210885
+        ],
+        "median_range": 0.01814058956916098
+      },
+      "y": {
+        "bin_median_corridor_foreground_fraction": [
+          0.5147392290249433,
+          0.5306122448979592,
+          0.5260770975056689,
+          0.54421768707483,
+          0.5192743764172335
+        ],
+        "median_range": 0.02947845804988669
+      },
+      "z": {
+        "bin_median_corridor_foreground_fraction": [
+          0.5827664399092971,
+          0.5238095238095238,
+          0.5238095238095238,
+          0.5056689342403629,
+          0.5260770975056689
+        ],
+        "median_range": 0.07709750566893425
+      }
+    }
+  },
+  "provenance": {
+    "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+    "analysis_scope_artifact_sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e",
+    "config_sha256": "43e66f3b9281065c51904453fda3f2968bdc16bbb62c7d5392bdb3a2390e20d9",
+    "localization_policy_sha256": "1374b143e2714b0d5d7ec96b4bb8d10c167ef9207261cf71130dca13d40377a1",
+    "policy_binding": "hashed_analysis_parameters",
+    "qa_policy_sha256": "ce462f7d524c71a03af699a0c52107acb15d675b89f0d0210504faa9e71367eb",
+    "registration_mode": "autonomous_v2",
+    "requested_analysis_scope": "roi_screening",
+    "sealed_labels_read": false,
+    "segmentation_policy_sha256": "ba333e743a61566b7302f09fd7cf12773746ad112ef34b53ed15f23921e69fae"
+  },
+  "reason_codes": [
+    "METROLOGY_NOT_AUTHORIZED",
+    "ROI_GATES_PASS"
+  ],
+  "registration_mode": "autonomous_v2",
+  "requested_analysis_scope": "roi_screening",
+  "roi_gate_results": {
+    "coarse_capture_pass": true,
+    "localization_binding_pass": true,
+    "localization_quantitative_gate_pass": true,
+    "overall_pass": true,
+    "padded_roi_capture_pass": true,
+    "production_image_qa_pass": true
+  },
+  "schema_version": "part2-registration-qa/1.2.0",
+  "scope_source": {
+    "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+    "declared_ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "design_id": "octet_truss_9x9x9",
+    "localization_policy_sha256": "1374b143e2714b0d5d7ec96b4bb8d10c167ef9207261cf71130dca13d40377a1",
+    "qa_policy_sha256": "ce462f7d524c71a03af699a0c52107acb15d675b89f0d0210504faa9e71367eb",
+    "registration_mode": "autonomous_v2",
+    "requested_analysis_scope": "roi_screening",
+    "segmentation_policy_sha256": "ba333e743a61566b7302f09fd7cf12773746ad112ef34b53ed15f23921e69fae",
+    "source_artifact_kind": "specimen_manifest",
+    "source_artifact_path": "/Users/jubaerjami/Documents/llnl_data_science_challenge_2026/analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json",
+    "source_artifact_sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e",
+    "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2"
+  },
+  "segmentation_binding": {
+    "ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "gates": {
+      "exact_otsu_replay_passed": true,
+      "threshold_matches_exact_otsu": true
+    },
+    "method": "exact_histogram_otsu",
+    "method_version": "2.0.0",
+    "overall_pass": true,
+    "segmentation_policy_sha256": "ba333e743a61566b7302f09fd7cf12773746ad112ef34b53ed15f23921e69fae",
+    "threshold": 40054,
+    "threshold_comparison": "value >= threshold"
+  },
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "threshold": 40054.0,
+  "unauthorized_outputs": [
+    "absolute_metrology",
+    "direct_dimensional_measurement"
+  ],
+  "warnings": [
+    "Direct dimensional metrology is not authorized for roi_screening"
+  ]
+}

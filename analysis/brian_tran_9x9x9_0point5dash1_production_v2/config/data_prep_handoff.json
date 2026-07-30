@@ -1,0 +1,104 @@
+{
+  "action": "run_data_prep",
+  "allowlisted_inputs": {
+    "ct": {
+      "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+      "role": "ct_volume",
+      "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+    },
+    "design_graph": {
+      "path": "data/missing_struts/octet_truss_9x9x9.json",
+      "role": "design_graph",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+    },
+    "normalized_nominal_graph": {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz",
+      "role": "normalized_nominal_graph",
+      "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+    }
+  },
+  "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+  "authorized_outputs": [
+    "segmentation",
+    "registration",
+    "node_localization",
+    "coarse_region_screening",
+    "padded_roi_definition"
+  ],
+  "canonical_handoff_sha256": "0574b0be1ce2cbe14a6d7a37ead7beaf70e6b6015694d262df094fa34bee313f",
+  "design_id": "octet_truss_9x9x9",
+  "forbidden_inputs": [
+    "defect labels",
+    "dev split",
+    "sealed split",
+    "ground-truth segmentation"
+  ],
+  "ingest_receipt_sha256": "f49350180f79da8b5b38914ad966f8762ec09b532decfe50e0f3a255047823dc",
+  "lifecycle_state": "ready_for_data_prep",
+  "localization_policy": {
+    "core_support_weight": 0.7,
+    "incident_sample_distances_voxels": [
+      3.0,
+      5.0,
+      7.0
+    ],
+    "incident_support_weight": 0.3,
+    "maximum_ambiguous_fraction": 0.05,
+    "maximum_boundary_limited_fraction": 0.0,
+    "maximum_fallback_fraction": 0.05,
+    "maximum_rejected_fraction": 0.0,
+    "maximum_shift_voxels": 8.0,
+    "mean_shift_bandwidth_voxels": 4.0,
+    "mean_shift_max_iterations": 12,
+    "mean_shift_tolerance_voxels": 0.05,
+    "minimum_candidate_support": 0.05,
+    "minimum_primary_or_stable_coarse_fraction": 0.95,
+    "minimum_relative_support_improvement": 0.01,
+    "minimum_seed_consensus_fraction": 0.7,
+    "patch_radius_voxels": 10,
+    "schema_version": "stage2-localization-policy/1.1.0",
+    "search_radius_voxels": 8.0,
+    "seed_cluster_radius_voxels": 2.0,
+    "seed_perturbation_voxels": 2.0,
+    "smoothing_sigma_voxels": 1.25
+  },
+  "manifest_path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json",
+  "manifest_sha256": "ed444c0560fdc0734bb368b1e25836392788742d2c4150fc29eec8acdaef4aec",
+  "maximum_agent_retries": 2,
+  "qa_policy": {
+    "corridor_angular_samples": 8,
+    "corridor_axial_samples": 9,
+    "corridor_radius_voxels": 6.0,
+    "junction_patch_radius_voxels": 2,
+    "maximum_spatial_bin_median_range": 0.25,
+    "maximum_uncertainty_to_radius_ratio": 1.0,
+    "minimum_mean_junction_foreground_fraction": 0.85,
+    "minimum_median_corridor_foreground_fraction": 0.08,
+    "minimum_roi_in_bounds_fraction": 0.99,
+    "radial_foreground_probability": 0.5,
+    "roi_padding_fraction": 0.2,
+    "schema_version": "stage2-qa-policy/1.1.0",
+    "spatial_bins_per_axis": 5
+  },
+  "registration_mode": "autonomous_v2",
+  "requested_analysis_scope": "roi_screening",
+  "required_outputs": [
+    "registered and independently localized nominal graph",
+    "exact-histogram Otsu result",
+    "canonical uint8 ZYX mask contract",
+    "bounded segmentation-mask comparison",
+    "registration QA",
+    "local node recentering",
+    "ROI capture gate",
+    "metrology gate",
+    "data-prep completion receipt"
+  ],
+  "schema_version": "data-prep-handoff/1.1.0",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "status": "ready",
+  "unauthorized_outputs": [
+    "absolute_metrology",
+    "direct_dimensional_measurement"
+  ],
+  "unresolved_fields": []
+}

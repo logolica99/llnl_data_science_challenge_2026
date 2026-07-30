@@ -83,7 +83,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--aligned-graph-units",
         choices=("voxel", "simulation_voxel", "unknown"),
-        default="unknown",
+        default="voxel",
     )
     parser.add_argument(
         "--retention",

@@ -1,0 +1,48 @@
+{
+  "association_confirmed": true,
+  "declared": {
+    "aligned_graph_units": "voxel",
+    "array_axes": [
+      "z",
+      "y",
+      "x"
+    ],
+    "cad_units": "unknown",
+    "cad_units_provenance": "unknown",
+    "design_transform_declaration_verification": null,
+    "graph_axes": [
+      "x",
+      "y",
+      "z"
+    ],
+    "retention": "committed"
+  },
+  "design_id": "octet_truss_9x9x9",
+  "mcp_response_binding": {
+    "artifact_path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_response.json",
+    "artifact_sha256": "cb5a8c820236df9c7ae5006ce588bbc22fa76918473623fb457e9b81079693e7",
+    "authoritative": true,
+    "call_receipt_path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_mcp_call_receipt.json",
+    "call_receipt_sha256": "fb4673c94e98178457c34a1457c5f938421d69779074cac2d1ef214740703dd9",
+    "canonical_call_receipt_sha256": "e5131500525fb2eb311f97a104ddc02b4db56361ae1df87022a671da4908bb48",
+    "ct_sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "header_only": true,
+    "response_schema_version": "part2-mcp-response/1.0.0",
+    "tool": "inspect_volume_metadata"
+  },
+  "method": "specimen_ingest",
+  "method_version": "1.3.0",
+  "paths": {
+    "aligned_graph": null,
+    "cad": null,
+    "ct": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+    "ct_metadata_mcp_call_receipt": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_mcp_call_receipt.json",
+    "ct_metadata_response": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_response.json",
+    "design_graph": "data/missing_struts/octet_truss_9x9x9.json",
+    "design_transform_declaration": null
+  },
+  "registration_mode": "autonomous_v2",
+  "requested_analysis_scope": "roi_screening",
+  "schema_version": "ingest-request/1.3.0",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2"
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -18,6 +19,18 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
 from llnl_nde.server import MCPResponseEnvelope, mcp  # noqa: E402
 from llnl_nde.core.response import RESPONSE_SCHEMA_VERSION  # noqa: E402
+from llnl_nde.orchestration.contracts import (  # noqa: E402
+    canonical_json_sha256,
+    validate_manifest,
+)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
@@ -49,6 +62,98 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
             ),
             encoding="utf-8",
         )
+        self.policy = self._write_policy_artifact()
+
+    def _write_policy_artifact(
+        self, *, minimum_significant_peaks: int = 2
+    ) -> Path:
+        source = (
+            REPOSITORY_ROOT
+            / "analysis"
+            / "brian_tran_9x9x9_0point5dash1_production"
+            / "config"
+            / "specimen_manifest.json"
+        )
+        manifest = json.loads(source.read_text(encoding="utf-8"))
+        ct_relative = self.volume.relative_to(REPOSITORY_ROOT).as_posix()
+        graph_relative = self.graph.relative_to(REPOSITORY_ROOT).as_posix()
+        manifest["specimen_id"] = "mcp_tool_fixture"
+        manifest["design_id"] = "mcp_tool_design"
+        manifest["analysis_parameters"]["segmentation"][
+            "minimum_significant_peaks"
+        ] = minimum_significant_peaks
+        manifest["analysis_parameters_sha256"] = canonical_json_sha256(
+            manifest["analysis_parameters"]
+        )
+        manifest["inputs"]["ct"] = {
+            "path": ct_relative,
+            "sha256": _sha256_file(self.volume),
+            "role": "ct_volume",
+            "retention": "external",
+        }
+        manifest["inputs"]["ct_metadata"] = {
+            "array_axes": ["z", "y", "x"],
+            "byte_order": "little",
+            "dtype": "uint16",
+            "format": "npy",
+            "shape": [20, 20, 20],
+            "voxel_spacing": {
+                axis: {
+                    "provenance": {
+                        "field": "unknown",
+                        "raw_value": "unknown",
+                        "source": "unknown",
+                    },
+                    "unit": "unknown",
+                    "value": "unknown",
+                }
+                for axis in ("x", "y", "z")
+            },
+        }
+        manifest["inputs"]["design_graph"] = {
+            "path": graph_relative,
+            "sha256": _sha256_file(self.graph),
+            "role": "design_graph",
+            "retention": "external",
+        }
+        manifest["inputs"].pop("normalized_nominal_graph", None)
+        if "intake" in manifest:
+            manifest["intake"]["graph_inspection"]["path"] = graph_relative
+            manifest["intake"]["graph_inspection"]["sha256"] = _sha256_file(
+                self.graph
+            )
+            manifest["intake"]["graph_inspection"].update(
+                {
+                    "junction_count": 2,
+                    "strut_count": 1,
+                    "unit_cell_count": 1,
+                }
+            )
+        if "graph_summary" in manifest.get("derived", {}):
+            manifest["derived"]["graph_summary"]["values"].update(
+                {
+                    "junction_count": 2,
+                    "strut_count": 1,
+                    "unit_cell_count": 1,
+                }
+            )
+            manifest["derived"]["graph_summary"]["provenance"][
+                "config_sha256"
+            ] = manifest["analysis_parameters_sha256"]
+            manifest["derived"]["graph_summary"]["provenance"]["input_sha256"] = [
+                _sha256_file(self.graph)
+            ]
+        policy_path = self.root / "specimen_manifest.json"
+        policy_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        validate_manifest(
+            policy_path,
+            repository_root=REPOSITORY_ROOT,
+            verify_files=False,
+        )
+        return policy_path
 
     async def test_tools_are_registered_with_typed_schemas(self) -> None:
         tools = {tool.name: tool for tool in await mcp.list_tools()}
@@ -66,11 +171,10 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(True, volume_properties["include_sha256"]["default"])
         graph_properties = tools["load_lattice_graph"].parameters["properties"]
         self.assertEqual(False, graph_properties["overwrite"]["default"])
-        otsu_properties = tools["replay_exact_otsu"].parameters["properties"]
-        self.assertEqual(
-            ["auto", "native_uint16", "full_volume_affine_uint16"],
-            otsu_properties["histogram_encoding"]["enum"],
-        )
+        otsu_schema = tools["replay_exact_otsu"].parameters
+        self.assertIn("analysis_policy_artifact_filepath", otsu_schema["required"])
+        self.assertNotIn("chunk_voxels", otsu_schema["properties"])
+        self.assertNotIn("enforce_reference_replay", otsu_schema["properties"])
         localization_schema = tools["localize_lattice_nodes"].parameters
         self.assertIn(
             "analysis_policy_artifact_filepath", localization_schema["required"]
@@ -172,6 +276,7 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual([0, 1], normalized["node_id_rows"].tolist())
 
     async def test_exact_otsu_persists_artifacts_and_uses_halt_gate(self) -> None:
+        policy = self._write_policy_artifact(minimum_significant_peaks=3)
         output = self.root / "otsu"
         async with Client(mcp) as client:
             call = await client.call_tool(
@@ -179,8 +284,7 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
                 {
                     "input_filepath": str(self.volume),
                     "output_directory": str(output),
-                    "chunk_voxels": 257,
-                    "minimum_significant_peaks": 3,
+                    "analysis_policy_artifact_filepath": str(policy),
                 },
             )
 
@@ -193,6 +297,14 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             any(not passed for passed in result["result"]["gates"].values())
         )
+        self.assertEqual(
+            "hashed_analysis_parameters",
+            result["result"]["provenance"]["policy_binding"],
+        )
+        self.assertEqual(
+            64,
+            len(result["hashes"]["analysis_parameters_sha256"]),
+        )
         for artifact in result["artifacts"].values():
             self.assertFalse(Path(artifact["path"]).is_absolute())
             self.assertTrue((REPOSITORY_ROOT / artifact["path"]).is_file())
@@ -201,6 +313,10 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
             (output / "histogram_report.json").read_text(encoding="utf-8")
         )
         self.assertFalse(Path(report["source_path"]).is_absolute())
+        self.assertEqual(
+            policy.relative_to(REPOSITORY_ROOT).as_posix(),
+            report["analysis_policy_artifact"]["path"],
+        )
 
     async def test_errors_are_structured_instead_of_json_rpc_failures(self) -> None:
         missing = self.root / "missing.npy"
@@ -238,10 +354,10 @@ class Part2MCPToolTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertFalse(call.is_error)
-        self.assertIn("Saved 32 foreground voxels", call.content[0].text)
-        segmented = np.load(mask, allow_pickle=False)
-        self.assertEqual(np.uint8, segmented.dtype)
-        self.assertEqual(32, int(np.count_nonzero(segmented)))
+        result = call.structured_content
+        self.assertEqual("ok", result["status"])
+        self.assertEqual("pass", result["gate"])
+        self.assertTrue(mask.is_file())
 
 
 if __name__ == "__main__":

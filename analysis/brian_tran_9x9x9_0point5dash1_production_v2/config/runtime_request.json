@@ -1,0 +1,26 @@
+{
+  "schema_version": "part2-scientist-intake-request/2.0.0",
+  "created_at": "2026-07-30T17:00:00Z",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "design_id": "octet_truss_9x9x9",
+  "requested_analysis_scope": "roi_screening",
+  "registration_mode": "autonomous_v2",
+  "association_confirmed": true,
+  "graph_axes": ["x", "y", "z"],
+  "array_axes": "unknown",
+  "inputs": {
+    "nominal_graph": {
+      "path": "data/missing_struts/octet_truss_9x9x9.json",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+      "role": "design_graph",
+      "retention": "committed"
+    },
+    "ct": {
+      "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+      "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+      "role": "ct_volume",
+      "retention": "committed"
+    }
+  },
+  "canonical_request_sha256": "eeada49b32c739bf0cc28497d82dfe5c3f5366057fa4649de37d5fb512bc34a5"
+}

@@ -1009,7 +1009,9 @@ def compute_strut_metrics(
     }
     try:
         staged_calibration_artifact = write_json_atomic(
-            calibration_write_path, calibration_payload, overwrite=False
+            calibration_write_path,
+            calibration_payload,
+            overwrite=False if strict_production else overwrite,
         )
     except Exception:
         if staging_directory is not None and staging_directory.exists():
@@ -1050,7 +1052,9 @@ def compute_strut_metrics(
     }
     try:
         staged_profiles_artifact = write_json_atomic(
-            profiles_write_path, profiles_payload, overwrite=False
+            profiles_write_path,
+            profiles_payload,
+            overwrite=False if strict_production else overwrite,
         )
     except Exception:
         if staging_directory is not None and staging_directory.exists():
@@ -1151,7 +1155,9 @@ def compute_strut_metrics(
     }
     try:
         staged_report_artifact = write_json_atomic(
-            report_write_path, report, overwrite=False
+            report_write_path,
+            report,
+            overwrite=False if strict_production else overwrite,
         )
     except Exception:
         if staging_directory is not None and staging_directory.exists():

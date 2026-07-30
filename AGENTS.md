@@ -18,13 +18,45 @@
 - Validate MCP-backed changes through an MCP client, not only by calling the
   underlying Python function directly.
 
-## Part 2 pipeline orchestration
+## Hackathon pipeline (default demo / agentic MCP path)
 
-For every request that runs, resumes, validates, or inspects the LLNL Part 2
-pipeline or any Stage 0–4 operation, the active main agent is the control-plane
-orchestrator.
+For hackathon / demo runs that do **not** need hash-sealed receipts, the active
+main agent is the control-plane orchestrator and must:
 
-Before performing scientific work or dispatching any agent, it must:
+1. Invoke `$hackathon-nde-pipeline`.
+2. Read and follow `.codex/agents/hackathon_orchestrator.toml` (or the
+   hackathon section of `.codex/agents/orchestrator.toml`).
+3. Dispatch only these stage owners as subagents, in order:
+   `specimen_ingest` → `data_prep` → `defect_lead` (+ `missing_strut_agent`,
+   `broken_strut_agent`, `thin_strut_agent`) → `report_agent`.
+4. Require every scientific step to go through the healthy
+   `segmentation-tools` MCP server. Missing MCP is a hard stop.
+
+Stages (immutable for this path):
+
+`0 metadata → 1 registration (registered JSON) → 2 defect agents + CSVs →
+3 materials-scientist NDE report`
+
+Seal-free MCP tools for this path include `hackathon_localize_lattice_nodes`,
+`hackathon_compute_strut_metrics`, `hackathon_analyze_defect`,
+`hackathon_merge_defect_classifications`, `hackathon_export_defect_csvs`, and
+`hackathon_prepare_report_classifications`, plus existing metadata /
+registration / reporting tools.
+
+Never replace those MCP calls with `scripts/hackathon_pipeline.py`, a direct
+`llnl_nde.core` import, or a local substitute when MCP is available. The script
+is offline-only fallback for humans, not an agent path.
+
+Add future defect agents by extending `DEFECT_KINDS` / specialist MCP coverage
+and registering a new bounded subagent under `.codex/agents/`.
+
+## Production Part 2 pipeline orchestration (hash-sealed)
+
+Only when the user explicitly asks for the hash-sealed production Part 2
+pipeline or any Stage 0–4 contract operation, the active main agent is the
+control-plane orchestrator.
+
+Before performing that scientific work or dispatching any agent, it must:
 
 1. Invoke `$part2-pipeline-runbook`.
 2. Read and follow `.codex/agents/orchestrator.toml`.
@@ -38,13 +70,13 @@ The production input is one scientist-confirmed nominal graph JSON and its
 specimen CT volume. CAD/STL variants and design-label splits are research
 inputs and must not enter a production handoff.
 
-The stage identities and order are immutable:
+The production stage identities and order are immutable:
 
 `0 specimen_ingest/graph validation → 1 data_prep → 2 strut_metrics →
 3 defect_lead/verifier → 4 report_agent`
 
-Never rename, reinterpret, combine, skip, or replace these stages with an
-ad-hoc workflow.
+Never rename, reinterpret, combine, skip, or replace these production stages
+with an ad-hoc workflow.
 
 Treat a missing or unreadable runbook, contract, agent definition, skill, MCP
 server, MCP tool, or schema-compatible interface as a hard dependency failure.

@@ -747,7 +747,7 @@ class SpecimenIngestTests(unittest.TestCase):
                 "graph_axes": ["x", "y", "z"],
                 "array_axes": ["z", "y", "x"],
                 "numpy_index_expression": "volume[round(z), round(y), round(x)]",
-                "aligned_graph_units": "unknown",
+                "aligned_graph_units": "voxel",
             },
             manifest["analysis_parameters"]["coordinates"],
         )

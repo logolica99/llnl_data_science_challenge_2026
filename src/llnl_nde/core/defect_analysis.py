@@ -44,12 +44,17 @@ DEFAULT_STAGE3_CONFIG: dict[str, Any] = {
     "policy_source": "frozen_prior_connectivity_method",
     "precedence": PRECEDENCE,
     "bent_is_non_competing_attribute": True,
+    # Missing/broken rules match Claire's recovered standalone 96/78 workflow:
+    # notes/STANDALONE_CONNECTIVITY_96_78_RECOVERY.md and
+    # scripts/classify_{missing_broken,material_loss}_struts.py on
+    # codex/recover-standalone-connectivity-96-78.
     "missing": {
         "implementation_status": "complete",
         "central_start_fraction": 0.20,
         "central_end_fraction": 0.80,
+        "present_fraction": 0.05,
+        "maximum_central_present_slice_fraction": 0.10,
         "smoothing_window_samples": 3,
-        "maximum_smoothed_minimum_foreground_fraction": 0.0,
         "require_primary_disconnection": True,
     },
     "broken": {
@@ -204,6 +209,10 @@ def _profile_features(
         & (axial_t <= float(missing_policy["central_end_fraction"]))
     ]
     window = int(missing_policy["smoothing_window_samples"])
+    if central.size == 0:
+        raise ValueError(
+            f"Strut {metric['strut_id']} has no central profile samples"
+        )
     if central.size < window:
         raise ValueError(
             f"Strut {metric['strut_id']} has fewer than {window} central profile samples"
@@ -211,6 +220,9 @@ def _profile_features(
     smoothed = np.convolve(
         central, np.ones(window, dtype=np.float64) / float(window), mode="valid"
     )
+    present = central >= float(missing_policy["present_fraction"])
+    central_present_slice_fraction = float(np.mean(present))
+    side_width = max(1, int(present.size) // 3)
     reference = float(
         np.quantile(central, float(broken_policy["central_reference_quantile"]))
     )
@@ -256,6 +268,11 @@ def _profile_features(
     )
     return {
         "same_material_component_connects_a_to_b": connected,
+        "central_material_slice_fraction": central_present_slice_fraction,
+        "a_side_material_slice_fraction": float(np.mean(present[:side_width])),
+        "b_side_material_slice_fraction": float(np.mean(present[-side_width:])),
+        "longest_empty_run_slices": _longest_true_run(~present),
+        "central_mean_foreground_fraction": float(np.mean(central)),
         "central_reference_foreground_fraction_p90": reference,
         "central_minimum_foreground_fraction": float(np.min(central)),
         "central_minimum_smoothed_foreground_fraction": float(np.min(smoothed)),
@@ -278,6 +295,21 @@ def _profile_features(
         ),
         "both_endpoint_segments_observed": endpoint_segments_observed,
     }
+
+
+def _missing_positive(
+    features: Mapping[str, Any],
+    policy: Mapping[str, Any],
+) -> bool:
+    """Claire recovered missing rule: disconnected + sparse central material."""
+
+    if bool(policy["missing"].get("require_primary_disconnection", True)) and bool(
+        features["same_material_component_connects_a_to_b"]
+    ):
+        return False
+    return float(features["central_material_slice_fraction"]) <= float(
+        policy["missing"]["maximum_central_present_slice_fraction"]
+    )
 
 
 def _finding_row(
@@ -317,6 +349,7 @@ def analyze_strut_specialist(
     *,
     specimen_id: str,
     defect_kind: str,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     """Write one schema-identical specialist finding document."""
 
@@ -344,35 +377,19 @@ def analyze_strut_specialist(
             continue
         features = _profile_features(metrics[strut_id], profiles[strut_id], policy)
         connected = bool(features["same_material_component_connects_a_to_b"])
-        smoothed_minimum = float(
-            features["central_minimum_smoothed_foreground_fraction"]
-        )
         if defect_kind == "missing":
-            positive = (
-                not connected
-                and smoothed_minimum
-                <= float(
-                    policy["missing"][
-                        "maximum_smoothed_minimum_foreground_fraction"
-                    ]
-                )
-            )
+            positive = _missing_positive(features, policy)
             disposition = "positive" if positive else "negative"
             reasons = (
-                ["primary_disconnected", "three_slice_smoothed_central_minimum_is_zero"]
+                [
+                    "primary_disconnected",
+                    "central_present_slice_fraction_at_most_10_percent",
+                ]
                 if positive
                 else ["missing_rule_not_satisfied"]
             )
         elif defect_kind == "broken":
-            missing_positive = (
-                not connected
-                and smoothed_minimum
-                <= float(
-                    policy["missing"][
-                        "maximum_smoothed_minimum_foreground_fraction"
-                    ]
-                )
-            )
+            missing_positive = _missing_positive(features, policy)
             material_loss = (
                 float(features["central_deficit_fraction"])
                 >= float(policy["broken"]["minimum_deficit_fraction"])
@@ -380,10 +397,16 @@ def analyze_strut_specialist(
                 >= int(policy["broken"]["minimum_deficit_run_samples"])
             )
             endpoint_evidence = bool(features["both_endpoint_segments_observed"])
+            allow_connected_bite = bool(
+                policy["broken"].get("connected_material_loss_is_broken", True)
+            )
+            unresolved_outcome = str(
+                policy["broken"].get("unresolved_disconnection_outcome", "review")
+            )
             if missing_positive:
                 disposition = "negative"
                 reasons = ["missing_precedence_excludes_broken"]
-            elif material_loss and endpoint_evidence:
+            elif material_loss and endpoint_evidence and (allow_connected_bite or not connected):
                 disposition = "positive"
                 reasons = [
                     "central_material_loss_rule_satisfied",
@@ -395,7 +418,11 @@ def analyze_strut_specialist(
                     ),
                 ]
             elif not connected:
-                disposition = "review"
+                disposition = unresolved_outcome if unresolved_outcome in {
+                    "review",
+                    "negative",
+                    "positive",
+                } else "review"
                 reasons = ["primary_disconnected_without_sufficient_broken_evidence"]
             else:
                 disposition = "negative"
@@ -428,7 +455,7 @@ def analyze_strut_specialist(
         "coverage": _coverage(rows, len(metrics)),
         "findings": rows,
         "provenance": {
-            "rule_version": "claire-missing-broken-profile/1.0.0",
+            "rule_version": "claire-standalone-connectivity-96-78/1.1.0",
             "metrics_recomputed": False,
             "registration_recomputed": False,
             "training_labels_read": False,
@@ -439,7 +466,7 @@ def analyze_strut_specialist(
     _validate_schema(
         payload, "specialist_findings.schema.json", f"{defect_kind} findings"
     )
-    artifact = write_json_atomic(output_path, payload)
+    artifact = write_json_atomic(output_path, payload, overwrite=overwrite)
     return {
         **payload,
         "gate": "pass" if status == "complete" else "manual_review",
@@ -514,7 +541,7 @@ def _decision_log_text(
             f"- Gate: `{gate}`",
             f"- Development mode: `{str(development_mode).lower()}`",
             f"- Precedence: `{' > '.join(PRECEDENCE)}`",
-            "- Missing: primary A-to-B component is disconnected and the three-slice-smoothed central minimum is zero.",
+            "- Missing: primary A-to-B component is disconnected and at most 10% of central (20%-80%) axial slices are material-bearing (foreground fraction ≥ 0.05).",
             "- Broken: missing is false, endpoint material is observed, and either at least 15% of central slices are below 50% of central P90 or the deficient run is at least three slices.",
             "- Connected bite cases may be broken; unresolved disconnections require review.",
             "- Bent is a separate non-competing attribute.",
@@ -536,6 +563,7 @@ def merge_strut_classifications(
     output_decision_log_path: str | Path,
     *,
     specimen_id: str,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     """Merge complete or deferred specialist findings with fixed precedence."""
 
@@ -629,7 +657,7 @@ def merge_strut_classifications(
         },
     }
     thresholds_artifact = write_json_atomic(
-        output_thresholds_path, thresholds_payload
+        output_thresholds_path, thresholds_payload, overwrite=overwrite
     )
     finding_hashes = {
         kind: sha256_file(path) for kind, path in sorted(findings_paths.items())
@@ -671,7 +699,7 @@ def merge_strut_classifications(
         "Merged Stage 3 classifications",
     )
     classifications_artifact = write_json_atomic(
-        output_classifications_path, classification_payload
+        output_classifications_path, classification_payload, overwrite=overwrite
     )
     decision_log = _decision_log_text(
         specimen_id=specimen_id,
@@ -680,7 +708,9 @@ def merge_strut_classifications(
         incomplete=incomplete,
         review_ids=review_ids,
     )
-    decision_artifact = write_text_atomic(output_decision_log_path, decision_log)
+    decision_artifact = write_text_atomic(
+        output_decision_log_path, decision_log, overwrite=overwrite
+    )
     return {
         **classification_payload,
         "artifacts": {
@@ -1015,6 +1045,11 @@ _VALIDATION_EXPORT_FIELDS = [
     "endpoint0_to_collar_component_voxel_count_in_corridor",
     "endpoint1_to_collar_component_voxel_count_in_corridor",
     "minimum_endpoint_to_collar_component_voxel_count_in_corridor",
+    "central_material_slice_fraction",
+    "a_side_material_slice_fraction",
+    "b_side_material_slice_fraction",
+    "longest_empty_run_slices",
+    "central_mean_foreground_fraction",
     "central_reference_foreground_fraction_p90",
     "central_minimum_foreground_fraction",
     "central_minimum_smoothed_foreground_fraction",
@@ -1032,6 +1067,8 @@ _VALIDATION_EXPORT_FIELDS = [
 def _write_validation_csv(
     path: str | Path,
     rows: Iterable[Mapping[str, Any]],
+    *,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     stream = io.StringIO(newline="")
     writer = csv.DictWriter(
@@ -1042,7 +1079,7 @@ def _write_validation_csv(
     )
     writer.writeheader()
     writer.writerows(rows)
-    return write_text_atomic(path, stream.getvalue())
+    return write_text_atomic(path, stream.getvalue(), overwrite=overwrite)
 
 
 def export_stage3_validation_csvs(
@@ -1056,12 +1093,13 @@ def export_stage3_validation_csvs(
     excluded_nominal_axis: str = "y",
     excluded_nominal_value: float = 18.0,
     coordinate_tolerance: float = 1e-9,
+    overwrite: bool = False,
 ) -> dict[str, Any]:
     """Export non-authoritative CSVs for Stage 3 development validation.
 
     This operation never changes a classification or a production artifact.
-    The filtered view excludes missing struts when either nominal endpoint
-    touches the explicitly supplied plane.
+    The filtered views exclude missing/broken struts when either nominal
+    endpoint touches the explicitly supplied plane (specimen crop artifact).
     """
 
     axis_by_name = {"x": 0, "y": 1, "z": 2}
@@ -1179,6 +1217,19 @@ def export_stage3_validation_csvs(
             "endpoint1_to_collar_component_voxel_count_in_corridor": metric[
                 "endpoint1_to_collar_component_voxel_count_in_corridor"
             ],
+            "central_material_slice_fraction": features.get(
+                "central_material_slice_fraction"
+            ),
+            "a_side_material_slice_fraction": features.get(
+                "a_side_material_slice_fraction"
+            ),
+            "b_side_material_slice_fraction": features.get(
+                "b_side_material_slice_fraction"
+            ),
+            "longest_empty_run_slices": features.get("longest_empty_run_slices"),
+            "central_mean_foreground_fraction": features.get(
+                "central_mean_foreground_fraction"
+            ),
             "central_reference_foreground_fraction_p90": features.get(
                 "central_reference_foreground_fraction_p90"
             ),
@@ -1226,13 +1277,36 @@ def export_stage3_validation_csvs(
     filtered_missing_rows = [
         row for row in missing_rows if not row["touches_excluded_nominal_plane"]
     ]
+    # Claire's final broken viewer list kept material-loss cases from the
+    # failed-connectivity (disconnected) candidate set, not connected bites.
+    filtered_broken_rows = [
+        row
+        for row in broken_rows
+        if not row["touches_excluded_nominal_plane"]
+        and not bool(row["same_material_component_connects_a_to_b"])
+    ]
+    connected_bite_broken = sum(
+        1
+        for row in broken_rows
+        if bool(row["same_material_component_connects_a_to_b"])
+    )
 
     output = Path(output_directory).expanduser().resolve()
-    missing_artifact = _write_validation_csv(output / "missing_struts.csv", missing_rows)
-    broken_artifact = _write_validation_csv(output / "broken_struts.csv", broken_rows)
-    filtered_artifact = _write_validation_csv(
+    missing_artifact = _write_validation_csv(
+        output / "missing_struts.csv", missing_rows, overwrite=overwrite
+    )
+    broken_artifact = _write_validation_csv(
+        output / "broken_struts.csv", broken_rows, overwrite=overwrite
+    )
+    filtered_missing_artifact = _write_validation_csv(
         output / "missing_struts_viewer_filtered.csv",
         filtered_missing_rows,
+        overwrite=overwrite,
+    )
+    filtered_broken_artifact = _write_validation_csv(
+        output / "broken_struts_viewer_filtered.csv",
+        filtered_broken_rows,
+        overwrite=overwrite,
     )
     manifest = {
         "schema_version": VALIDATION_EXPORT_SCHEMA_VERSION,
@@ -1249,20 +1323,36 @@ def export_stage3_validation_csvs(
             "nominal_graph_sha256": graph.source_sha256,
         },
         "filter": {
-            "applies_only_to": "missing_struts_viewer_filtered.csv",
+            "applies_to": [
+                "missing_struts_viewer_filtered.csv",
+                "broken_struts_viewer_filtered.csv",
+            ],
             "coordinate_source": "nominal_graph.junctions[].position",
             "axis": excluded_nominal_axis,
             "value": float(excluded_nominal_value),
             "coordinate_tolerance": float(coordinate_tolerance),
-            "exclusion_rule": "either nominal endpoint touches the plane",
+            "exclusion_rule": (
+                "missing: either nominal endpoint touches the plane; "
+                "broken: plane touch OR primary A-B still connected (connected bite)"
+            ),
             "scientific_classification_changed": False,
+            "intended_use": (
+                "Specimen crop-face + Claire-like disconnected-broken viewer/report "
+                "filter; not a scientific relabel of Stage 3 findings"
+            ),
         },
         "counts": {
             "missing_all": len(missing_rows),
             "broken_all": len(broken_rows),
-            "missing_touching_excluded_plane": len(missing_rows)
-            - len(filtered_missing_rows),
+            "broken_connected_bite": connected_bite_broken,
+            "missing_touching_excluded_plane": sum(
+                1 for row in missing_rows if row["touches_excluded_nominal_plane"]
+            ),
+            "broken_touching_excluded_plane": sum(
+                1 for row in broken_rows if row["touches_excluded_nominal_plane"]
+            ),
             "missing_viewer_filtered": len(filtered_missing_rows),
+            "broken_viewer_filtered": len(filtered_broken_rows),
         },
         "outputs": {
             "missing_all": {
@@ -1275,13 +1365,18 @@ def export_stage3_validation_csvs(
             },
             "missing_viewer_filtered": {
                 "filename": "missing_struts_viewer_filtered.csv",
-                "sha256": filtered_artifact["sha256"],
+                "sha256": filtered_missing_artifact["sha256"],
+            },
+            "broken_viewer_filtered": {
+                "filename": "broken_struts_viewer_filtered.csv",
+                "sha256": filtered_broken_artifact["sha256"],
             },
         },
     }
     manifest_artifact = write_json_atomic(
         output / "stage3_validation_export_manifest.json",
         manifest,
+        overwrite=overwrite,
     )
     return {
         "gate": "pass",
@@ -1301,8 +1396,13 @@ def export_stage3_validation_csvs(
                 "retention": "regenerable",
             },
             "missing_struts_viewer_filtered_csv": {
-                **filtered_artifact,
+                **filtered_missing_artifact,
                 "role": "stage3_validation_missing_filtered_csv",
+                "retention": "regenerable",
+            },
+            "broken_struts_viewer_filtered_csv": {
+                **filtered_broken_artifact,
+                "role": "stage3_validation_broken_filtered_csv",
                 "retention": "regenerable",
             },
             "validation_manifest": {
@@ -1314,7 +1414,10 @@ def export_stage3_validation_csvs(
         "hashes": {
             "missing_struts_csv_sha256": missing_artifact["sha256"],
             "broken_struts_csv_sha256": broken_artifact["sha256"],
-            "missing_struts_viewer_filtered_csv_sha256": filtered_artifact[
+            "missing_struts_viewer_filtered_csv_sha256": filtered_missing_artifact[
+                "sha256"
+            ],
+            "broken_struts_viewer_filtered_csv_sha256": filtered_broken_artifact[
                 "sha256"
             ],
             "validation_manifest_sha256": manifest_artifact["sha256"],
@@ -1323,7 +1426,174 @@ def export_stage3_validation_csvs(
             "Validation CSVs are not production Stage 3 receipt artifacts",
             (
                 f"The {excluded_nominal_axis}={float(excluded_nominal_value):g} "
-                "exclusion changes only the viewer-filtered CSV"
+                "exclusion changes only the viewer-filtered CSVs and report remap"
+            ),
+        ],
+    }
+
+
+def prepare_hackathon_report_classifications(
+    classifications_path: str | Path,
+    output_path: str | Path,
+    *,
+    nominal_graph_path: str | Path | None = None,
+    metrics_path: str | Path | None = None,
+    excluded_nominal_axis: str = "y",
+    excluded_nominal_value: float = 18.0,
+    coordinate_tolerance: float = 1e-9,
+    require_disconnected_for_broken: bool = True,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Build report-ready classifications with deferred+crop remaps.
+
+    Scientific ``classified_struts.json`` is left unchanged. This artifact is
+    for hackathon spatial stats / NDE report only:
+
+    1. ``deferred`` → ``present`` (thin/bent incomplete)
+    2. ``missing``/``broken`` touching the excluded nominal plane → ``present``
+       (specimen high-Y / XZ crop-face human artifact)
+    3. ``broken`` that remain A-B connected (connected bites) → ``present``
+       when ``require_disconnected_for_broken`` (Claire final-78 scope)
+    """
+
+    axis_by_name = {"x": 0, "y": 1, "z": 2}
+    if excluded_nominal_axis not in axis_by_name:
+        raise ValueError("excluded_nominal_axis must be one of x, y, or z")
+    if not math.isfinite(float(excluded_nominal_value)):
+        raise ValueError("excluded_nominal_value must be finite")
+    if not math.isfinite(float(coordinate_tolerance)) or coordinate_tolerance < 0:
+        raise ValueError("coordinate_tolerance must be finite and nonnegative")
+
+    classifications = read_json_object(classifications_path)
+    plane_touching: set[int] = set()
+    if nominal_graph_path is not None:
+        graph = load_lattice_json(nominal_graph_path)
+        axis_index = axis_by_name[excluded_nominal_axis]
+        edge_rows = {
+            int(edge_id): row for row, edge_id in enumerate(graph.edge_ids.tolist())
+        }
+        for strut_id, edge_row in edge_rows.items():
+            endpoints = graph.edge_node_rows[edge_row]
+            first = graph.node_positions_xyz[int(endpoints[0])]
+            second = graph.node_positions_xyz[int(endpoints[1])]
+            if np.isclose(
+                first[axis_index],
+                excluded_nominal_value,
+                rtol=0.0,
+                atol=coordinate_tolerance,
+            ) or np.isclose(
+                second[axis_index],
+                excluded_nominal_value,
+                rtol=0.0,
+                atol=coordinate_tolerance,
+            ):
+                plane_touching.add(strut_id)
+
+    connected_by_strut: dict[int, bool] = {}
+    if metrics_path is not None and require_disconnected_for_broken:
+        for strut_id, metric in _metric_map(metrics_path).items():
+            connected_by_strut[int(strut_id)] = bool(
+                metric["same_material_component_connects_a_to_b"]
+            )
+
+    remapped: list[dict[str, Any]] = []
+    deferred_count = 0
+    crop_excluded = {"missing": 0, "broken": 0}
+    connected_bite_excluded = 0
+    for row in classifications.get("classifications", []):
+        item = dict(row)
+        strut_id = int(item["strut_id"])
+        label = item.get("class")
+        if label == "deferred":
+            deferred_count += 1
+            item["class"] = "present"
+            item["reasons"] = list(item.get("reasons") or []) + [
+                "hackathon_remap_deferred_to_present_for_report"
+            ]
+        elif label in {"missing", "broken"} and strut_id in plane_touching:
+            crop_excluded[label] += 1
+            item["class"] = "present"
+            item["reasons"] = list(item.get("reasons") or []) + [
+                (
+                    "hackathon_exclude_crop_plane_"
+                    f"{excluded_nominal_axis}_{float(excluded_nominal_value):g}"
+                )
+            ]
+        elif (
+            label == "broken"
+            and require_disconnected_for_broken
+            and connected_by_strut.get(strut_id, False)
+        ):
+            connected_bite_excluded += 1
+            item["class"] = "present"
+            item["reasons"] = list(item.get("reasons") or []) + [
+                "hackathon_exclude_connected_bite_broken_for_report"
+            ]
+        remapped.append(item)
+
+    counts = Counter(str(row["class"]) for row in remapped)
+    payload = dict(classifications)
+    payload["classifications"] = remapped
+    payload["counts"] = {
+        key: int(counts.get(key, 0))
+        for key in ("missing", "broken", "thin", "present")
+    }
+    payload["hackathon_report_remap"] = {
+        "deferred_to_present": True,
+        "deferred_count": deferred_count,
+        "connected_bite_broken_to_present": {
+            "enabled": require_disconnected_for_broken and metrics_path is not None,
+            "excluded_count": connected_bite_excluded,
+            "rule": "Claire final-78: report broken requires A-B disconnection",
+        },
+        "crop_plane_exclusion": {
+            "enabled": nominal_graph_path is not None,
+            "axis": excluded_nominal_axis,
+            "value": float(excluded_nominal_value),
+            "coordinate_tolerance": float(coordinate_tolerance),
+            "excluded_missing": crop_excluded["missing"],
+            "excluded_broken": crop_excluded["broken"],
+        },
+        "source_classifications": str(classifications_path),
+        "scientific_classification_changed": False,
+    }
+    artifact = write_json_atomic(output_path, payload, overwrite=overwrite)
+    return {
+        "gate": "pass",
+        "counts": payload["counts"],
+        "deferred_remapped": deferred_count,
+        "crop_excluded_missing": crop_excluded["missing"],
+        "crop_excluded_broken": crop_excluded["broken"],
+        "connected_bite_excluded_broken": connected_bite_excluded,
+        "artifacts": {
+            "classified_struts_report": {
+                **artifact,
+                "role": "classified_struts_report",
+                "retention": "regenerable",
+            }
+        },
+        "hashes": {"classified_struts_report_sha256": artifact["sha256"]},
+        "warnings": [
+            *(
+                [
+                    (
+                        "Remapped crop-plane missing/broken to present for report: "
+                        f"missing={crop_excluded['missing']}, "
+                        f"broken={crop_excluded['broken']}"
+                    )
+                ]
+                if crop_excluded["missing"] or crop_excluded["broken"]
+                else []
+            ),
+            *(
+                [
+                    (
+                        "Remapped connected-bite broken to present for report: "
+                        f"broken={connected_bite_excluded}"
+                    )
+                ]
+                if connected_bite_excluded
+                else []
             ),
         ],
     }

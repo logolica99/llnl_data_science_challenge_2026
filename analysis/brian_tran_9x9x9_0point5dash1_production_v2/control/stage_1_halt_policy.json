@@ -1,0 +1,28 @@
+{
+  "schema_version":"part2-stage-policy/1.0.0",
+  "stage_number":1,
+  "terminal_state":"halt",
+  "specimen_id":"brian_tran_9x9x9_0point5dash1_production_v2",
+  "design_id":"octet_truss_9x9x9",
+  "attempt":1,
+  "run_token":"0cc8bf023935a34263b81f481e2c83851034839f2032272c1c51277e2766fde3",
+  "input_handoff_sha256":"cece204908ca1aed5c93bdc28c59916a3c13ec1c025e7f7346135d21c6a765d8",
+  "config_sha256":"9270429da74ead93d01411b982bdb2499aa3c5178995c29c276f3f228e4f29fe",
+  "contract_sha256":"469dbd4588d289f76a27957bb7ade46fbcf6188a7bbb615872ed0e4fde71c9f7",
+  "source_hashes":{
+    "ct_volume":"1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "data_prep_handoff":"7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac",
+    "nominal_graph":"af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+    "normalized_nominal_graph":"e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f",
+    "specimen_manifest":"eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e"
+  },
+  "requested_analysis_scope":"roi_screening",
+  "authorized_outputs":[],
+  "unauthorized_outputs":["absolute_metrology","coarse_region_screening","direct_dimensional_measurement","node_localization","padded_roi_definition","registration","segmentation"],
+  "roi_gate_summary":{"coarse_region":"not_run","image_qa":"not_run","localization":"not_run","padded_roi":"not_run","registration":"not_run","segmentation":"not_run"},
+  "metrology_summary":{"absolute_uncertainty_available":false,"direct_metrology_authorized":false,"status":"not_run","uncertainty_within_limit":null},
+  "localization_summary":null,
+  "reason_codes":["MCP_SCHEMA_INCOMPATIBLE"],
+  "mcp_response_bindings":[],
+  "output_hashes":{}
+}

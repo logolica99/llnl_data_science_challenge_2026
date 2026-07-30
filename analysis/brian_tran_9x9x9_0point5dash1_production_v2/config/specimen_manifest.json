@@ -1,0 +1,213 @@
+{
+  "analysis_parameters": {
+    "artifact_schema_versions": {
+      "classified_struts": "1.0.0",
+      "nde_report": "1.0.0",
+      "node_localization": "1.2.0",
+      "per_strut_metrics": "1.0.0",
+      "registration_qa": "1.2.0",
+      "specimen_manifest": "2.1.0"
+    },
+    "budgets": {
+      "local_recenter_radius_voxels": 8.0,
+      "maximum_agent_retries": 2,
+      "metrology_uncertainty_voxels": 2.0,
+      "roi_padding_fraction": 0.2
+    },
+    "coordinates": {
+      "aligned_graph_units": "voxel",
+      "array_axes": [
+        "z",
+        "y",
+        "x"
+      ],
+      "graph_axes": [
+        "x",
+        "y",
+        "z"
+      ],
+      "numpy_index_expression": "volume[round(z), round(y), round(x)]"
+    },
+    "localization_policy": {
+      "core_support_weight": 0.7,
+      "incident_sample_distances_voxels": [
+        3.0,
+        5.0,
+        7.0
+      ],
+      "incident_support_weight": 0.3,
+      "maximum_ambiguous_fraction": 0.05,
+      "maximum_boundary_limited_fraction": 0.0,
+      "maximum_fallback_fraction": 0.05,
+      "maximum_rejected_fraction": 0.0,
+      "maximum_shift_voxels": 8.0,
+      "mean_shift_bandwidth_voxels": 4.0,
+      "mean_shift_max_iterations": 12,
+      "mean_shift_tolerance_voxels": 0.05,
+      "minimum_candidate_support": 0.05,
+      "minimum_primary_or_stable_coarse_fraction": 0.95,
+      "minimum_relative_support_improvement": 0.01,
+      "minimum_seed_consensus_fraction": 0.7,
+      "patch_radius_voxels": 10,
+      "schema_version": "stage2-localization-policy/1.1.0",
+      "search_radius_voxels": 8.0,
+      "seed_cluster_radius_voxels": 2.0,
+      "seed_perturbation_voxels": 2.0,
+      "smoothing_sigma_voxels": 1.25
+    },
+    "qa_policy": {
+      "corridor_angular_samples": 8,
+      "corridor_axial_samples": 9,
+      "corridor_radius_voxels": 6.0,
+      "junction_patch_radius_voxels": 2,
+      "maximum_spatial_bin_median_range": 0.25,
+      "maximum_uncertainty_to_radius_ratio": 1.0,
+      "minimum_mean_junction_foreground_fraction": 0.85,
+      "minimum_median_corridor_foreground_fraction": 0.08,
+      "minimum_roi_in_bounds_fraction": 0.99,
+      "radial_foreground_probability": 0.5,
+      "roi_padding_fraction": 0.2,
+      "schema_version": "stage2-qa-policy/1.1.0",
+      "spatial_bins_per_axis": 5
+    },
+    "registration": {
+      "local_recenter_required": true,
+      "mode": "autonomous_v2"
+    },
+    "requested_analysis_scope": "roi_screening",
+    "segmentation": {
+      "chunk_depth": 8,
+      "coarse_bins": 1024,
+      "comparison": "value >= threshold",
+      "edge_slices_excluded": 0,
+      "histogram_bins": 65536,
+      "histogram_encoding": "native_uint16",
+      "maximum_foreground_fraction": 0.35,
+      "method": "exact_histogram_otsu",
+      "method_version": "2.0.0",
+      "minimum_class_mean_separation_sigma": 0.75,
+      "minimum_foreground_fraction": 0.01,
+      "minimum_otsu_separability": 0.45,
+      "minimum_significant_peaks": 2,
+      "peak_prominence_fraction": 0.003,
+      "peak_smoothing_sigma_bins": 2.0
+    }
+  },
+  "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+  "derived": {
+    "graph_summary": {
+      "method": "canonical_lattice_topology",
+      "method_version": "1.0.0",
+      "provenance": {
+        "config_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+        "input_sha256": [
+          "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+        ],
+        "source": "scientist-supplied graph schema and reference inspection"
+      },
+      "values": {
+        "junction_count": 10206,
+        "strut_count": 18468,
+        "topology_sha256": "7dc0c54a3a36af4a464159a0592d230c700744ffdbfec3f84df181914f6d5b0a",
+        "unit_cell_count": 729
+      }
+    }
+  },
+  "design_id": "octet_truss_9x9x9",
+  "inputs": {
+    "ct": {
+      "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+      "retention": "committed",
+      "role": "ct_volume",
+      "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+    },
+    "ct_metadata": {
+      "array_axes": [
+        "z",
+        "y",
+        "x"
+      ],
+      "byte_order": "big",
+      "dtype": "uint16",
+      "format": "tiff",
+      "shape": [
+        761,
+        815,
+        837
+      ],
+      "voxel_spacing": {
+        "x": {
+          "provenance": {
+            "field": "unknown",
+            "raw_value": "unknown",
+            "source": "unknown"
+          },
+          "unit": "unknown",
+          "value": "unknown"
+        },
+        "y": {
+          "provenance": {
+            "field": "unknown",
+            "raw_value": "unknown",
+            "source": "unknown"
+          },
+          "unit": "unknown",
+          "value": "unknown"
+        },
+        "z": {
+          "provenance": {
+            "field": "unknown",
+            "raw_value": "unknown",
+            "source": "unknown"
+          },
+          "unit": "unknown",
+          "value": "unknown"
+        }
+      }
+    },
+    "design_graph": {
+      "path": "data/missing_struts/octet_truss_9x9x9.json",
+      "retention": "committed",
+      "role": "design_graph",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+    },
+    "normalized_nominal_graph": {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz",
+      "retention": "committed",
+      "role": "normalized_nominal_graph",
+      "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+    }
+  },
+  "intake": {
+    "association": {
+      "confirmed": true,
+      "ct_to_specimen": true,
+      "source": "scientist_explicit"
+    },
+    "graph_inspection": {
+      "extra_top_level_keys": [],
+      "id_reference_integrity": true,
+      "junction_count": 10206,
+      "method": "canonical_lattice_topology",
+      "method_version": "1.0.0",
+      "path": "data/missing_struts/octet_truss_9x9x9.json",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+      "strut_count": 18468,
+      "topology_sha256": "7dc0c54a3a36af4a464159a0592d230c700744ffdbfec3f84df181914f6d5b0a",
+      "unit_cell_count": 729
+    },
+    "registration_mode_selection": {
+      "mode": "autonomous_v2",
+      "source": "scientist_explicit"
+    },
+    "volume_metadata": {
+      "method": "volume_metadata",
+      "method_version": "1.0.0",
+      "output_schema_version": "volume-metadata/1.0.0"
+    }
+  },
+  "lifecycle_state": "ready_for_data_prep",
+  "schema_version": "2.1.0",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "unresolved_fields": []
+}

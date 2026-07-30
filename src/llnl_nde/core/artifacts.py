@@ -70,10 +70,11 @@ def write_json_atomic(
                 "sha256": sha256_file(destination),
                 "changed": False,
             }
-        raise FileExistsError(
-            "Artifact already exists with different bytes; choose a new path: "
-            f"{destination}"
-        )
+        if not overwrite:
+            raise FileExistsError(
+                "Artifact already exists with different bytes; choose a new path: "
+                f"{destination}"
+            )
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         dir=destination.parent,
@@ -113,9 +114,10 @@ def write_text_atomic(
                 "sha256": sha256_file(destination),
                 "changed": False,
             }
-        raise FileExistsError(
-            f"Artifact already exists with different bytes: {destination}"
-        )
+        if not overwrite:
+            raise FileExistsError(
+                f"Artifact already exists with different bytes: {destination}"
+            )
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         dir=destination.parent,

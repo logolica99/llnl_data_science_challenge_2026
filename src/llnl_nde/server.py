@@ -30,13 +30,20 @@ from llnl_nde.mcp_tools.data_prep_stage1 import (
     replay_exact_otsu,
     segment_ct_dataset,
     verify_canonical_segmentation,
-    visualize_slice,
     volume_info,
 )
 from llnl_nde.mcp_tools.strut_metrics_stage2 import compute_strut_metrics
 from llnl_nde.mcp_tools.defect_analysis_stage3 import (
     classify_struts,
     render_strut_evidence,
+)
+from llnl_nde.mcp_tools.hackathon_pipeline import (
+    hackathon_analyze_defect,
+    hackathon_compute_strut_metrics,
+    hackathon_export_defect_csvs,
+    hackathon_localize_lattice_nodes,
+    hackathon_merge_defect_classifications,
+    hackathon_prepare_report_classifications,
 )
 from llnl_nde.mcp_tools.reporting_stage4 import (
     compute_spatial_stats,
@@ -54,6 +61,12 @@ __all__ = [
     "compute_spatial_stats",
     "compute_strut_metrics",
     "get_strut_report",
+    "hackathon_analyze_defect",
+    "hackathon_compute_strut_metrics",
+    "hackathon_export_defect_csvs",
+    "hackathon_localize_lattice_nodes",
+    "hackathon_merge_defect_classifications",
+    "hackathon_prepare_report_classifications",
     "inspect_volume_metadata",
     "load_lattice_graph",
     "localize_lattice_nodes",
@@ -64,7 +77,6 @@ __all__ = [
     "replay_exact_otsu",
     "segment_ct_dataset",
     "verify_canonical_segmentation",
-    "visualize_slice",
     "volume_info",
 ]
 

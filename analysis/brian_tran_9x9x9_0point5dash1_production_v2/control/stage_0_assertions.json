@@ -1,0 +1,18 @@
+{
+  "contract_version_matches": true,
+  "association_explicit": true,
+  "all_paths_repository_relative": true,
+  "all_supplied_inputs_hashed": true,
+  "ct_metadata_mcp_integrity_chain_valid": true,
+  "nominal_graph_normalized_by_mcp": true,
+  "graph_ids_references_and_topology_valid": true,
+  "normalized_graph_path_and_hash_bound": true,
+  "manifest_schema_valid": true,
+  "canonical_ingest_receipt_hash_valid": true,
+  "accessed_inputs_within_allowlist": true,
+  "forbidden_inputs_not_accessed": true,
+  "segmentation_not_run": true,
+  "registration_not_run": true,
+  "defect_labels_not_derived": true,
+  "output_artifact_hashes_match": true
+}

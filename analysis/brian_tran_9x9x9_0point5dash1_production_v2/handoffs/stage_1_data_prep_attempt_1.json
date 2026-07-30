@@ -1,0 +1,65 @@
+{
+  "attempt": 1,
+  "canonical_handoff_sha256": "cece204908ca1aed5c93bdc28c59916a3c13ec1c025e7f7346135d21c6a765d8",
+  "config_sha256": "9270429da74ead93d01411b982bdb2499aa3c5178995c29c276f3f228e4f29fe",
+  "contract_sha256": "469dbd4588d289f76a27957bb7ade46fbcf6188a7bbb615872ed0e4fde71c9f7",
+  "contract_version": "agent-stage-contract/1.0.0",
+  "created_at": "2026-07-30T16:45:01.977820Z",
+  "forbidden_operations": [
+    "defect_label_access",
+    "development_split_access",
+    "sealed_split_access",
+    "threshold_target_fraction_tuning",
+    "open_ended_threshold_optimization",
+    "autonomous_pre_freeze_aligned_json_access",
+    "global_refit_after_independent_node_localization",
+    "defect_classification",
+    "stage_2_roi_measurement",
+    "mcp_cli_or_direct_import_fallback"
+  ],
+  "input_artifacts": [
+    {
+      "consumer": "data_prep",
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_handoff.json",
+      "phase": "input",
+      "role": "data_prep_handoff",
+      "sha256": "7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac"
+    },
+    {
+      "consumer": "data_prep",
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json",
+      "phase": "input",
+      "role": "specimen_manifest",
+      "sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e"
+    },
+    {
+      "consumer": "data_prep",
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz",
+      "phase": "input",
+      "role": "normalized_nominal_graph",
+      "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+    },
+    {
+      "consumer": "data_prep",
+      "path": "data/missing_struts/octet_truss_9x9x9.json",
+      "phase": "input",
+      "role": "nominal_graph",
+      "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+    },
+    {
+      "consumer": "data_prep",
+      "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+      "phase": "input",
+      "role": "ct_volume",
+      "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+    }
+  ],
+  "owner": "data_prep",
+  "predecessor_receipt_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+  "registration_mode": "autonomous_v2",
+  "run_token": "0cc8bf023935a34263b81f481e2c83851034839f2032272c1c51277e2766fde3",
+  "schema_version": "part2-stage-handoff/1.0.0",
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "stage": "data_prep",
+  "stage_number": 1
+}

@@ -1,0 +1,510 @@
+{
+  "artifact_index": [
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_mcp_call_receipt.json",
+      "phase": "input",
+      "role": "ct_metadata_mcp_call_receipt",
+      "sensitivity": null,
+      "sha256": "fb4673c94e98178457c34a1457c5f938421d69779074cac2d1ef214740703dd9",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_response.json",
+      "phase": "input",
+      "role": "ct_metadata_mcp_response",
+      "sensitivity": null,
+      "sha256": "cb5a8c820236df9c7ae5006ce588bbc22fa76918473623fb457e9b81079693e7",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_handoff.json",
+      "phase": "input",
+      "role": "data_prep_handoff",
+      "sensitivity": null,
+      "sha256": "7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ingest_receipt.json",
+      "phase": "input",
+      "role": "ingest_receipt",
+      "sensitivity": null,
+      "sha256": "8cade5e748ec8bd346c81507d85c6507bdaef65005b363b87b6288639ba706da",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ingest_request.json",
+      "phase": "input",
+      "role": "ingest_request",
+      "sensitivity": null,
+      "sha256": "cde65342c167121e981a9d75b15e01876db5c3c3378d40606f584cc71dcc4a14",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json",
+      "phase": "input",
+      "role": "specimen_manifest",
+      "sensitivity": null,
+      "sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e",
+      "stage_number": 0,
+      "state": "active"
+    },
+    {
+      "attempt": 1,
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz",
+      "phase": "input",
+      "role": "normalized_nominal_graph",
+      "sensitivity": null,
+      "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f",
+      "stage_number": 0,
+      "state": "active"
+    }
+  ],
+  "config": {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/pipeline_config.json",
+    "sha256": "9270429da74ead93d01411b982bdb2499aa3c5178995c29c276f3f228e4f29fe"
+  },
+  "created_at": "2026-07-30T16:38:54.908148Z",
+  "current_stage": 1,
+  "events": [
+    {
+      "action": "pipeline_created",
+      "details": {
+        "registration_mode": "autonomous_v2"
+      },
+      "sequence": 0,
+      "stage_number": 0,
+      "timestamp": "2026-07-30T16:38:54.908148Z"
+    },
+    {
+      "action": "stage_started",
+      "details": {
+        "attempt": 1,
+        "run_token": "bed8df7cf47a8c8d341218b88713d16b1d287cee5c7fe101a724721dee492c35"
+      },
+      "sequence": 1,
+      "stage_number": 0,
+      "timestamp": "2026-07-30T16:39:55.076948Z"
+    },
+    {
+      "action": "stage_completed",
+      "details": {
+        "attempt": 1,
+        "effective_state": "pass",
+        "receipt_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+        "reported_state": "pass"
+      },
+      "sequence": 2,
+      "stage_number": 0,
+      "timestamp": "2026-07-30T16:44:12.098941Z"
+    },
+    {
+      "action": "stage_started",
+      "details": {
+        "attempt": 1,
+        "run_token": "0cc8bf023935a34263b81f481e2c83851034839f2032272c1c51277e2766fde3"
+      },
+      "sequence": 3,
+      "stage_number": 1,
+      "timestamp": "2026-07-30T16:45:01.977820Z"
+    },
+    {
+      "action": "autonomous_registration_frozen",
+      "details": {
+        "freeze_sha256": "096ffcb11c1352c3ab47057c04b7d502da6d7d4861cc28715d8c327d42c17072"
+      },
+      "sequence": 4,
+      "stage_number": 1,
+      "timestamp": "2026-07-30T16:59:12.761396Z"
+    },
+    {
+      "action": "stage_completed",
+      "details": {
+        "attempt": 1,
+        "effective_state": "halt",
+        "receipt_sha256": "da037ac06f975154b7b198572933b857f477ce84b7a93daf9fe702523fb5ed44",
+        "reported_state": "halt"
+      },
+      "sequence": 5,
+      "stage_number": 1,
+      "timestamp": "2026-07-30T17:20:39.780261Z"
+    }
+  ],
+  "manifest_sha256": "1e1af4ee317403a91a754aa5c9349dc749c14b6c4b47979d8025f4e5801ab9b6",
+  "pipeline_state": "halt",
+  "predecessor_receipt_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+  "registration_mode": "autonomous_v2",
+  "revision": 5,
+  "schema_version": "part2-pipeline-manifest/1.0.0",
+  "sealed_evaluation": {
+    "consumed": false,
+    "consumed_at": null,
+    "run_token": null,
+    "stage_attempt": null
+  },
+  "sensitive_artifact_hashes": {
+    "aligned_graph": [],
+    "defect_labels": [],
+    "development_labels": [],
+    "sealed_labels": []
+  },
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "stage_order": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "stages": {
+    "0": {
+      "attempt_count": 1,
+      "attempts": [
+        {
+          "attempt": 1,
+          "completed_at": "2026-07-30T16:44:12.098941Z",
+          "effective_terminal_state": "pass",
+          "failure_kind": null,
+          "handoff": {
+            "canonical_sha256": "32a1eb641e079574f58fb16a0b36ee41218f52759f0b3a39af3b1c16f25cf438",
+            "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/handoffs/stage_0_specimen_ingest_attempt_1.json",
+            "sha256": "44d5527843f26828bbb5466bbd7393fd452871fea6941150c9183570d368abff"
+          },
+          "input_artifacts": [
+            {
+              "consumer": "specimen_ingest",
+              "path": ".agents/skills/volume-metadata/SKILL.md",
+              "phase": "input",
+              "role": "volume_metadata_skill",
+              "sha256": "6c450ee49222653417914a18c5fc064e8a3030165c1c20bfd629a0a2d5a57ece"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/runtime_request.json",
+              "phase": "input",
+              "role": "scientist_intake_request",
+              "sha256": "5423757717db3fe009c23fff28635471de9bf56a9fc42434fc48b72c7a4f364c"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "analysis/schema/specimen_manifest.schema.json",
+              "phase": "input",
+              "role": "specimen_manifest_schema",
+              "sha256": "b05639f5b554f51d824dd53357adbcca75510a0224c2478780a668bf929718d9"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "data/missing_struts/octet_truss_9x9x9.json",
+              "phase": "input",
+              "role": "nominal_graph",
+              "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+            },
+            {
+              "consumer": "specimen_ingest",
+              "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+              "phase": "input",
+              "role": "ct_volume",
+              "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+            }
+          ],
+          "output_artifacts": [
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_mcp_call_receipt.json",
+              "phase": "input",
+              "role": "ct_metadata_mcp_call_receipt",
+              "sha256": "fb4673c94e98178457c34a1457c5f938421d69779074cac2d1ef214740703dd9"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ct_metadata_response.json",
+              "phase": "input",
+              "role": "ct_metadata_mcp_response",
+              "sha256": "cb5a8c820236df9c7ae5006ce588bbc22fa76918473623fb457e9b81079693e7"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_handoff.json",
+              "phase": "input",
+              "role": "data_prep_handoff",
+              "sha256": "7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ingest_receipt.json",
+              "phase": "input",
+              "role": "ingest_receipt",
+              "sha256": "8cade5e748ec8bd346c81507d85c6507bdaef65005b363b87b6288639ba706da"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/ingest_request.json",
+              "phase": "input",
+              "role": "ingest_request",
+              "sha256": "cde65342c167121e981a9d75b15e01876db5c3c3378d40606f584cc71dcc4a14"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json",
+              "phase": "input",
+              "role": "specimen_manifest",
+              "sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e"
+            },
+            {
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz",
+              "phase": "input",
+              "role": "normalized_nominal_graph",
+              "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+            }
+          ],
+          "predecessor_receipt_sha256": null,
+          "receipt": {
+            "canonical_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+            "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/receipts/stage_0_specimen_ingest_attempt_1.json",
+            "sha256": "02a9299b1135706f6d8989503e0bc1d8826a9524255f868267436b2734446f7b"
+          },
+          "registration_freeze": null,
+          "reported_terminal_state": "pass",
+          "run_token": "bed8df7cf47a8c8d341218b88713d16b1d287cee5c7fe101a724721dee492c35",
+          "scoped_handoffs": [],
+          "stage_policy": null,
+          "started_at": "2026-07-30T16:39:55.076948Z",
+          "state": "pass",
+          "supplemental_handoffs": []
+        }
+      ],
+      "completed_at": "2026-07-30T16:44:12.098941Z",
+      "completion_receipt": {
+        "canonical_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+        "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/receipts/stage_0_specimen_ingest_attempt_1.json",
+        "sha256": "02a9299b1135706f6d8989503e0bc1d8826a9524255f868267436b2734446f7b"
+      },
+      "contract": {
+        "path": "analysis/contracts/specimen_ingest.json",
+        "sha256": "612eb2bc5f008accb930ee6da2b8f5386215b360bfd5c4c7faf6afd0a4c15dfc",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": 1,
+      "execution_kind": "hybrid",
+      "maximum_attempts": 2,
+      "name": "specimen_ingest",
+      "one_shot": false,
+      "owner": "specimen_ingest",
+      "stage_number": 0,
+      "state": "pass",
+      "unlocked_at": "2026-07-30T16:38:54.908148Z"
+    },
+    "1": {
+      "attempt_count": 1,
+      "attempts": [
+        {
+          "attempt": 1,
+          "completed_at": "2026-07-30T17:20:39.780261Z",
+          "effective_terminal_state": "halt",
+          "failure_kind": "schema",
+          "handoff": {
+            "canonical_sha256": "cece204908ca1aed5c93bdc28c59916a3c13ec1c025e7f7346135d21c6a765d8",
+            "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/handoffs/stage_1_data_prep_attempt_1.json",
+            "sha256": "052e824d64933bad8f276a47a518af3553334d4658af73fa9e8bb70a597e0a9d"
+          },
+          "input_artifacts": [
+            {
+              "consumer": "data_prep",
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/data_prep_handoff.json",
+              "phase": "input",
+              "role": "data_prep_handoff",
+              "sha256": "7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac"
+            },
+            {
+              "consumer": "data_prep",
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/config/specimen_manifest.json",
+              "phase": "input",
+              "role": "specimen_manifest",
+              "sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e"
+            },
+            {
+              "consumer": "data_prep",
+              "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/design/normalized_nominal_graph.npz",
+              "phase": "input",
+              "role": "normalized_nominal_graph",
+              "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+            },
+            {
+              "consumer": "data_prep",
+              "path": "data/missing_struts/octet_truss_9x9x9.json",
+              "phase": "input",
+              "role": "nominal_graph",
+              "sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+            },
+            {
+              "consumer": "data_prep",
+              "path": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+              "phase": "input",
+              "role": "ct_volume",
+              "sha256": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+            }
+          ],
+          "output_artifacts": [],
+          "predecessor_receipt_sha256": "60d242754ef9e15952b2f084941b4d0788b8531d6b3a575a2361a9ba13ca7202",
+          "receipt": {
+            "canonical_sha256": "da037ac06f975154b7b198572933b857f477ce84b7a93daf9fe702523fb5ed44",
+            "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/receipts/stage_1_data_prep_attempt_1.json",
+            "sha256": "cb8b72cd34fb85367a0f2511d1ad1cda2666613fb657bc62b401daa42c4e22c7"
+          },
+          "registration_freeze": {
+            "canonical_sha256": "096ffcb11c1352c3ab47057c04b7d502da6d7d4861cc28715d8c327d42c17072",
+            "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/receipts/stage_1_registration_freeze_attempt_1.json",
+            "sha256": "940748ace73714184ca5c5b1e0ec165c0d2cc3e387bf3078db646a9d42ae5222"
+          },
+          "reported_terminal_state": "halt",
+          "run_token": "0cc8bf023935a34263b81f481e2c83851034839f2032272c1c51277e2766fde3",
+          "scoped_handoffs": [],
+          "stage_policy": {
+            "attempt": 1,
+            "authorized_outputs": [],
+            "config_sha256": "9270429da74ead93d01411b982bdb2499aa3c5178995c29c276f3f228e4f29fe",
+            "contract_sha256": "469dbd4588d289f76a27957bb7ade46fbcf6188a7bbb615872ed0e4fde71c9f7",
+            "design_id": "octet_truss_9x9x9",
+            "input_handoff_sha256": "cece204908ca1aed5c93bdc28c59916a3c13ec1c025e7f7346135d21c6a765d8",
+            "localization_summary": null,
+            "mcp_response_bindings": [],
+            "metrology_summary": {
+              "absolute_uncertainty_available": false,
+              "direct_metrology_authorized": false,
+              "status": "not_run",
+              "uncertainty_within_limit": null
+            },
+            "output_hashes": {},
+            "reason_codes": [
+              "MCP_SCHEMA_INCOMPATIBLE"
+            ],
+            "requested_analysis_scope": "roi_screening",
+            "roi_gate_summary": {
+              "coarse_region": "not_run",
+              "image_qa": "not_run",
+              "localization": "not_run",
+              "padded_roi": "not_run",
+              "registration": "not_run",
+              "segmentation": "not_run"
+            },
+            "run_token": "0cc8bf023935a34263b81f481e2c83851034839f2032272c1c51277e2766fde3",
+            "schema_version": "part2-stage-policy/1.0.0",
+            "source_hashes": {
+              "ct_volume": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+              "data_prep_handoff": "7af046f9f70a9565a640508b3c1cd82dd7f6a5603ce5fe086acc22054d4087ac",
+              "nominal_graph": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+              "normalized_nominal_graph": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f",
+              "specimen_manifest": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e"
+            },
+            "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+            "stage_number": 1,
+            "terminal_state": "halt",
+            "unauthorized_outputs": [
+              "absolute_metrology",
+              "coarse_region_screening",
+              "direct_dimensional_measurement",
+              "node_localization",
+              "padded_roi_definition",
+              "registration",
+              "segmentation"
+            ]
+          },
+          "started_at": "2026-07-30T16:45:01.977820Z",
+          "state": "halt",
+          "supplemental_handoffs": []
+        }
+      ],
+      "completed_at": "2026-07-30T17:20:39.780261Z",
+      "completion_receipt": {
+        "canonical_sha256": "da037ac06f975154b7b198572933b857f477ce84b7a93daf9fe702523fb5ed44",
+        "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/receipts/stage_1_data_prep_attempt_1.json",
+        "sha256": "cb8b72cd34fb85367a0f2511d1ad1cda2666613fb657bc62b401daa42c4e22c7"
+      },
+      "contract": {
+        "path": "analysis/contracts/data_prep.json",
+        "sha256": "469dbd4588d289f76a27957bb7ade46fbcf6188a7bbb615872ed0e4fde71c9f7",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": 1,
+      "execution_kind": "hybrid",
+      "maximum_attempts": 2,
+      "name": "data_prep",
+      "one_shot": false,
+      "owner": "data_prep",
+      "stage_number": 1,
+      "state": "halt",
+      "unlocked_at": "2026-07-30T16:44:12.098941Z"
+    },
+    "2": {
+      "attempt_count": 0,
+      "attempts": [],
+      "completed_at": null,
+      "completion_receipt": null,
+      "contract": {
+        "path": "analysis/contracts/strut_metrics.json",
+        "sha256": "544bdbac952846a846ea7d1216b72abb8c6cdf8c29eca663dd8958fad250cb40",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": null,
+      "execution_kind": "deterministic",
+      "maximum_attempts": 1,
+      "name": "strut_metrics",
+      "one_shot": false,
+      "owner": "strut_metrics",
+      "stage_number": 2,
+      "state": "locked",
+      "unlocked_at": null
+    },
+    "3": {
+      "attempt_count": 0,
+      "attempts": [],
+      "completed_at": null,
+      "completion_receipt": null,
+      "contract": {
+        "path": "analysis/contracts/defect_analysis.json",
+        "sha256": "4f48861493543fbf076cfc29e72d965532e09dc6080769551e38a0bb8186588b",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": null,
+      "execution_kind": "agent_judgment",
+      "maximum_attempts": 2,
+      "name": "defect_analysis",
+      "one_shot": false,
+      "owner": "defect_lead",
+      "stage_number": 3,
+      "state": "locked",
+      "unlocked_at": null
+    },
+    "4": {
+      "attempt_count": 0,
+      "attempts": [],
+      "completed_at": null,
+      "completion_receipt": null,
+      "contract": {
+        "path": "analysis/contracts/nde_report.json",
+        "sha256": "ddca0ac44d90420a171ec2fb4bf24b3d9071efe9fb73d8f6ddc84b48630872c9",
+        "version": "agent-stage-contract/1.0.0"
+      },
+      "control_halt": null,
+      "current_attempt": null,
+      "execution_kind": "agent_judgment",
+      "maximum_attempts": 2,
+      "name": "nde_report",
+      "one_shot": false,
+      "owner": "report_agent",
+      "stage_number": 4,
+      "state": "locked",
+      "unlocked_at": null
+    }
+  },
+  "updated_at": "2026-07-30T17:20:39.780261Z"
+}

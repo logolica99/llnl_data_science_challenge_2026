@@ -45,16 +45,18 @@
             "implementation_status",
             "central_start_fraction",
             "central_end_fraction",
+            "present_fraction",
+            "maximum_central_present_slice_fraction",
             "smoothing_window_samples",
-            "maximum_smoothed_minimum_foreground_fraction",
             "require_primary_disconnection"
           ],
           "properties": {
             "implementation_status": {"const": "complete"},
             "central_start_fraction": {"const": 0.2},
             "central_end_fraction": {"const": 0.8},
+            "present_fraction": {"const": 0.05},
+            "maximum_central_present_slice_fraction": {"const": 0.1},
             "smoothing_window_samples": {"const": 3},
-            "maximum_smoothed_minimum_foreground_fraction": {"const": 0.0},
             "require_primary_disconnection": {"const": true}
           }
         },

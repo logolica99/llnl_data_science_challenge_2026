@@ -62,9 +62,17 @@ Each sample includes:
 
 To run the codebase and participate in the challenge, we recommend using [Conda](https://docs.conda.io/en/latest/) to manage your environment.
 
+> **Repository runtime note:** This project requires Python 3.12. The macOS
+> system Python 3.9 is incompatible with the codebase, and a bundled Python
+> runtime may not include required packages such as `jsonschema`. When the
+> repository's existing `.venv` is available, use `.venv/bin/python` directly
+> for pipeline commands and validation instead of rediscovering or rebuilding
+> the environment. During the July 2026 pipeline run, `.venv` already provided
+> Python 3.12 and the required dependencies, so nothing was reinstalled.
+
 1. **Create a new conda environment:**
    ```bash
-   conda create -n dssi_env python=3.11 -y
+   conda create -n dssi_env python=3.12 -y
    conda activate dssi_env
    ```
 

@@ -187,6 +187,11 @@ poc/**/results/
 **/mask.tiff
 **/mask.npy
 **/exact_histogram_uint16.npy
+**/per_strut_profiles.json
+**/*_segmentation.npy
+
+# Local vendored Python packages (install via requirements / venv, do not commit).
+.python_pkgs/
 
 # Local runtime/evaluation output retained outside Git history.
 analysis/brian_tran_9x9x9_runtime_*/

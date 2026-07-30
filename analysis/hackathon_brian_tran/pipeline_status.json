@@ -1,0 +1,25 @@
+{
+  "ct": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_0point5dash1 1 Slices.tif",
+  "nominal": "data/missing_struts/octet_truss_9x9x9.json",
+  "schema_version": "hackathon-pipeline-status/1.0.0",
+  "specimen_id": "brian_tran_hackathon",
+  "stages": {
+    "0": {
+      "artifacts": {
+        "ct_metadata": "analysis/hackathon_brian_tran/stage0/ct_metadata.json"
+      },
+      "completed_at": "2026-07-30T17:33:37+00:00",
+      "gate": "pass",
+      "summary": {
+        "dtype": "uint16",
+        "format": "tiff",
+        "shape": [
+          761,
+          815,
+          837
+        ]
+      }
+    }
+  },
+  "updated_at": "2026-07-30T17:33:37+00:00"
+}

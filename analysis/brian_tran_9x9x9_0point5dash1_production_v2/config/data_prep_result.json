@@ -1,0 +1,233 @@
+{
+  "aligned_graph": {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/localized_graph.json",
+    "retention": "regenerable",
+    "role": "derived_aligned_graph",
+    "sha256": "ad58cbd0fa3751add5cb24c54cfd8776c8af2a2c8513246de7dd8a4d2cd725be"
+  },
+  "analysis_parameters_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+  "artifact_bindings": {
+    "localization_report": {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/registration/localization_report.json",
+      "role": "localization_report",
+      "sha256": "8c99b5234abf455d75b8cb0eb2b6e88936719b02426b80b27af31e8ed9dd8fab"
+    },
+    "registration_qa": {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/qa/registration_qa.json",
+      "role": "registration_qa",
+      "sha256": "f09b35c6b8e3072673e3a8f7b2773b738b16d25bcf95677fdd8c92d5bfdcb311"
+    },
+    "segmentation_verification_mcp_response": {
+      "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/segmentation/segmentation_verification_mcp_response.json",
+      "role": "segmentation_verification_mcp_response",
+      "sha256": "0e417f360ec269a30203ca4726f1ff0f18f5c9f035c4ab9fd9691a71240b3f55"
+    }
+  },
+  "authorized_outputs": [
+    "segmentation",
+    "registration",
+    "node_localization",
+    "coarse_region_screening",
+    "padded_roi_definition"
+  ],
+  "canonical_mask": {
+    "array_axes": [
+      "z",
+      "y",
+      "x"
+    ],
+    "dtype": "uint8",
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production_v2/segmentation/canonical_mask.npy",
+    "retention": "committed",
+    "role": "canonical_segmentation_mask",
+    "sha256": "37ffd769657bf8f96653bd4f06b9d57bd7de783a462c491bb73511a960d02bf6",
+    "shape": [
+      761,
+      815,
+      837
+    ]
+  },
+  "derived": {
+    "graph_summary": {
+      "aligned_values": {
+        "junction_count": 10206,
+        "strut_count": 18468,
+        "topology_sha256": "7dc0c54a3a36af4a464159a0592d230c700744ffdbfec3f84df181914f6d5b0a",
+        "unit_cell_count": 729
+      },
+      "method": "canonical_lattice_topology",
+      "method_version": "1.0.0",
+      "provenance": {
+        "config_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+        "input_sha256": [
+          "ad58cbd0fa3751add5cb24c54cfd8776c8af2a2c8513246de7dd8a4d2cd725be",
+          "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2"
+        ],
+        "source": "nominal topology and independently localized autonomous registration"
+      },
+      "values": {
+        "junction_count": 10206,
+        "strut_count": 18468,
+        "topology_sha256": "7dc0c54a3a36af4a464159a0592d230c700744ffdbfec3f84df181914f6d5b0a",
+        "unit_cell_count": 729
+      }
+    },
+    "registration_result": {
+      "method": "autonomous_v2",
+      "method_version": "1.0.0",
+      "provenance": {
+        "config_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+        "input_sha256": [
+          "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+          "ad58cbd0fa3751add5cb24c54cfd8776c8af2a2c8513246de7dd8a4d2cd725be"
+        ],
+        "source": "hash-bound autonomous registration, independent localization, and all-edge QA"
+      },
+      "values": {
+        "aligned_graph_state": "derived",
+        "authorized_outputs": [
+          "segmentation",
+          "registration",
+          "node_localization",
+          "coarse_region_screening",
+          "padded_roi_definition"
+        ],
+        "design_id": "octet_truss_9x9x9",
+        "local_recenter_complete": true,
+        "localization_quality_counts": {
+          "ambiguous_edges": 0,
+          "ambiguous_nodes": 0,
+          "boundary_limited_nodes": 0,
+          "direct_metrology_usable_edges": 17644,
+          "fallback_edges": 824,
+          "fallback_nodes": 288,
+          "primary_edges": 5579,
+          "primary_nodes": 4254,
+          "rejected_or_low_confidence_nodes": 288,
+          "roi_screening_usable_edges": 18468,
+          "stable_coarse_edges": 12065,
+          "stable_coarse_nodes": 5664
+        },
+        "metrology_gate_status": "not_authorized",
+        "overall_pass": true,
+        "reason_codes": [
+          "METROLOGY_NOT_AUTHORIZED",
+          "ROI_GATES_PASS"
+        ],
+        "requested_analysis_scope": "roi_screening",
+        "roi_gate_pass": true,
+        "roi_gate_results": {
+          "coarse_capture_pass": true,
+          "localization_binding_pass": true,
+          "localization_quantitative_gate_pass": true,
+          "overall_pass": true,
+          "padded_roi_capture_pass": true,
+          "production_image_qa_pass": true
+        },
+        "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+        "unauthorized_outputs": [
+          "absolute_metrology",
+          "direct_dimensional_measurement"
+        ]
+      }
+    },
+    "segmentation_result": {
+      "method": "exact_histogram_otsu",
+      "method_version": "2.0.0",
+      "provenance": {
+        "config_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+        "input_sha256": [
+          "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+        ],
+        "source": "persisted closed exact-Otsu MCP verification evidence"
+      },
+      "values": {
+        "background_mean": 32615.08340378344,
+        "class_mean_separation_sigma": 4.321652770590698,
+        "foreground_fraction": 0.11298623648555371,
+        "foreground_mean": 47493.56062968888,
+        "foreground_voxel_count": 58653410,
+        "histogram_sha256": "daed3b27ceb0b6c7842da7dea64fd1b3eaf7779e9fc0521905b7262114dab1f4",
+        "otsu_separability": 0.814158617485167,
+        "overall_pass": true,
+        "significant_modes": [
+          32288.0,
+          48992.0
+        ],
+        "threshold": 40054,
+        "voxel_count": 519119955
+      }
+    },
+    "voxel_spacing": {
+      "method": "voxel_index_grid",
+      "method_version": "1.0.0",
+      "provenance": {
+        "config_sha256": "958052dc7bf05ac0a31ca3f626b34e232c0e7d9f159c4dd5657d80af00fd5918",
+        "input_sha256": [
+          "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79"
+        ],
+        "source": "CT voxel indices; physical spacing unavailable from file metadata"
+      },
+      "values": {
+        "axes": [
+          "z",
+          "y",
+          "x"
+        ],
+        "spacing": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "unit": "simulation_voxel"
+      }
+    }
+  },
+  "design_id": "octet_truss_9x9x9",
+  "input_manifest_artifact_sha256": "eb5a8720445e97bbd97f39b1bade1e517c44da7fc7662290d545447f906be12e",
+  "input_manifest_sha256": "ed444c0560fdc0734bb368b1e25836392788742d2c4150fc29eec8acdaef4aec",
+  "localization_quality_counts": {
+    "ambiguous_edges": 0,
+    "ambiguous_nodes": 0,
+    "boundary_limited_nodes": 0,
+    "direct_metrology_usable_edges": 17644,
+    "fallback_edges": 824,
+    "fallback_nodes": 288,
+    "primary_edges": 5579,
+    "primary_nodes": 4254,
+    "rejected_or_low_confidence_nodes": 288,
+    "roi_screening_usable_edges": 18468,
+    "stable_coarse_edges": 12065,
+    "stable_coarse_nodes": 5664
+  },
+  "metrology_gate_status": "not_authorized",
+  "reason_codes": [
+    "METROLOGY_NOT_AUTHORIZED",
+    "ROI_GATES_PASS"
+  ],
+  "registration_mode": "autonomous_v2",
+  "requested_analysis_scope": "roi_screening",
+  "roi_gate_results": {
+    "coarse_capture_pass": true,
+    "localization_binding_pass": true,
+    "localization_quantitative_gate_pass": true,
+    "overall_pass": true,
+    "padded_roi_capture_pass": true,
+    "production_image_qa_pass": true
+  },
+  "schema_version": "data-prep-result/1.2.0",
+  "self_verification": {
+    "defect_labels_not_accessed": true,
+    "exact_otsu_complete": true,
+    "local_recenter_complete": true,
+    "localization_quality_propagated": true,
+    "registration_complete": true,
+    "roi_gate_pass": true,
+    "scope_bound_to_hashed_intake": true
+  },
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "unauthorized_outputs": [
+    "absolute_metrology",
+    "direct_dimensional_measurement"
+  ]
+}

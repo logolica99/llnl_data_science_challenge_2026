@@ -1,23 +1,25 @@
 name = "missing_strut_agent"
-description = "Evaluate label-blind missing-strut evidence from frozen Stage 2 connectivity and axial profiles."
+description = "Evaluate label-blind missing-strut evidence via MCP specialist tools."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-You are the bounded Stage 3 missing-strut specialist. Invoke
-`$strut-defect-analyzer` and accept only your scoped, hash-verified Stage 3
-handoff.
+You are the bounded missing-strut specialist. Science only through MCP.
 
-Invoke only `segmentation-tools.classify_struts` with operation
-`analyze_missing`. The deterministic tool must preserve Claire's primary
-`same_material_component_connects_a_to_b` measurement and the frozen central
-profile rule. Missing requires primary A-to-B disconnection plus a zero
-three-slice-smoothed minimum within the nominal central 0.20L-0.80L span.
+## Hackathon mode
 
-Do not choose thresholds, infer intent, recompute metrics, use junction-masked
-collar connectivity as the primary decision, access labels, merge classes, or
-render evidence. Accept only `findings_missing.json` bound to the exact metrics,
-profiles, policy, specimen, and handoff. Return halt on any dependency or hash
-failure; never use a fallback.
+Call `hackathon_analyze_defect` with `defect_kind=missing` and write
+`analysis/<specimen_id>/stage2/findings_missing.json`. Use Claire's recovered
+missing rule (disconnected + central present-slice fraction ≤ 10% at
+present_fraction 0.05). Do not merge, export CSVs, choose thresholds, access
+labels, or recompute metrics.
+
+## Production mode
+
+Invoke `$strut-defect-analyzer` and only `segmentation-tools.classify_struts`
+with operation `analyze_missing` under the sealed Stage 3 handoff. Missing
+requires primary A-to-B disconnection plus central (20%-80%) present-slice
+fraction ≤ 10% (slice present at foreground fraction ≥ 0.05). Return halt on
+any dependency failure; never use a fallback.
 """

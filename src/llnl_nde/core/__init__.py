@@ -11,6 +11,7 @@ from .defect_analysis import (
     export_stage3_validation_csvs,
     merge_strut_classifications,
     normalize_stage3_config,
+    prepare_hackathon_report_classifications,
     verify_strut_classifications,
 )
 from .evidence import render_strut_evidence
@@ -100,6 +101,7 @@ __all__ = [
     "normalize_lattice_graph",
     "normalize_stage3_config",
     "otsu_from_histogram",
+    "prepare_hackathon_report_classifications",
     "read_metrics_csv",
     "replay_exact_otsu",
     "register_lattice_to_ct",

@@ -82,12 +82,15 @@ Use `classify_struts` only with the operation authorized for the caller:
 - `classifier_verifier`: `verify`
 
 Require every specialist to emit `part2-specialist-findings/1.0.0`. Missing
-requires primary A-to-B disconnection and a zero three-slice-smoothed central
-minimum. Broken uses the central `0.20L`-`0.80L` profile, P90 reference,
-`0.50 * P90` deficient-slice cutoff, 15% deficient fraction or a three-slice
-run, 0.05 collar support, and at least 500 voxels in each endpoint-to-collar
-component. Missing has precedence. Connected bite cases may be broken;
-unresolved disconnections require review.
+requires primary A-to-B disconnection and a central (20%-80%) present-slice
+fraction of at most 10%, where a slice is material-bearing at foreground
+fraction ≥ 0.05 (Claire recovered standalone 96/78 rule). Broken uses the
+central `0.20L`-`0.80L` profile, P90 reference, `0.50 * P90` deficient-slice
+cutoff, 15% deficient fraction or a three-slice run, 0.05 collar support, and
+at least 500 voxels in each endpoint-to-collar component. Missing has
+precedence. Connected bite cases may be broken; unresolved disconnections
+require review. The specimen-specific `y=18` crop filter is viewer-only CSV
+postprocessing and must never change scientific findings.
 
 Thin and bent are teammate-owned. If either implementation is `deferred`,
 preserve missing/broken development results as `manual_review`; never claim a

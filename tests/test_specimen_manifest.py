@@ -302,15 +302,20 @@ class SpecimenManifestTests(unittest.TestCase):
 
     def test_autonomous_provisional_manifest_allows_pending_aligned_graph(self) -> None:
         source = next(
-            path for path in manifest_paths() if "pacificvis" in path.as_posix()
+            path
+            for path in manifest_paths()
+            if "brian_tran_9x9x9_0point5dash1_production" in path.as_posix()
+            and path.as_posix().endswith(
+                "brian_tran_9x9x9_0point5dash1_production/config/specimen_manifest.json"
+            )
         )
         manifest = json.loads(source.read_text(encoding="utf-8"))
         manifest["lifecycle_state"] = "provisional"
         manifest["unresolved_fields"] = ["analysis_parameters.coordinates.array_axes"]
         manifest["analysis_parameters"]["coordinates"]["array_axes"] = "unknown"
-        del manifest["inputs"]["aligned_graph"]
+        manifest["inputs"].pop("aligned_graph", None)
         graph_summary = manifest["derived"]["graph_summary"]
-        del graph_summary["aligned_values"]
+        graph_summary.pop("aligned_values", None)
         graph_summary["provenance"]["input_sha256"] = [
             manifest["inputs"]["design_graph"]["sha256"]
         ]
@@ -328,7 +333,11 @@ class SpecimenManifestTests(unittest.TestCase):
 
     def test_challenge_provisional_manifest_requires_supplied_aligned_graph(self) -> None:
         source = next(
-            path for path in manifest_paths() if "brian_tran" in path.as_posix()
+            path
+            for path in manifest_paths()
+            if path.as_posix().endswith(
+                "brian_tran_9x9x9_0point5dash1/config/specimen_manifest.json"
+            )
         )
         manifest = json.loads(source.read_text(encoding="utf-8"))
         manifest["lifecycle_state"] = "provisional"
@@ -378,26 +387,38 @@ class SpecimenManifestTests(unittest.TestCase):
 
     def test_direct_metrology_analysis_ready_requires_passing_uncertainty(self) -> None:
         source = next(
-            path for path in manifest_paths() if "pacificvis" in path.as_posix()
+            path
+            for path in manifest_paths()
+            if path.as_posix().endswith(
+                "brian_tran_9x9x9_0point5dash1/config/specimen_manifest.json"
+            )
         )
         manifest = self._promote_analysis_ready(
             json.loads(source.read_text(encoding="utf-8"))
         )
-        manifest["derived"]["registration_result"]["values"][
-            "metrology_gate_status"
-        ] = "insufficient_evidence"
-        manifest["derived"]["registration_result"]["values"][
-            "unauthorized_outputs"
-        ] = ["absolute_metrology", "direct_dimensional_measurement"]
-        manifest["derived"]["registration_result"]["values"][
-            "authorized_outputs"
-        ] = [
-            value
-            for value in manifest["derived"]["registration_result"]["values"][
-                "authorized_outputs"
-            ]
-            if value not in {"absolute_metrology", "direct_dimensional_measurement"}
+        manifest["analysis_parameters"]["requested_analysis_scope"] = "direct_metrology"
+        manifest["analysis_parameters_sha256"] = canonical_json_sha256(
+            manifest["analysis_parameters"]
+        )
+        values = manifest["derived"]["registration_result"]["values"]
+        values["requested_analysis_scope"] = "direct_metrology"
+        values["metrology_gate_status"] = "insufficient_evidence"
+        values["reason_codes"] = ["ROI_GATES_PASS", "METROLOGY_GATES_PASS"]
+        values["authorized_outputs"] = [
+            "segmentation",
+            "registration",
+            "node_localization",
+            "coarse_region_screening",
+            "padded_roi_definition",
+            "absolute_metrology",
+            "direct_dimensional_measurement",
         ]
+        values["unauthorized_outputs"] = []
+        for section in manifest["derived"].values():
+            if isinstance(section, dict) and isinstance(section.get("provenance"), dict):
+                section["provenance"]["config_sha256"] = manifest[
+                    "analysis_parameters_sha256"
+                ]
         temporary = self._write_temporary(manifest)
         self.addCleanup(temporary.unlink)
 

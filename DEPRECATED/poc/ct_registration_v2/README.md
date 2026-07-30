@@ -24,7 +24,6 @@ tolerance gates. See [RESULTS.md](RESULTS.md).
   default.
 - `registration_core.py`: numerical and validation implementation.
 - `config.default.json`: all sampling choices and acceptance limits.
-- `config.pacificvis.json`: settings for the 1200³ float32 PacificVis volume.
 
 The detailed algorithms and rationale are in [METHOD.md](METHOD.md). Test
 coverage and the release protocol are in [TEST_PLAN.md](TEST_PLAN.md).
@@ -95,19 +94,3 @@ classify defects. Classification is allowed only when:
 
 Missing evidence or a failed gate produces a nonzero exit and
 `classification_allowed: false`.
-
-## PacificVis blind run
-
-The repository also contains a CT-only run against the physically simulated
-PacificVis 8×8×8 five-defect volume. The fit uses
-`data/octet_truss_8x8x8/octet_truss_8x8x8.json`; it does not use either
-PacificVis OBJ mesh and no registered JSON exists in that dataset directory.
-
-See
-[`results/pacificvis_8x8x8_v2run/RUN_SUMMARY.md`](results/pacificvis_8x8x8_v2run/RUN_SUMMARY.md).
-The strict end-to-end robustness sweep passes. A nearby downsampled-EDT setting
-first produces a visibly incorrect coarse transform, but the standard
-full-resolution image refinement rejects that coarse placement and recovers to
-within 1.66 voxels P95 of the baseline. External validation is still pending,
-so this run remains diagnostic rather than authorization for defect
-classification.

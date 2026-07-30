@@ -116,7 +116,9 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
 
         axial_t = np.linspace(-0.1, 1.1, 13).tolist()
         profiles = {
-            1: [0.8, 0.8, 0.8, 0.0, 0.0, 0.0, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+            # Central 20%-80% is almost empty → missing under present-slice ≤10%.
+            1: [0.8, 0.8, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.8, 0.8, 0.8],
+            # Sparse central material (>10% present) + disconnect → broken.
             2: [0.8, 0.8, 0.8, 0.1, 0.1, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
             3: [0.8, 0.8, 0.8, 0.1, 0.1, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
             4: [0.8] * 13,
@@ -619,8 +621,11 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
             {
                 "missing_all": 1,
                 "broken_all": 2,
+                "broken_connected_bite": 1,
                 "missing_touching_excluded_plane": 1,
+                "broken_touching_excluded_plane": 0,
                 "missing_viewer_filtered": 0,
+                "broken_viewer_filtered": 1,
             },
             result["result"]["counts"],
         )
@@ -639,6 +644,11 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(["1"], [row["strut_id"] for row in missing])
         self.assertEqual(["2", "3"], [row["strut_id"] for row in broken])
         self.assertEqual([], filtered)
+        with (export_directory / "broken_struts_viewer_filtered.csv").open(
+            newline="", encoding="utf-8"
+        ) as stream:
+            broken_filtered = list(csv.DictReader(stream))
+        self.assertEqual(["2"], [row["strut_id"] for row in broken_filtered])
         manifest = json.loads(
             (export_directory / "stage3_validation_export_manifest.json").read_text(
                 encoding="utf-8"
@@ -646,9 +656,13 @@ class Stage3DefectAnalysisTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertTrue(manifest["non_authoritative"])
         self.assertFalse(manifest["production_receipt_artifact"])
-        self.assertEqual(
-            "either nominal endpoint touches the plane",
+        self.assertIn(
+            "connected bite",
             manifest["filter"]["exclusion_rule"],
+        )
+        self.assertIn(
+            "broken_struts_viewer_filtered.csv",
+            manifest["filter"]["applies_to"],
         )
 
     async def test_mcp_rejects_stale_stage3_handoff(self) -> None:

@@ -951,7 +951,7 @@ def ingest_specimen(
     cad_units_provenance: str = UNKNOWN,
     graph_axes: str = "xyz",
     array_axes: str = UNKNOWN,
-    aligned_graph_units: str = UNKNOWN,
+    aligned_graph_units: str = "voxel",
     retention: str = "committed",
     schema_path: Path = DEFAULT_SCHEMA,
     normalized_graph_path: Path | None = None,

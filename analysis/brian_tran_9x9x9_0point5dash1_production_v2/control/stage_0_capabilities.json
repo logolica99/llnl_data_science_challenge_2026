@@ -1,0 +1,23 @@
+{
+  "agents": {
+    "specimen_ingest": {
+      "available": true,
+      "contract_version": "agent-stage-contract/1.0.0"
+    }
+  },
+  "mcp_servers": {
+    "segmentation-tools": {
+      "healthy": true,
+      "tools": {
+        "inspect_volume_metadata": {
+          "available": true,
+          "response_schema_version": "part2-mcp-response/1.0.0"
+        },
+        "load_lattice_graph": {
+          "available": true,
+          "response_schema_version": "part2-mcp-response/1.0.0"
+        }
+      }
+    }
+  }
+}

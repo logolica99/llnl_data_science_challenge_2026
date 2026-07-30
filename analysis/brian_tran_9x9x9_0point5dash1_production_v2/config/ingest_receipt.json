@@ -1,0 +1,47 @@
+{
+  "canonical_receipt_sha256": "f49350180f79da8b5b38914ad966f8762ec09b532decfe50e0f3a255047823dc",
+  "design_id": "octet_truss_9x9x9",
+  "design_transform_declaration_verification": null,
+  "input_sha256": {
+    "ct": "1dea75b7a9882065cc52d4eb137b7d2cdc86d3ad928543e751ae4c811c466b79",
+    "ct_metadata_mcp_call_receipt": "fb4673c94e98178457c34a1457c5f938421d69779074cac2d1ef214740703dd9",
+    "ct_metadata_response": "cb5a8c820236df9c7ae5006ce588bbc22fa76918473623fb457e9b81079693e7",
+    "design_graph": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+    "normalized_nominal_graph": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f"
+  },
+  "lifecycle_state": "ready_for_data_prep",
+  "manifest_sha256": "ed444c0560fdc0734bb368b1e25836392788742d2c4150fc29eec8acdaef4aec",
+  "method": "specimen_ingest",
+  "method_version": "1.3.0",
+  "request_sha256": "67c0a696b38f3c287352e7c2a87c3a00534f5d03b2816e330a13a3190bedf8e7",
+  "requested_analysis_scope": "roi_screening",
+  "schema_version": "ingest-receipt/1.3.0",
+  "self_verification": {
+    "all_inputs_hashed": true,
+    "all_paths_repository_relative": true,
+    "association_explicit": true,
+    "cad_readable": true,
+    "cad_readable_or_not_supplied": true,
+    "ct_metadata_header_facts_bound_to_call_receipt": true,
+    "ct_metadata_mcp_call_receipt_closed": true,
+    "ct_metadata_mcp_call_receipt_hash_bound": true,
+    "ct_metadata_mcp_integrity_chain_valid": true,
+    "ct_metadata_response_hash_bound": true,
+    "ct_metadata_response_header_only": true,
+    "ct_metadata_response_path_and_ct_hash_match": true,
+    "ct_metadata_response_schema_closed": true,
+    "defect_labels_not_derived": true,
+    "design_transform_declaration_hash_bound": true,
+    "design_transform_declaration_valid": true,
+    "graph_id_reference_integrity": true,
+    "manifest_schema_valid": true,
+    "normalized_graph_hash_bound": true,
+    "registration_not_run": true,
+    "segmentation_not_run": true
+  },
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production_v2",
+  "unresolved_fields": [],
+  "warnings": [
+    "CT voxel spacing is unavailable from file metadata"
+  ]
+}

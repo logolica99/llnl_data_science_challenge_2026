@@ -1,0 +1,51 @@
+[
+  {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/design/normalized_nominal_graph.npz",
+    "sha256": "e4e4185053e163d320631e27b7fe671b88ad913301faa7081714722499ea622f",
+    "role": "normalized_nominal_graph",
+    "phase": "output",
+    "producer": "specimen_ingest"
+  },
+  {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_request.json",
+    "sha256": "9d36472cce2b821cabd619d8e62af5990fea8cfb9914e6809283b3f75ac51bcf",
+    "role": "ingest_request",
+    "phase": "output",
+    "producer": "specimen_ingest"
+  },
+  {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_response.json",
+    "sha256": "eadf7fe213a82dfa4e6a47e6105f430ee0465a46891185ee295480c3bf8abe3f",
+    "role": "ct_metadata_mcp_response",
+    "phase": "output",
+    "producer": "specimen_ingest"
+  },
+  {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ct_metadata_mcp_call_receipt.json",
+    "sha256": "1987a1115c4b2bd181f393c4ca484c18483a8fe2a59ef795f9aa66c23336cbc6",
+    "role": "ct_metadata_mcp_call_receipt",
+    "phase": "output",
+    "producer": "specimen_ingest"
+  },
+  {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/specimen_manifest.json",
+    "sha256": "1857f18e818a82e03e8aec73df8dc087b4ffea827cca6493d48ec9c3912277ce",
+    "role": "specimen_manifest",
+    "phase": "output",
+    "producer": "specimen_ingest"
+  },
+  {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/ingest_receipt.json",
+    "sha256": "95096637fca6250f95253322f338dad7fbbaaff5f973c2d50d3ec026520aa95d",
+    "role": "ingest_receipt",
+    "phase": "output",
+    "producer": "specimen_ingest"
+  },
+  {
+    "path": "analysis/brian_tran_9x9x9_0point5dash1_production/config/data_prep_handoff.json",
+    "sha256": "4feb3ca4519cbc6d28093ec0c2f46c22afa47c6ce474d2c1c396cbc97aeec3d0",
+    "role": "data_prep_handoff",
+    "phase": "output",
+    "producer": "specimen_ingest"
+  }
+]

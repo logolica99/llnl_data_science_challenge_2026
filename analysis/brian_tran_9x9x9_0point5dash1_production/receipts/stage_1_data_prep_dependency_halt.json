@@ -1,0 +1,36 @@
+{
+  "assertions": {},
+  "attempt": 0,
+  "canonical_receipt_sha256": "a4785158f4313270fef32f4c6a5f656849f1351797834a2bc2e4426697b65e52",
+  "completed_at": "2026-07-30T16:28:19.830143Z",
+  "config_sha256": "196fd93afa4044dbef41b2056cbe4d8365aef67dcb396c241370606bfbfd905b",
+  "contract_sha256": "5cdc013cf66ec52ba96a0ba7b7d4ab3562506b5081b2b4926618b71f8c7df7e4",
+  "contract_version": "agent-stage-contract/1.0.0",
+  "error": {
+    "code": "missing_or_incompatible_dependency",
+    "failures": [
+      {
+        "kind": "mcp_tool",
+        "name": "segmentation-tools.visualize_slice",
+        "reason": "missing"
+      }
+    ],
+    "fallback_used": false
+  },
+  "failure_kind": "dependency",
+  "input_handoff": null,
+  "output_artifacts": [],
+  "owner": "data_prep",
+  "predecessor_receipt_sha256": "6519f63bd3c22b3017edcc8b1d51be2548e6f4c6b3cec65f255a63427a495d06",
+  "registration_freeze": null,
+  "registration_mode": "autonomous_v2",
+  "run_token": null,
+  "schema_version": "part2-stage-receipt/1.1.0",
+  "scoped_handoffs": [],
+  "specimen_id": "brian_tran_9x9x9_0point5dash1_production",
+  "stage": "data_prep",
+  "stage_number": 1,
+  "stage_policy": null,
+  "supplemental_handoffs": [],
+  "terminal_state": "halt"
+}
