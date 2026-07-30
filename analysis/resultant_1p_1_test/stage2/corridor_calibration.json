@@ -1,0 +1,215 @@
+{
+  "accepted_strut_count": 13,
+  "candidate_strut_count": 18468,
+  "canonical_mask_sha256": null,
+  "configuration_sha256": "9daabaa74c0f9a42f1f957b5beece7c7121b6ea64b2e715d4111b1163bf1cdce",
+  "corridor_radius_voxels": 7.0,
+  "ct_sha256": "39f6ffdef5b549a77c5d1911e02bb56d5519837228ce5ffbf7aee143a68bde17",
+  "foreground_probability_cutoff": 0.5,
+  "interpolation": "trilinear scipy.ndimage.map_coordinates order=1",
+  "label_blind": true,
+  "localized_graph_sha256": "4dcb842d26ef65cb5cb90b8ea339afaf1dc33d9574f647dfa189a113c4db29cb",
+  "method": "label-blind central-slice nearest-component radial-extent bootstrap",
+  "per_strut": [
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 3.605551275463989,
+      "strut_id": 9053,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 16358,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 18439,
+      "valid_slice_count": 3,
+      "valid_slice_fraction": 0.09090909090909091
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 18180,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 32,
+      "strut_id": 16133,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 2000,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 200,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 6.324555320336759,
+      "strut_id": 8,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 1773,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 17298,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 8707,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 10006,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 5.385164807134504,
+      "strut_id": 12201,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 920,
+      "valid_slice_count": 24,
+      "valid_slice_fraction": 0.7272727272727273
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 1040,
+      "valid_slice_count": 20,
+      "valid_slice_fraction": 0.6060606060606061
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 9390,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 2.23606797749979,
+      "strut_id": 8298,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.123105625617661,
+      "strut_id": 2134,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 34,
+      "median_radial_extent_voxels": 6.082762530298219,
+      "strut_id": 17196,
+      "valid_slice_count": 30,
+      "valid_slice_fraction": 0.8823529411764706
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 3.605551275463989,
+      "strut_id": 1897,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 3.605551275463989,
+      "strut_id": 18334,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 3.1622776601683795,
+      "strut_id": 7583,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 15424,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 7879,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    }
+  ],
+  "policy": {
+    "calibration_half_width_voxels": 12.0,
+    "central_fraction": 0.6,
+    "maximum_axis_distance_voxels": 8.0,
+    "maximum_radius_voxels": 11.0,
+    "minimum_radius_voxels": 1.0,
+    "minimum_valid_samples": 6,
+    "minimum_valid_slice_fraction": 0.75,
+    "radial_extent_quantile": 0.9,
+    "radius_multiplier": 1.0,
+    "radius_safety_voxels": 0.5,
+    "sample_count": 24
+  },
+  "quantile_radial_extent_voxels": 5.943242985665477,
+  "sample_count_used": 24,
+  "schema_version": "part2-corridor-calibration/1.0.0",
+  "selection": "deterministic farthest-point sampling of in-bounds graph midpoints",
+  "source": "stage_1_canonical_segmentation_mask",
+  "unclipped_radius_voxels": 6.443242985665477
+}

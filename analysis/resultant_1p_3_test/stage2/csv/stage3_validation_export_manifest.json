@@ -1,0 +1,55 @@
+{
+  "classification_gate": "manual_review",
+  "counts": {
+    "broken_all": 902,
+    "broken_connected_bite": 811,
+    "broken_touching_excluded_plane": 24,
+    "broken_viewer_filtered": 89,
+    "missing_all": 500,
+    "missing_touching_excluded_plane": 21,
+    "missing_viewer_filtered": 479
+  },
+  "development_mode": true,
+  "filter": {
+    "applies_to": [
+      "missing_struts_viewer_filtered.csv",
+      "broken_struts_viewer_filtered.csv"
+    ],
+    "axis": "y",
+    "coordinate_source": "nominal_graph.junctions[].position",
+    "coordinate_tolerance": 1e-06,
+    "exclusion_rule": "missing: either nominal endpoint touches the plane; broken: plane touch OR primary A-B still connected (connected bite)",
+    "intended_use": "Specimen crop-face + Claire-like disconnected-broken viewer/report filter; not a scientific relabel of Stage 3 findings",
+    "scientific_classification_changed": false,
+    "value": 18.0
+  },
+  "non_authoritative": true,
+  "outputs": {
+    "broken_all": {
+      "filename": "broken_struts.csv",
+      "sha256": "04274e3dbcb0ca24c5c3aa0b5646b512eb1d26094996f156e9805615b7e2947d"
+    },
+    "broken_viewer_filtered": {
+      "filename": "broken_struts_viewer_filtered.csv",
+      "sha256": "15d70598fe23e4dbdc6bc89ae408824e7e2b880991484f5d653eaaaccb95561b"
+    },
+    "missing_all": {
+      "filename": "missing_struts.csv",
+      "sha256": "caa615950368687be423c25d8ccbcf481e289a9ed1750082f0a1ff483dfb81f7"
+    },
+    "missing_viewer_filtered": {
+      "filename": "missing_struts_viewer_filtered.csv",
+      "sha256": "574f7a9a18ac582e7c760f176c05fdd069cf97722e9d23b417ab1546be959867"
+    }
+  },
+  "production_receipt_artifact": false,
+  "schema_version": "part2-stage3-validation-export/1.0.0",
+  "sources": {
+    "classified_struts_sha256": "2989cc6adb9ca701ce6c7bf54438f7901fa8c294e33679a166a26620e9e03ec5",
+    "findings_broken_sha256": "3fbf82978904a02ecfa25c5545b59eb1d890ecf2a7c3b23cea339fd467015efb",
+    "findings_missing_sha256": "743e85d9b5fbfafe228dd7fa17e57ae24aeb49f9420a15e4eefbe6ba7306c671",
+    "nominal_graph_sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+    "per_strut_metrics_sha256": "eb7682af8c6da311987ea542f1c94b9d874da1a2878316f4f89fc146942b9baf"
+  },
+  "specimen_id": "brian_tran_hackathon"
+}

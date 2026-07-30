@@ -1,0 +1,62 @@
+{
+  "bent_is_non_competing_attribute": true,
+  "gate": "manual_review",
+  "label_access": {
+    "evaluation": false,
+    "intentional_deletion": false,
+    "training": false
+  },
+  "policy": {
+    "bent": {
+      "implementation_status": "deferred",
+      "owner": "teammate",
+      "policy": {}
+    },
+    "bent_is_non_competing_attribute": true,
+    "broken": {
+      "central_reference_quantile": 0.9,
+      "connected_material_loss_is_broken": true,
+      "deficit_ratio": 0.5,
+      "implementation_status": "complete",
+      "minimum_collar_foreground_fraction": 0.05,
+      "minimum_deficit_fraction": 0.15,
+      "minimum_deficit_run_samples": 3,
+      "minimum_shared_component_voxels": 500,
+      "unresolved_disconnection_outcome": "review"
+    },
+    "development_mode": true,
+    "label_blind": true,
+    "missing": {
+      "central_end_fraction": 0.8,
+      "central_start_fraction": 0.2,
+      "implementation_status": "complete",
+      "maximum_central_present_slice_fraction": 0.1,
+      "present_fraction": 0.05,
+      "require_primary_disconnection": true,
+      "smoothing_window_samples": 3
+    },
+    "policy_source": "frozen_prior_connectivity_method",
+    "precedence": [
+      "missing",
+      "broken",
+      "thin",
+      "present"
+    ],
+    "schema_version": "part2-defect-analysis-config/1.0.0",
+    "thin": {
+      "implementation_status": "deferred",
+      "owner": "teammate",
+      "policy": {}
+    }
+  },
+  "policy_sha256": "d6aa3f6daf5177dae143d00c32d460c39599085ec386038809f5f6df2aad3029",
+  "precedence": [
+    "missing",
+    "broken",
+    "thin",
+    "present"
+  ],
+  "schema_version": "part2-defect-analysis-config/1.0.0",
+  "specimen_id": "brian_tran_hackathon",
+  "stage_number": 3
+}

@@ -1,0 +1,50 @@
+{
+  "artifacts": {
+    "metadata_response": {
+      "path": "analysis/resultant_1p_3_test/stage0/ct_metadata_response.json",
+      "retention": "committed",
+      "role": "ct_metadata_mcp_response",
+      "sha256": "d34fb112d81210cdd4895777848f9174f8f638915d534fbeb6793ef2722bb4db"
+    }
+  },
+  "canonical_call_receipt_sha256": "0ee4263edd51c763340de8a58ce81a30be41ee6b3685829c7309376ffb2d1477",
+  "error": null,
+  "gate": "pass",
+  "hashes": {
+    "header_facts_sha256": "f200ef377c01005345c4791ba4160488bf2d58a5cc56991c04bdda039647a9a1",
+    "input_sha256": "71c55ea36a0366e4555cf6d0f3e7653ea538175e2709c1d77c76891f38c5c3bf",
+    "metadata_response_sha256": "d34fb112d81210cdd4895777848f9174f8f638915d534fbeb6793ef2722bb4db",
+    "request_sha256": "819aea2ffe3fa18f08b4c728477adb6eac293db94d306bf76764bfaa43073ef8",
+    "result_sha256": "048636abd8de1c1797411e1e0d5b4bb725f42e39120c0ee18fb293a2bb7f49df"
+  },
+  "header_facts": {
+    "array_bytes": 952286482,
+    "axes": "ZYX",
+    "byte_order": "big",
+    "dtype": "uint16",
+    "dtype_string": "<u2",
+    "file_bytes": 952466196,
+    "format": "tiff",
+    "ndim": 3,
+    "shape": [
+      761,
+      791,
+      791
+    ],
+    "voxel_count": 476143241
+  },
+  "request": {
+    "call_receipt_filepath": "analysis/resultant_1p_3_test/stage0/ct_metadata_mcp_call_receipt.json",
+    "header_only": true,
+    "include_sha256": true,
+    "input_filepath": "data/missing_struts/tif_stacks/210127_Brian_Tran_strut_lattices_1_3 1 Slices.tif",
+    "output_filepath": "analysis/resultant_1p_3_test/stage0/ct_metadata_response.json",
+    "retention": "committed"
+  },
+  "response_schema_version": "part2-mcp-response/1.0.0",
+  "schema_version": "volume-metadata-mcp-call-receipt/1.0.0",
+  "status": "ok",
+  "summary": "Persisted authoritative header-only CT metadata response",
+  "tool": "inspect_volume_metadata",
+  "warnings": []
+}

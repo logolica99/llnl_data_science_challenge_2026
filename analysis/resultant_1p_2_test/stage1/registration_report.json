@@ -1,0 +1,1309 @@
+{
+  "artifacts": {
+    "registered_graph": {
+      "path": "C:\\Users\\Claire\\Documents\\GitHub\\llnl_data_science_challenge_2026\\analysis\\resultant_1p_2_test\\stage1\\registered_graph.json",
+      "retention": "regenerable",
+      "role": "registered_lattice_graph",
+      "sha256": "f5a7529e88ed10d4058ab624ae37b895ef65eed71950cf9b2fabbb1c0e589908"
+    }
+  },
+  "axis_mapping": {
+    "array_axes": [
+      "z",
+      "y",
+      "x"
+    ],
+    "coordinate_order": [
+      "x",
+      "y",
+      "z"
+    ],
+    "numpy_index_expression": "volume[round(z), round(y), round(x)]"
+  },
+  "counts": {
+    "cells": 729,
+    "edges": 18468,
+    "nodes": 10206
+  },
+  "gate": "halt",
+  "gates": {
+    "all_nodes_in_ct_bounds": true,
+    "bounded_robustness_passed": false,
+    "candidate_population_sufficient": true,
+    "converged_start_fraction_sufficient": true,
+    "enough_near_optimal_starts": true,
+    "fit_holdout_disjoint": true,
+    "holdout_supported": true,
+    "near_optimal_starts_agree": true,
+    "synthetic_recovery_passed": true
+  },
+  "hashes": {
+    "ct_sha256": "cc594bef192d5e8b931ec7f027109ac1fc76c6d77cd57e4b0d0945a5e3a90afe",
+    "nominal_graph_sha256": "af7bbd51657735f0a0af07ea8ede2007416c61821b7860936457ab0b76fad6a2",
+    "registered_graph_sha256": "f5a7529e88ed10d4058ab624ae37b895ef65eed71950cf9b2fabbb1c0e589908"
+  },
+  "mode": "autonomous_v2",
+  "mode_details": {
+    "bounded_robustness": {
+      "case_count": 7,
+      "cases": [
+        {
+          "config_sha256": "f1deb61b75b077c5faf246cb48c99696685abf8633cd00d6c7b0d6180979091b",
+          "detected_node_count": 3283,
+          "holdout_median_distance_voxels": 3.662141137877016,
+          "multistart_overall_pass": true,
+          "name": "threshold_low",
+          "status": "ok",
+          "threshold": 42633.0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.14276520031806178,
+            "rotation_matrix": [
+              [
+                0.9999994910645387,
+                -0.00039559805671380253,
+                0.0009281017409795061
+              ],
+              [
+                0.00039348250480311073,
+                0.9999973267646673,
+                0.0022785159727292
+              ],
+              [
+                -0.0009290006364360438,
+                -0.002278149621313946,
+                0.9999969734914804
+              ]
+            ],
+            "scale": 39.12130593940294,
+            "translation_xyz": [
+              38.31858870926783,
+              42.45514246441172,
+              35.267599500941174
+            ]
+          }
+        },
+        {
+          "config_sha256": "f1deb61b75b077c5faf246cb48c99696685abf8633cd00d6c7b0d6180979091b",
+          "detected_node_count": 3159,
+          "holdout_median_distance_voxels": 3.9060235987405347,
+          "multistart_overall_pass": true,
+          "name": "baseline",
+          "status": "ok",
+          "threshold": 43133.0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.10859699676458386,
+            "rotation_matrix": [
+              [
+                0.9999996412055681,
+                -0.00021095439238717395,
+                0.0008204187829482734
+              ],
+              [
+                0.00020956303639303926,
+                0.9999985404671041,
+                0.0016956258415675599
+              ],
+              [
+                -0.0008207752852392051,
+                -0.0016954533037352583,
+                0.9999982258814392
+              ]
+            ],
+            "scale": 39.11888603872816,
+            "translation_xyz": [
+              38.35571029950614,
+              42.83840728832598,
+              34.88450896497358
+            ]
+          }
+        },
+        {
+          "config_sha256": "f1deb61b75b077c5faf246cb48c99696685abf8633cd00d6c7b0d6180979091b",
+          "detected_node_count": 3098,
+          "holdout_median_distance_voxels": 2.979100395860711,
+          "multistart_overall_pass": true,
+          "name": "threshold_high",
+          "status": "ok",
+          "threshold": 43633.0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.08637265325809901,
+            "rotation_matrix": [
+              [
+                0.99999978623003,
+                -0.00024984235556668326,
+                0.000604250519743602
+              ],
+              [
+                0.00024902137212209316,
+                0.9999990464032362,
+                0.0013583743864900033
+              ],
+              [
+                -0.0006045893229885024,
+                -0.001358223624816537,
+                0.9999988948495571
+              ]
+            ],
+            "scale": 39.09703665953397,
+            "translation_xyz": [
+              38.67713190801794,
+              43.01428115130966,
+              34.714041639318054
+            ]
+          }
+        },
+        {
+          "config_sha256": "a3ca32653521cce0702339d5073efccd57af15f494a312d32a625f7764116e23",
+          "detected_node_count": 2391,
+          "holdout_median_distance_voxels": 15.606306043659378,
+          "multistart_overall_pass": false,
+          "name": "downsample_three",
+          "status": "ok",
+          "threshold": 43133.0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.2856307888521767,
+            "rotation_matrix": [
+              [
+                0.9999963752446485,
+                -0.0026640722104937843,
+                -0.00039014974266728033
+              ],
+              [
+                0.0026624118727406774,
+                0.9999876522318591,
+                -0.004196063254244254
+              ],
+              [
+                0.00040132354069782395,
+                0.004195009305234354,
+                0.9999911203787483
+              ]
+            ],
+            "scale": 37.845680842096186,
+            "translation_xyz": [
+              53.54733463830809,
+              54.34597469958004,
+              41.36602032581703
+            ]
+          }
+        },
+        {
+          "config_sha256": "f1bdcb9b839b0657de592ac02af33c707f5b912bcaf6fb1f29e93a2a156d63fb",
+          "detected_node_count": 3159,
+          "holdout_median_distance_voxels": 3.8912784593507936,
+          "multistart_overall_pass": true,
+          "name": "seed_alternative",
+          "status": "ok",
+          "threshold": 43133.0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.07910692196364268,
+            "rotation_matrix": [
+              [
+                0.9999997639789525,
+                -0.00024188866250392542,
+                0.0006430644710591158
+              ],
+              [
+                0.00024111836083048026,
+                0.9999992537257589,
+                0.0011976685103326922
+              ],
+              [
+                -0.0006433536935906023,
+                -0.001197513173006491,
+                0.999999076028686
+              ]
+            ],
+            "scale": 39.1147398049743,
+            "translation_xyz": [
+              38.4399723814459,
+              43.05970005503718,
+              34.65686601279634
+            ]
+          }
+        },
+        {
+          "config_sha256": "fa8a2e37b265a6fa23322de6148d0ede3b85c1b423ded7fcbcbd4514c18dfaac",
+          "detected_node_count": 3159,
+          "holdout_median_distance_voxels": 5.133207395908516,
+          "multistart_overall_pass": true,
+          "name": "edt_low_trim_high",
+          "status": "ok",
+          "threshold": 43133.0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.2662441627898853,
+            "rotation_matrix": [
+              [
+                0.999989268961236,
+                -0.004548791680244308,
+                0.0008777565849234994
+              ],
+              [
+                0.004548473711103246,
+                0.9999895894244093,
+                0.00036390891790296704
+              ],
+              [
+                -0.0008794027928300463,
+                -0.00035991256003101396,
+                0.9999995485567363
+              ]
+            ],
+            "scale": 38.898128671121036,
+            "translation_xyz": [
+              41.50514956421193,
+              43.88030894004197,
+              36.25811855075739
+            ]
+          }
+        },
+        {
+          "config_sha256": "9eb828b2e4e11b975e195c67301fb970393ffeda6aa9a82ab61e75541013dee5",
+          "detected_node_count": 3398,
+          "holdout_median_distance_voxels": 4.257267595343389,
+          "multistart_overall_pass": true,
+          "name": "edt_high_trim_low",
+          "status": "ok",
+          "threshold": 43133.0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09665619225854588,
+            "rotation_matrix": [
+              [
+                0.9999997780128881,
+                -6.235539353635577e-05,
+                0.0006633897637890715
+              ],
+              [
+                6.132719556663934e-05,
+                0.9999987971434133,
+                0.001549822796742342
+              ],
+              [
+                -0.0006634856056368493,
+                -0.0015497817688676953,
+                0.9999985789806505
+              ]
+            ],
+            "scale": 39.17449895266264,
+            "translation_xyz": [
+              37.451771257927874,
+              42.30092595220458,
+              33.98191207775227
+            ]
+          }
+        }
+      ],
+      "gates": {
+        "prediction_spread_within_limit": false,
+        "successful_case_count_sufficient": true
+      },
+      "overall_pass": false,
+      "p95_prediction_spread_voxels": 13.765316166832719,
+      "successful_case_count": 7
+    },
+    "candidate_count": 3159,
+    "candidate_to_unique_node_ratio": 0.9209912536443149,
+    "coordinate_bounds_xyz": {
+      "maximum": [
+        743.0484388240793,
+        748.2338269040151,
+        738.8917047387629
+      ],
+      "minimum": [
+        38.242639901124825,
+        43.062972426092415,
+        33.28342528532774
+      ]
+    },
+    "detection": {
+      "all_component_count": 4072,
+      "axis_mapping": {
+        "array_axes": [
+          "z",
+          "y",
+          "x"
+        ],
+        "coordinate_order": [
+          "x",
+          "y",
+          "z"
+        ],
+        "numpy_index_expression": "volume[round(z), round(y), round(x)]"
+      },
+      "central_z_margin_full_resolution_voxels": 50,
+      "detected_bounds_xyz": {
+        "maximum": [
+          745.6842105263158,
+          746.0,
+          716.0
+        ],
+        "minimum": [
+          73.27272727272727,
+          44.0,
+          50.0
+        ]
+      },
+      "detected_node_count": 3159,
+      "downsample_factor": 2,
+      "source_shape_zyx": [
+        768,
+        792,
+        788
+      ],
+      "threshold": 43133.0
+    },
+    "fit_candidate_count": 2527,
+    "holdout_candidate_count": 632,
+    "holdout_distance_voxels": {
+      "maximum": 26.971811208436172,
+      "median": 1.7762093122408913,
+      "p95": 6.475558936388817
+    },
+    "multistart": {
+      "best_objective": 2.3349395290394215,
+      "best_start_index": 0,
+      "gates": {
+        "converged_start_fraction_sufficient": true,
+        "enough_near_optimal_starts": true,
+        "near_optimal_starts_agree": true
+      },
+      "near_optimal_converged_fraction": 1.0,
+      "near_optimal_p95_prediction_spread_voxels": 0.0,
+      "near_optimal_start_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "overall_pass": true,
+      "start_count": 21,
+      "starts": [
+        {
+          "iterations": 8,
+          "objective": 2.3349395290394215,
+          "start_index": 0,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 9,
+          "objective": 2.3349395290394215,
+          "start_index": 1,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 11,
+          "objective": 2.3349395290394215,
+          "start_index": 2,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 10,
+          "objective": 2.3349395290394215,
+          "start_index": 3,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 8,
+          "objective": 2.3349395290394215,
+          "start_index": 4,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 9,
+          "objective": 2.3349395290394215,
+          "start_index": 5,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 10,
+          "objective": 2.3349395290394215,
+          "start_index": 6,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 7,
+          "objective": 2.3349395290394215,
+          "start_index": 7,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 7,
+          "objective": 2.3349395290394215,
+          "start_index": 8,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 9,
+          "objective": 2.3349395290394215,
+          "start_index": 9,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 8,
+          "objective": 2.3349395290394215,
+          "start_index": 10,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 6,
+          "objective": 2.3349395290394215,
+          "start_index": 11,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 7,
+          "objective": 2.3349395290394215,
+          "start_index": 12,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 9,
+          "objective": 2.3349395290394215,
+          "start_index": 13,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 6,
+          "objective": 2.3349395290394215,
+          "start_index": 14,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 7,
+          "objective": 2.3349395290394215,
+          "start_index": 15,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 9,
+          "objective": 2.3349395290394215,
+          "start_index": 16,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 7,
+          "objective": 2.3349395290394215,
+          "start_index": 17,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 6,
+          "objective": 2.3349395290394215,
+          "start_index": 18,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 6,
+          "objective": 2.3349395290394215,
+          "start_index": 19,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        },
+        {
+          "iterations": 8,
+          "objective": 2.3349395290394215,
+          "start_index": 20,
+          "transform": {
+            "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+            "rotation_deg": 0.09489611375791727,
+            "rotation_matrix": [
+              [
+                0.9999995923389556,
+                -0.0002479147331459152,
+                0.0008682512353991188
+              ],
+              [
+                0.0002467089563060466,
+                0.9999990054983402,
+                0.0013885737362563262
+              ],
+              [
+                -0.0008685946198090686,
+                -0.0013883589648328637,
+                0.9999986590004865
+              ]
+            ],
+            "scale": 39.11223791356491,
+            "translation_xyz": [
+              38.41717690157628,
+              43.062972426092415,
+              34.87236638545073
+            ]
+          }
+        }
+      ]
+    },
+    "synthetic_recovery": {
+      "case_count": 12,
+      "cases": [
+        {
+          "case": 0,
+          "errors": {
+            "relative_scale": 3.423253652501401e-05,
+            "rotation_degrees": 0.005367504280724918,
+            "translation_norm_voxels": 0.03579030023599138
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 1,
+          "errors": {
+            "relative_scale": 8.967624519473638e-05,
+            "rotation_degrees": 0.015675614028097334,
+            "translation_norm_voxels": 0.15770397459333432
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 2,
+          "errors": {
+            "relative_scale": 0.00022833649222486763,
+            "rotation_degrees": 0.0055105715339854285,
+            "translation_norm_voxels": 0.1963150715843882
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 3,
+          "errors": {
+            "relative_scale": 2.418625377953454e-05,
+            "rotation_degrees": 0.006988469673370095,
+            "translation_norm_voxels": 0.08875203645412846
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 4,
+          "errors": {
+            "relative_scale": 2.530267112998974e-05,
+            "rotation_degrees": 0.005613324547564516,
+            "translation_norm_voxels": 0.05270471695736866
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 5,
+          "errors": {
+            "relative_scale": 1.6805466672265013e-05,
+            "rotation_degrees": 0.006435562487295541,
+            "translation_norm_voxels": 0.09373223763379589
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 6,
+          "errors": {
+            "relative_scale": 7.819171295841976e-05,
+            "rotation_degrees": 0.0069102833510400205,
+            "translation_norm_voxels": 0.11238049188956739
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 7,
+          "errors": {
+            "relative_scale": 4.364101830178768e-05,
+            "rotation_degrees": 0.006145719618232322,
+            "translation_norm_voxels": 0.064128730660012
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 8,
+          "errors": {
+            "relative_scale": 0.00010178989512776848,
+            "rotation_degrees": 0.007936777083168907,
+            "translation_norm_voxels": 0.140268252052512
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 9,
+          "errors": {
+            "relative_scale": 3.865395700675123e-05,
+            "rotation_degrees": 0.007277076560695653,
+            "translation_norm_voxels": 0.10258054003911957
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 10,
+          "errors": {
+            "relative_scale": 3.3096944140664775e-05,
+            "rotation_degrees": 0.008993151915843055,
+            "translation_norm_voxels": 0.1044627647152091
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        },
+        {
+          "case": 11,
+          "errors": {
+            "relative_scale": 1.9973781193449724e-06,
+            "rotation_degrees": 0.004667200473627157,
+            "translation_norm_voxels": 0.06516176579827147
+          },
+          "gates": {
+            "multistart": true,
+            "rotation": true,
+            "scale": true,
+            "translation": true
+          },
+          "pass": true
+        }
+      ],
+      "gates": {
+        "synthetic_recovery_pass_fraction": true
+      },
+      "minimum_pass_fraction": 0.9,
+      "overall_pass": true,
+      "pass_fraction": 1.0
+    },
+    "threshold": 43133.0,
+    "threshold_report_sha256": "ec68320bc4cde3a043833e83f4c383839172ca9f46dfb5bef68a4dda84c44e80"
+  },
+  "overall_pass": false,
+  "provenance": {
+    "aligned_graph_used_for_fit": false,
+    "config_sha256": "f1deb61b75b077c5faf246cb48c99696685abf8633cd00d6c7b0d6180979091b",
+    "registration_mode": "autonomous_v2",
+    "sealed_labels_read": false
+  },
+  "schema_version": "part2-registration/1.0.0",
+  "transform": {
+    "convention": "ct_xyz = scale * (design_xyz @ rotation_matrix.T) + translation_xyz",
+    "rotation_deg": 0.09489611375791727,
+    "rotation_matrix": [
+      [
+        0.9999995923389556,
+        -0.0002479147331459152,
+        0.0008682512353991188
+      ],
+      [
+        0.0002467089563060466,
+        0.9999990054983402,
+        0.0013885737362563262
+      ],
+      [
+        -0.0008685946198090686,
+        -0.0013883589648328637,
+        0.9999986590004865
+      ]
+    ],
+    "scale": 39.11223791356491,
+    "translation_xyz": [
+      38.41717690157628,
+      43.062972426092415,
+      34.87236638545073
+    ]
+  },
+  "warnings": []
+}

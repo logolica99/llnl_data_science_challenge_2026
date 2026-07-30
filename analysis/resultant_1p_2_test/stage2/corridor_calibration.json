@@ -1,0 +1,218 @@
+{
+  "accepted_strut_count": 16,
+  "candidate_strut_count": 18468,
+  "canonical_mask_sha256": null,
+  "configuration_sha256": "9daabaa74c0f9a42f1f957b5beece7c7121b6ea64b2e715d4111b1163bf1cdce",
+  "corridor_radius_voxels": 7.0,
+  "ct_sha256": "cc594bef192d5e8b931ec7f027109ac1fc76c6d77cd57e4b0d0945a5e3a90afe",
+  "foreground_probability_cutoff": 0.5,
+  "interpolation": "trilinear scipy.ndimage.map_coordinates order=1",
+  "label_blind": true,
+  "localized_graph_sha256": "8be0c6a45f577b8f790eb742abf1a1a500d13d9d72ae988915864e2046c2e0cb",
+  "method": "label-blind central-slice nearest-component radial-extent bootstrap",
+  "per_strut": [
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.123105625617661,
+      "strut_id": 9059,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 32,
+      "strut_id": 18439,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 18180,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 32,
+      "strut_id": 16358,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 2.8284271247461903,
+      "strut_id": 1773,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 32,
+      "median_radial_extent_voxels": 6.082762530298219,
+      "strut_id": 1993,
+      "valid_slice_count": 32,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 31,
+      "strut_id": 16133,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 34,
+      "median_radial_extent_voxels": 6.324555320336759,
+      "strut_id": 200,
+      "valid_slice_count": 34,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 4,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 17524,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 10006,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 31,
+      "strut_id": 9391,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 5.0990195135927845,
+      "strut_id": 13177,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 8219,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.47213595499958,
+      "strut_id": 1439,
+      "valid_slice_count": 29,
+      "valid_slice_fraction": 0.8787878787878788
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 5.385164807134504,
+      "strut_id": 339,
+      "valid_slice_count": 27,
+      "valid_slice_fraction": 0.8181818181818182
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 34,
+      "median_radial_extent_voxels": 3.1622776601683795,
+      "strut_id": 8108,
+      "valid_slice_count": 34,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 3.605551275463989,
+      "strut_id": 3104,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 5.608058350989902,
+      "strut_id": 16519,
+      "valid_slice_count": 32,
+      "valid_slice_fraction": 0.9696969696969697
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.0,
+      "strut_id": 898,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.123105625617661,
+      "strut_id": 17168,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 33,
+      "median_radial_extent_voxels": 4.123105625617661,
+      "strut_id": 7876,
+      "valid_slice_count": 33,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": true,
+      "central_slice_count": 32,
+      "median_radial_extent_voxels": 3.1622776601683795,
+      "strut_id": 15959,
+      "valid_slice_count": 32,
+      "valid_slice_fraction": 1.0
+    },
+    {
+      "accepted": false,
+      "central_slice_count": 33,
+      "strut_id": 17096,
+      "valid_slice_count": 0,
+      "valid_slice_fraction": 0.0
+    }
+  ],
+  "policy": {
+    "calibration_half_width_voxels": 12.0,
+    "central_fraction": 0.6,
+    "maximum_axis_distance_voxels": 8.0,
+    "maximum_radius_voxels": 11.0,
+    "minimum_radius_voxels": 1.0,
+    "minimum_valid_samples": 6,
+    "minimum_valid_slice_fraction": 0.75,
+    "radial_extent_quantile": 0.9,
+    "radius_multiplier": 1.0,
+    "radius_safety_voxels": 0.5,
+    "sample_count": 24
+  },
+  "quantile_radial_extent_voxels": 5.845410440644061,
+  "sample_count_used": 24,
+  "schema_version": "part2-corridor-calibration/1.0.0",
+  "selection": "deterministic farthest-point sampling of in-bounds graph midpoints",
+  "source": "stage_1_canonical_segmentation_mask",
+  "unclipped_radius_voxels": 6.345410440644061
+}

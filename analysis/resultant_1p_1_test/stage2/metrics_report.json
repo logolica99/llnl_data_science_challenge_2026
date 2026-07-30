@@ -1,0 +1,99 @@
+{
+  "artifacts": {
+    "corridor_calibration": {
+      "changed": true,
+      "path": "C:\\Users\\Claire\\Documents\\GitHub\\llnl_data_science_challenge_2026\\analysis\\resultant_1p_test\\stage2\\corridor_calibration.json",
+      "retention": "committed",
+      "role": "corridor_calibration",
+      "sha256": "d15acfba61b58f976f0f9d36fb0898638accfbdd844d1cacce8e0c6e38d2aee7"
+    },
+    "per_strut_metrics": {
+      "changed": true,
+      "path": "C:\\Users\\Claire\\Documents\\GitHub\\llnl_data_science_challenge_2026\\analysis\\resultant_1p_test\\stage2\\per_strut_metrics.csv",
+      "retention": "committed",
+      "role": "per_strut_metrics",
+      "sha256": "cbb5a297834e0054d2ee3f182dbe601d04a7a781674fb1af28e4fbc94f50bc6d"
+    },
+    "per_strut_profiles": {
+      "changed": true,
+      "path": "C:\\Users\\Claire\\Documents\\GitHub\\llnl_data_science_challenge_2026\\analysis\\resultant_1p_test\\stage2\\per_strut_profiles.json",
+      "retention": "committed",
+      "role": "per_strut_profiles",
+      "sha256": "cea4a0cbe869e1401b40be5d10bc0f9230c1877f206f7f74bacf6f228f0cfc95"
+    }
+  },
+  "axis_mapping": {
+    "array_axes": [
+      "z",
+      "y",
+      "x"
+    ],
+    "coordinate_order": [
+      "x",
+      "y",
+      "z"
+    ],
+    "numpy_index_expression": "volume[round(z), round(y), round(x)]"
+  },
+  "classification_performed": false,
+  "counts": {
+    "cells": 729,
+    "edges": 18468,
+    "invalid_rois": 0,
+    "metric_rows": 18468,
+    "nodes": 10206,
+    "valid_rois": 18468
+  },
+  "direct_dimensional_measurement_performed": false,
+  "foreground_source": "legacy_direct_core_threshold",
+  "gate": "pass",
+  "gates": {
+    "all_roi_provenance_present": true,
+    "axis_mapping_is_xyz_to_zyx": true,
+    "corridor_radius_empirically_derived": true,
+    "metric_row_count_matches_graph": true,
+    "one_row_per_nominal_strut": true,
+    "strut_ids_exhaustive": true,
+    "strut_ids_unique": true
+  },
+  "hashes": {
+    "corridor_calibration_sha256": "d15acfba61b58f976f0f9d36fb0898638accfbdd844d1cacce8e0c6e38d2aee7",
+    "ct_sha256": "39f6ffdef5b549a77c5d1911e02bb56d5519837228ce5ffbf7aee143a68bde17",
+    "localized_graph_sha256": "4dcb842d26ef65cb5cb90b8ea339afaf1dc33d9574f647dfa189a113c4db29cb",
+    "per_strut_metrics_sha256": "cbb5a297834e0054d2ee3f182dbe601d04a7a781674fb1af28e4fbc94f50bc6d",
+    "per_strut_profiles_sha256": "cea4a0cbe869e1401b40be5d10bc0f9230c1877f206f7f74bacf6f228f0cfc95"
+  },
+  "measurement_only": true,
+  "method": {
+    "axial_padding_fraction_total": 0.2,
+    "component_connectivity": "independent per-strut 26-neighbor labeling",
+    "interpolation": "trilinear scipy.ndimage.map_coordinates order=1",
+    "interpolation_batch_size": 64,
+    "local_mapping": "p=c+x*e_x+y*e_y+(z-L/2)*e_z",
+    "minimum_valid_roi_fraction": 0.99,
+    "primary_connectivity": "one unmasked corridor-local component intersects both A and B endpoint windows",
+    "primary_connectivity_span": "nominal A-to-B span only; padded slices are excluded",
+    "strut_interpolation_batch_count": 289,
+    "supplementary_connectivity": "junction-masked component evidence at fixed 0.20L and 0.80L collar slabs"
+  },
+  "otsu_threshold": 41444.0,
+  "overall_pass": true,
+  "provenance": {
+    "config_sha256": "9daabaa74c0f9a42f1f957b5beece7c7121b6ea64b2e715d4111b1163bf1cdce",
+    "defect_labels_accessed": false,
+    "development_split_accessed": false,
+    "input_bindings": {},
+    "sealed_split_accessed": false
+  },
+  "registration_mode": "autonomous_v2",
+  "requested_analysis_scope": null,
+  "schema_version": "part2-strut-metrics/2.0.0",
+  "stage": "strut_metrics",
+  "stage_number": 2,
+  "summary": {
+    "median_corridor_foreground_fraction": 0.344636759684446,
+    "median_edt_radius_voxels": 2.8284271247461903,
+    "roi_valid_fraction": 1.0
+  },
+  "warnings": []
+}
